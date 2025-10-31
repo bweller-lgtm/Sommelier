@@ -42,6 +42,13 @@ LABELS_FILE = LABELING_CACHE / "pairwise_labels.json"
 SCENE_CLUSTERS_FILE = LABELING_CACHE / "scene_clusters.pkl"
 GEMINI_CACHE_FILE = LABELING_CACHE / "gemini_cache.json"
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
