@@ -37,8 +37,7 @@ def check_dependencies():
 def check_api_key():
     """Check if Gemini API key is set."""
     print("\n🔑 Checking API key...")
-    
-    os.environ["GEMINI_API_KEY"] = "AIzaSyCafHByAIEeoilCwGG1kRbOaxMx7jA49DM"
+
     api_key = os.getenv("GEMINI_API_KEY")
     
     if not api_key:
