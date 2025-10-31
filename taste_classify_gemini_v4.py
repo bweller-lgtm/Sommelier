@@ -68,6 +68,13 @@ LABELS_FILE = LABELING_CACHE / "pairwise_labels.json"
 GEMINI_CACHE_FILE = LABELING_CACHE / "gemini_cache_v4_grouped.json"
 CHECKPOINT_FILE = LABELING_CACHE / "classification_checkpoint_v4_grouped.json"
 
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)

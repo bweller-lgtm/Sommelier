@@ -10,6 +10,7 @@ import subprocess
 REQUIRED_PACKAGES = [
     "google-generativeai",
     "gradio",
+    "python-dotenv",
 ]
 
 def check_dependencies():
@@ -38,25 +39,32 @@ def check_api_key():
     """Check if Gemini API key is set."""
     print("\n🔑 Checking API key...")
 
+    # Load .env file if it exists
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+
     api_key = os.getenv("GEMINI_API_KEY")
-    
+
     if not api_key:
         print("""
    ❌ GEMINI_API_KEY not set!
-   
+
    To get started:
    1. Visit: https://ai.google.dev/
    2. Click "Get API key in Google AI Studio"
    3. Create a new API key (free tier available)
-   4. Set environment variable:
-   
-   Windows:
-      set GEMINI_API_KEY=your-key-here
-   
-   Mac/Linux:
-      export GEMINI_API_KEY=your-key-here
-   
-   Or add to your shell profile (.bashrc, .zshrc, etc.)
+   4. Set your API key using one of these methods:
+
+   Option 1 - .env file (recommended):
+      Create a .env file in this directory with:
+      GEMINI_API_KEY=your-key-here
+
+   Option 2 - Environment variable:
+      Windows: set GEMINI_API_KEY=your-key-here
+      Mac/Linux: export GEMINI_API_KEY=your-key-here
 """)
         return False
     
