@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # quick_start_v4.py
 # Easy setup and workflow for photo taste cloning (v4 - with reasoning!)
 
@@ -6,6 +7,16 @@ import os
 import sys
 from pathlib import Path
 import subprocess
+
+# Fix Windows console encoding for emojis
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 REQUIRED_PACKAGES = [
     "google-generativeai",
