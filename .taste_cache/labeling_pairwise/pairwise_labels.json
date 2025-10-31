@@ -1,0 +1,462 @@
+{
+  "pairwise": [
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230730_081410.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230730_081409.jpg",
+      "choice": "left",
+      "reason": "Left has better expression for dad and cute motion for baby. Right is pretty good, too -- especially the seemingly knowing expression for baby. But dad's vacant expression is pretty lame.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:26:21.604418"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230711_084145(0).jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230821_131447.jpg",
+      "choice": "both",
+      "reason": "They're both pretty good! The picture on the left is super cute -- baby's eyes are wide, she's staring at us, she's well framed. On the right she's pretty cute, too, but smaller and slouchy. So left is better but both are share-worthy.",
+      "comparison_type": "between",
+      "timestamp": "2025-10-30T11:27:45.571863"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230721_092205.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230715_184221.jpg",
+      "choice": "neither",
+      "reason": "These photos are both okay -- not great, but okay. The swing photo isn't special -- not well framed, baby isn't doing anything particularly interesting. The eating the plastic lemon photo is better -- it's funny -- but it's still pretty zoomed out and the lighting contrast is worse. ",
+      "comparison_type": "between",
+      "timestamp": "2025-10-30T11:29:43.736750"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230810_142033.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230821_171306.jpg",
+      "choice": "right",
+      "reason": "The photo on the right is slightly better, but they're both pretty good. Baby is engaged in both, and the photo quality is definitely better on the left. But baby is super engaged -- with a funny expression -- on the right, and it seems to capture a more intimate moment.",
+      "comparison_type": "between",
+      "timestamp": "2025-10-30T11:31:57.687519"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230817_202207.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230817_202208.jpg",
+      "choice": "right",
+      "reason": "Photo B -- the mischief and joy are the best!",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:37:38.306823"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230729_131920.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230729_131918.jpg",
+      "choice": "right",
+      "reason": "Baby looks ornery in the expression on the left. On the right is okay -- neutral expression, tight shot.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:39:26.885870"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230819_185204.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230819_185203.jpg",
+      "choice": "right",
+      "reason": "The left photo is more about daddy, the right photo is more about baby. And the interaction of daddy looking at baby is nice.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:40:39.719280"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230729_142029.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230729_142024.jpg",
+      "choice": "left",
+      "reason": "Can't really tell what's going on in the photo on the right.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:43:57.050321"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230721_171228.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230721_171227.jpg",
+      "choice": "right",
+      "reason": "The photo on the right because it looks like dad and daughter are enjoying something together. The smile is awesome on the left but it's kinda weird that dad is looking one way and daughter in another.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:48:03.211600"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230730_145029.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230819_185306.jpg",
+      "choice": "both",
+      "reason": "Both good. Baby looks so cool on the left. Baby looks so unhappy on the right -- comically so when daddy is being so loving.",
+      "comparison_type": "between",
+      "timestamp": "2025-10-30T11:52:40.740987"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181300.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230812_070845.jpg",
+      "choice": "right",
+      "reason": "Can't see the baby's face enough in Photo A.",
+      "comparison_type": "between",
+      "timestamp": "2025-10-30T11:56:52.199729"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230823_200025.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230823_200026.jpg",
+      "choice": "neither",
+      "reason": "Mom's expressions are not the best despite baby looking cute.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T11:57:18.562137"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230726_084732.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230726_084729.jpg",
+      "choice": "left",
+      "reason": "Photo on the left is slightly better. It's a tighter shot of baby, baby is clearly engaged in play. Photo B looks a little posed and too far away.",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T12:00:03.664726"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230804_085451.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230711_183719.jpg",
+      "choice": "left",
+      "reason": "Photo A has baby much more interactive, and a tighter shot. Photo B -- who knows where the baby is looking and only a tiny part of the photo.",
+      "comparison_type": "between",
+      "timestamp": "2025-10-30T12:00:55.890501"
+    },
+    {
+      "photo_a": "E:\\OneDrive\\Photos\\Holding Cell\\20230715_184436.jpg",
+      "photo_b": "E:\\OneDrive\\Photos\\Holding Cell\\20230715_184443.jpg",
+      "choice": "right",
+      "reason": "The moment of wonder in Photo B makes it the winner!",
+      "comparison_type": "within",
+      "timestamp": "2025-10-30T12:01:58.674354"
+    }
+  ],
+  "single": {
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193020.jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: The first photo dad is happy and baby is curious. The second through fourth photos the baby has a really funny expression, and it's happiest in photo #4. Photo #5 is sweet, too, but not quite above the bar to have three photos in the same series.",
+      "timestamp": "2025-10-30T11:36:42.358680"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193020(0).jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: The first photo dad is happy and baby is curious. The second through fourth photos the baby has a really funny expression, and it's happiest in photo #4. Photo #5 is sweet, too, but not quite above the bar to have three photos in the same series.",
+      "timestamp": "2025-10-30T11:36:42.366924"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193021(0).jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: The first photo dad is happy and baby is curious. The second through fourth photos the baby has a really funny expression, and it's happiest in photo #4. Photo #5 is sweet, too, but not quite above the bar to have three photos in the same series.",
+      "timestamp": "2025-10-30T11:36:42.367594"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193021.jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: The first photo dad is happy and baby is curious. The second through fourth photos the baby has a really funny expression, and it's happiest in photo #4. Photo #5 is sweet, too, but not quite above the bar to have three photos in the same series.",
+      "timestamp": "2025-10-30T11:36:42.368606"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193022.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: The first photo dad is happy and baby is curious. The second through fourth photos the baby has a really funny expression, and it's happiest in photo #4. Photo #5 is sweet, too, but not quite above the bar to have three photos in the same series.",
+      "timestamp": "2025-10-30T11:36:42.370621"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181308.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.043797"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181311.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.047589"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181312.jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.050028"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181313(0).jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.051038"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181313.jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.051038"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181314.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.051038"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181315(0).jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.054264"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181315.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.054264"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181316(0).jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.054264"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181316.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.060040"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104435.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.418084"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104436.jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.423130"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104438.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.425553"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104439.jpg": {
+      "action": "Share",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.428022"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104441.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.430616"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104443.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.431552"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104445.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.433855"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104447.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.435871"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104451.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.438398"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104453.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.438398"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104457.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.442425"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104458.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.444513"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104459.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.446526"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104500.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.448543"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104506.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.450756"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104509.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.451269"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104509(0).jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.454778"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080511.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: ",
+      "timestamp": "2025-10-30T11:58:00.985335"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080513.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: ",
+      "timestamp": "2025-10-30T11:58:00.990324"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080514.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: ",
+      "timestamp": "2025-10-30T11:58:00.993484"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080515.jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: ",
+      "timestamp": "2025-10-30T11:58:00.993484"
+    },
+    "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080515(0).jpg": {
+      "action": "Storage",
+      "confidence": 0.8,
+      "confidence_label": "High",
+      "reason": "Gallery selection: ",
+      "timestamp": "2025-10-30T11:58:00.996701"
+    }
+  },
+  "gallery": [
+    {
+      "photos": [
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193020.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193020(0).jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193021(0).jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193021.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230824_193022.jpg"
+      ],
+      "selected_indices": [
+        0,
+        3
+      ],
+      "reason": "The first photo dad is happy and baby is curious. The second through fourth photos the baby has a really funny expression, and it's happiest in photo #4. Photo #5 is sweet, too, but not quite above the bar to have three photos in the same series.",
+      "timestamp": "2025-10-30T11:36:42.358680"
+    },
+    {
+      "photos": [
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181308.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181311.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181312.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181313(0).jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181313.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181314.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181315(0).jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181315.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181316(0).jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230719_181316.jpg"
+      ],
+      "selected_indices": [
+        2,
+        4,
+        8
+      ],
+      "reason": "Photo #3: Look of pure joy and wonder for baby! Photo #5: Delightful matching expressions. Photo #9: Daddy looking at happy baby melts my heart.",
+      "timestamp": "2025-10-30T11:51:29.043797"
+    },
+    {
+      "photos": [
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104435.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104436.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104438.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104439.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104441.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104443.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104445.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104447.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104451.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104453.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104457.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104458.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104459.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104500.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104506.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104509.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230801_104509(0).jpg"
+      ],
+      "selected_indices": [
+        1,
+        3
+      ],
+      "reason": "Photo #2: Impression of motion while being posed well. Photo #4: Pure joy in the crib and different from the rest.",
+      "timestamp": "2025-10-30T11:55:31.418084"
+    },
+    {
+      "photos": [
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080511.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080513.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080514.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080515.jpg",
+        "E:\\OneDrive\\Photos\\Holding Cell\\20230803_080515(0).jpg"
+      ],
+      "selected_indices": [],
+      "reason": "",
+      "timestamp": "2025-10-30T11:58:00.985335"
+    }
+  ]
+}
