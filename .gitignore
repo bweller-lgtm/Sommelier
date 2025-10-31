@@ -40,6 +40,7 @@ desktop.ini
 .env.local
 
 # Project specific
+.taste_cache/
 old/
 Share/
 Storage/
