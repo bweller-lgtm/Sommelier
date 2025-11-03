@@ -10,7 +10,8 @@ import imagehash
 from PIL import Image
 
 def get_photo_timestamp(photo_path):
-    """Extract photo timestamp from EXIF or file metadata."""
+    """Extract photo timestamp from EXIF, filename, or file metadata."""
+    # Try EXIF first
     try:
         from taste_sort_win import get_image_date
         date = get_image_date(photo_path)
@@ -18,7 +19,21 @@ def get_photo_timestamp(photo_path):
             return date
     except:
         pass
-    
+
+    # Parse WhatsApp filename format (IMG-YYYYMMDD-WA####.jpg)
+    # Also handles similar formats like VID-YYYYMMDD, etc.
+    import re
+    filename = photo_path.name
+    match = re.match(r'(?:IMG|VID|AUD)-(\d{4})(\d{2})(\d{2})-', filename, re.IGNORECASE)
+    if match:
+        year, month, day = match.groups()
+        try:
+            # Use noon as default time (12:00:00) for filename-based dates
+            return datetime(int(year), int(month), int(day), 12, 0, 0)
+        except ValueError:
+            pass  # Invalid date in filename, skip
+
+    # Fallback to file modification time
     try:
         return datetime.fromtimestamp(photo_path.stat().st_mtime)
     except:
@@ -59,9 +74,10 @@ def detect_bursts_temporal_visual(photos, embeddings,
     
     if not photo_times:
         print("[BURST] No timestamps found, using visual-only clustering")
-        return detect_bursts_visual_only(photos, embeddings, 
-                                         embedding_similarity_threshold, 
-                                         min_burst_size)
+        return detect_bursts_visual_only(photos, embeddings,
+                                         embedding_similarity_threshold,
+                                         min_burst_size,
+                                         max_time_span_hours=1)
     
     # Sort by timestamp
     photo_times.sort(key=lambda x: x[2])
@@ -90,11 +106,17 @@ def detect_bursts_temporal_visual(photos, embeddings,
         temporal_groups.append(current_group)
     
     print(f"[BURST] Found {len(temporal_groups)} temporal groups")
-    
+
+    # Track which photo indices are in temporal groups
+    photos_in_groups = set()
+    for group in temporal_groups:
+        for item in group:
+            photos_in_groups.add(item[0])  # item[0] is the photo index
+
     # Within each temporal group, cluster by visual similarity
     bursts = []
     singletons = []
-    
+
     for group in temporal_groups:
         if len(group) < min_burst_size:
             singletons.extend([item[1] for item in group])
@@ -147,11 +169,22 @@ def detect_bursts_temporal_visual(photos, embeddings,
                 singletons.extend([group_photos[idx] for idx in cluster])
         
         bursts.extend(group_bursts)
-    
+
+    # Add photos not in any temporal group as singletons (temporally isolated photos)
+    temporally_isolated = []
+    for i, p in enumerate(photos):
+        if i in valid_indices and i not in photos_in_groups:
+            temporally_isolated.append(p)
+
+    if temporally_isolated:
+        print(f"[BURST] Found {len(temporally_isolated)} temporally isolated photos (added as singletons)")
+
+    singletons.extend(temporally_isolated)
+
     # Add photos without timestamps as singletons
     no_timestamp_photos = [p for i, p in enumerate(photos) if i not in valid_indices]
     singletons.extend(no_timestamp_photos)
-    
+
     # Stats
     print(f"\n[BURST] Detection complete:")
     print(f"[BURST]   Bursts: {len(bursts)}")
@@ -164,41 +197,66 @@ def detect_bursts_temporal_visual(photos, embeddings,
     # Return bursts + singletons as individual "bursts" of size 1
     return bursts + [[p] for p in singletons]
 
-def detect_bursts_visual_only(photos, embeddings, 
+def detect_bursts_visual_only(photos, embeddings,
                                similarity_threshold=0.92,
-                               min_burst_size=2):
+                               min_burst_size=2,
+                               max_time_span_hours=1):
     """
     Fallback: detect bursts using only visual similarity (no timestamps).
+    Added sanity check: reject clusters spanning >1 hour based on file mtime.
     """
     print("[BURST] Using visual-only clustering...")
-    
+    print(f"[BURST] Sanity check: max time span = {max_time_span_hours} hour(s)")
+
     similarity_matrix = cosine_similarity(embeddings)
-    
+
     visited = set()
     bursts = []
-    
+
     for i in range(len(photos)):
         if i in visited:
             continue
-        
+
         cluster = [i]
         visited.add(i)
-        
+
         for j in range(i + 1, len(photos)):
             if j in visited:
                 continue
-            
+
             max_sim = max(similarity_matrix[k, j] for k in cluster)
-            
+
             if max_sim >= similarity_threshold:
                 cluster.append(j)
                 visited.add(j)
-        
+
         if len(cluster) >= min_burst_size:
-            bursts.append([photos[idx] for idx in cluster])
+            burst_photos = [photos[idx] for idx in cluster]
+
+            # Sanity check: verify time span using file modification times
+            file_times = []
+            for photo in burst_photos:
+                try:
+                    file_times.append(datetime.fromtimestamp(photo.stat().st_mtime))
+                except:
+                    pass
+
+            if len(file_times) >= 2:
+                time_span = max(file_times) - min(file_times)
+                time_span_hours = time_span.total_seconds() / 3600
+
+                if time_span_hours > max_time_span_hours:
+                    print(f"   ⚠️  Visual cluster of {len(burst_photos)} photos spans {time_span_hours:.1f} hours")
+                    print(f"      Date range: {min(file_times).date()} to {max(file_times).date()}")
+                    print(f"      → Splitting to singletons (likely false burst)")
+                    # Split to singletons
+                    bursts.extend([[photo] for photo in burst_photos])
+                    continue
+
+            bursts.append(burst_photos)
         else:
             bursts.append([photos[i]])
-    
+
     return bursts
 
 def detect_exact_duplicates(photos, hamming_threshold=5):
