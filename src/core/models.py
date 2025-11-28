@@ -328,27 +328,36 @@ class GeminiClient:
 
     def _load_images_in_prompt(self, prompt: List) -> List:
         """
-        Load images from Path objects in prompt.
+        Load images from Path objects in prompt, upload videos.
 
         Args:
             prompt: List potentially containing Path objects.
 
         Returns:
-            List with Paths replaced by PIL Images.
+            List with Paths replaced by PIL Images or uploaded video files.
         """
+        from .file_utils import ImageUtils, FileTypeRegistry
+
         result = []
         for item in prompt:
             if isinstance(item, Path):
-                # Load image
-                try:
-                    from .file_utils import ImageUtils
-                    img = ImageUtils.load_and_fix_orientation(item)
-                    if img is not None:
-                        result.append(img)
-                    else:
-                        print(f"⚠️  Warning: Could not load image {item}")
-                except Exception as e:
-                    print(f"⚠️  Warning: Error loading image {item}: {e}")
+                if FileTypeRegistry.is_video(item):
+                    # Upload video to Gemini
+                    try:
+                        video_file = genai.upload_file(str(item))
+                        result.append(video_file)
+                    except Exception as e:
+                        print(f"⚠️  Warning: Error uploading video {item}: {e}")
+                else:
+                    # Load image
+                    try:
+                        img = ImageUtils.load_and_fix_orientation(item)
+                        if img is not None:
+                            result.append(img)
+                        else:
+                            print(f"⚠️  Warning: Could not load image {item}")
+                    except Exception as e:
+                        print(f"⚠️  Warning: Error loading image {item}: {e}")
             else:
                 result.append(item)
         return result
