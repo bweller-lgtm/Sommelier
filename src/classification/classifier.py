@@ -38,6 +38,7 @@ class MediaClassifier:
         self.client = gemini_client
         self.prompt_builder = prompt_builder
         self.cache_manager = cache_manager
+        self.max_output_tokens = config.model.max_output_tokens
 
     def classify_singleton(
         self,
@@ -79,7 +80,7 @@ class MediaClassifier:
             result = self.client.generate_json(
                 prompt=[prompt, img],
                 fallback=self._create_fallback_response("API error"),
-                generation_config={"max_output_tokens": 512},
+                generation_config={"max_output_tokens": self.max_output_tokens},
                 handle_safety_errors=True
             )
 
@@ -161,7 +162,7 @@ class MediaClassifier:
             result = self.client.generate_json(
                 prompt=content,
                 fallback=[self._create_fallback_response(f"API error") for _ in burst_photos],
-                generation_config={"max_output_tokens": 2048},
+                generation_config={"max_output_tokens": self.max_output_tokens},
                 handle_safety_errors=True
             )
 
@@ -264,7 +265,7 @@ class MediaClassifier:
             result = self.client.generate_json(
                 prompt=[prompt, video_path],  # Path object will be uploaded
                 fallback=self._create_fallback_response("API error", is_video=True),
-                generation_config={"max_output_tokens": 1024},
+                generation_config={"max_output_tokens": self.max_output_tokens},
                 handle_safety_errors=True
             )
 

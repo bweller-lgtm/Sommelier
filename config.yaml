@@ -6,6 +6,9 @@ model:
   # Gemini model to use for classification
   name: "gemini-2.5-flash"
 
+  # Maximum output tokens for API responses (increase if hitting truncation)
+  max_output_tokens: 4096
+
   # CLIP model for visual embeddings
   clip_model: "ViT-B-32"
   clip_pretrained: "laion2b_s34b_b79k"

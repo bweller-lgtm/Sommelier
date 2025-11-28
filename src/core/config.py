@@ -10,6 +10,7 @@ from dataclasses import dataclass, field, asdict
 class ModelConfig:
     """Model configuration."""
     name: str = "gemini-2.5-flash"
+    max_output_tokens: int = 4096
     clip_model: str = "ViT-B-32"
     clip_pretrained: str = "laion2b_s34b_b79k"
 
