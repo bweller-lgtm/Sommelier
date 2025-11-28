@@ -18,9 +18,11 @@ Classifies photos/videos into 4 categories:
 
 ## 🚀 Quick Start (30 Seconds)
 
+**Requires Python 3.12**
+
 ### 1. Install Dependencies
 ```bash
-pip install -r requirements.txt
+py -3.12 -m pip install -r requirements.txt
 ```
 
 ### 2. Configure API Key
@@ -31,7 +33,7 @@ GEMINI_API_KEY=your_api_key_here
 
 ### 3. Run Classification
 ```bash
-python taste_classify.py "C:\Photos\MyFolder"
+py -3.12 taste_classify.py "C:\Photos\MyFolder"
 ```
 
 That's it! Photos will be sorted into `C:\Photos\MyFolder_sorted/`
@@ -43,28 +45,28 @@ That's it! Photos will be sorted into `C:\Photos\MyFolder_sorted/`
 ### Basic Classification
 ```bash
 # Classify photos only
-python taste_classify.py "path/to/photos"
+py -3.12 taste_classify.py "path/to/photos"
 
 # Classify photos and videos (videos are ON by default)
-python taste_classify.py "path/to/photos" --classify-videos
+py -3.12 taste_classify.py "path/to/photos" --classify-videos
 
 # Disable video classification
-python taste_classify.py "path/to/photos" --no-classify-videos
+py -3.12 taste_classify.py "path/to/photos" --no-classify-videos
 
 # Dry run (test without moving files)
-python taste_classify.py "path/to/photos" --dry-run
+py -3.12 taste_classify.py "path/to/photos" --dry-run
 
 # Custom output directory
-python taste_classify.py "path/to/photos" --output "path/to/output"
+py -3.12 taste_classify.py "path/to/photos" --output "path/to/output"
 
 # Use custom configuration
-python taste_classify.py "path/to/photos" --config custom_config.yaml
+py -3.12 taste_classify.py "path/to/photos" --config custom_config.yaml
 ```
 
 ### Video Classification Options
 ```bash
 # Use 20 parallel workers for faster video processing
-python taste_classify.py "path/to/photos" --parallel-videos 20
+py -3.12 taste_classify.py "path/to/photos" --parallel-videos 20
 
 # Videos are classified by default (10 workers)
 # Use --no-classify-videos to just copy them without AI classification
@@ -137,21 +139,21 @@ The project has been **completely refactored** with a clean, modular architectur
 
 ### Option 1: Interactive Training (Recommended)
 ```bash
-python taste_trainer_pairwise_v4.py
+py -3.12 taste_trainer_pairwise_v4.py
 ```
 
 Opens Gradio UI in browser. Compare photos and train your preferences.
 
 ### Option 2: Generate Taste Profile from Examples
 ```bash
-python generate_taste_profile.py
+py -3.12 generate_taste_profile.py
 ```
 
 Analyzes your Share/Storage folders and creates `taste_preferences_generated.json`.
 
 ### Option 3: Manual Corrections
 ```bash
-python learn_from_reviews.py
+py -3.12 learn_from_reviews.py
 ```
 
 Learns from photos you manually moved to correct folders.
@@ -267,7 +269,7 @@ taste_classify.py      # Main entry point
 ```bash
 # Run from project root directory
 cd "path/to/Taste Cloner Photo Sorter"
-python taste_classify.py ...
+py -3.12 taste_classify.py ...
 ```
 
 ### "GEMINI_API_KEY not set"
@@ -351,7 +353,7 @@ Personal project - Use at your own risk
 1. Is `GEMINI_API_KEY` set in `.env`?
 2. Is `config.yaml` present?
 3. Are you running from project root?
-4. Do you have all dependencies? (`pip install -r requirements.txt`)
+4. Do you have all dependencies? (`py -3.12 -m pip install -r requirements.txt`)
 
 For video-specific issues, see `VIDEO_CLASSIFICATION_GUIDE.md`.
 
