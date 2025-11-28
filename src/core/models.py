@@ -342,9 +342,16 @@ class GeminiClient:
         for item in prompt:
             if isinstance(item, Path):
                 if FileTypeRegistry.is_video(item):
-                    # Upload video to Gemini
+                    # Upload video to Gemini and wait for processing
                     try:
                         video_file = genai.upload_file(str(item))
+                        # Wait for video to be ready (ACTIVE state)
+                        while video_file.state.name == "PROCESSING":
+                            time.sleep(2)
+                            video_file = genai.get_file(video_file.name)
+                        if video_file.state.name == "FAILED":
+                            print(f"⚠️  Warning: Video processing failed for {item}")
+                            continue
                         result.append(video_file)
                     except Exception as e:
                         print(f"⚠️  Warning: Error uploading video {item}: {e}")
