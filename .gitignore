@@ -42,6 +42,7 @@ desktop.ini
 # Project specific
 .taste_cache/
 old/
+archive/
 Share/
 Storage/
 Review/

@@ -1,0 +1,64 @@
+{
+  "share_philosophy": "Photos worth sharing capture genuine moments of connection and joy between baby and loved ones. They should highlight the baby's expressions, engagement with the world, and the loving interactions they share, all presented in a visually clear and appealing manner.",
+  "top_priorities": [
+    "Baby's Face: Ensure baby's face is visible, well-lit, and in focus.",
+    "Engagement: Prioritize photos showing the baby actively engaging with people or objects.",
+    "Clear Expressions: Select photos with clear and expressive facial expressions (joy, curiosity, mischief).",
+    "Parent-Baby Interaction: Favour shots depicting positive interactions between the baby and a parent, caregiver, or other child.",
+    "Framing & Composition: Choose well-framed photos that focus on the baby and minimize distractions.",
+    "Emotional Resonance: Select photos that evoke positive emotions like joy, love, wonder, or humour.",
+    "Technical Quality: Prioritize photos with good lighting, sharpness, and minimal blur."
+  ],
+  "share_criteria": {
+    "must_have": [
+      "Baby's face is clearly visible and in focus",
+      "Baby is engaged in the activity or with another person",
+      "Photo is well-lit and sharp (minimal blur)",
+      "Expressive and genuine emotion is conveyed"
+    ],
+    "highly_valued": [
+      "Interactions between the baby and a parent/caregiver (especially eye contact or physical touch)",
+      "Baby displaying positive emotions (smiling, laughing, curious)",
+      "Photos that tell a story or capture a special moment",
+      "Good framing that focuses attention on the baby",
+      "Close-up or medium shots emphasizing the baby's face and expressions"
+    ],
+    "bonus_points": [
+      "Unique or funny expressions",
+      "Impression of motion or activity",
+      "Photos that are noticeably different or stand out from the rest",
+      "Good use of natural lighting",
+      "The photo captures a moment of wonder"
+    ]
+  },
+  "reject_criteria": {
+    "deal_breakers": [
+      "Baby's face is not visible or is obscured",
+      "Photo is blurry or out of focus",
+      "Poor lighting (too dark or overexposed)",
+      "Baby displaying a negative or neutral expression without context",
+      "Child too small in frame"
+    ],
+    "negative_factors": [
+      "Distracting backgrounds or clutter",
+      "Awkward or unflattering angles",
+      "Redundant or very similar images",
+      "Photo focuses on objects or scenery instead of the baby",
+      "Vacant expressions of people"
+    ]
+  },
+  "contextual_preferences": {
+    "parent_expressions": "Parent expressions are valued when they show affection, engagement, or joy towards the baby. Avoid photos where the parent looks vacant, distracted, or has an unflattering expression.",
+    "interaction_quality": "Photos depicting positive interactions between the baby and others are highly preferred over solo shots. Shared gaze and physical touch are particularly valued.",
+    "technical_threshold": "Photos should be reasonably well-lit and in focus. While professional quality is not expected, blurry, over/underexposed, or poorly composed shots should be rejected.",
+    "emotional_content": "Photos should evoke positive emotions such as joy, love, wonder, curiosity, and humour. Genuine and authentic expressions are more important than perfectly posed shots.",
+    "burst_philosophy": "From burst photos, prioritize those with the clearest expressions, best focus on the baby's face, and minimal distractions. Choose the photo that best captures the moment's essence and positive emotional impact."
+  },
+  "specific_guidance": [
+    "When evaluating photos, ask yourself, 'Does this photo capture the baby's personality and current stage of development?'",
+    "Prioritize photos where the baby is looking at the camera or interacting with someone.",
+    "If both the parent and baby are in the photo, ensure *both* have engaged and positive expressions.",
+    "Reject photos even if technically good if the baby looks unhappy (unless comically so).",
+    "Focus on quality over quantity; it's better to have a few excellent photos than many mediocre ones."
+  ]
+}

@@ -1,0 +1,221 @@
+# LLM Taste Cloner Configuration
+# All configurable settings for the photo classification system
+
+# ============================= MODEL SETTINGS =====================================
+model:
+  # Gemini model to use for classification
+  name: "gemini-2.5-flash"
+
+  # CLIP model for visual embeddings
+  clip_model: "ViT-B-32"
+  clip_pretrained: "laion2b_s34b_b79k"
+
+# ============================= PATHS ==============================================
+paths:
+  # Root directory for family photos (optional, can be overridden)
+  root: "E:\\OneDrive\\Evie and Elle"
+  family_photos: "E:\\OneDrive\\Evie and Elle\\Family Photos"
+  private_photos: "E:\\OneDrive\\Evie and Elle\\Private Photos"
+  holding_cell: "E:\\OneDrive\\Evie and Elle\\Holding Cell"
+  camera_roll: "E:\\OneDrive\\Pictures\\Camera Roll"
+
+  # Cache directory
+  cache_root: ".taste_cache"
+
+  # Taste preference files
+  taste_preferences: "taste_preferences.json"
+  taste_preferences_generated: "taste_preferences_generated.json"
+
+# ============================= FILE TYPES =========================================
+file_types:
+  # Supported image extensions
+  image_extensions:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".webp"
+    - ".heic"
+    - ".tif"
+    - ".tiff"
+    - ".bmp"
+
+  # Supported video extensions
+  video_extensions:
+    - ".mp4"
+    - ".mov"
+    - ".avi"
+    - ".mkv"
+    - ".m4v"
+    - ".3gp"
+    - ".wmv"
+    - ".flv"
+    - ".webm"
+
+# ============================= CLASSIFICATION =====================================
+classification:
+  # Enable video classification by default
+  classify_videos: true
+
+  # Number of parallel workers for video processing
+  parallel_video_workers: 10
+
+  # Routing thresholds (0.0 to 1.0)
+  share_threshold: 0.60       # Must be >= 60% confidence to Share
+  review_threshold: 0.35      # 35-59% → Review, <35% → Storage
+
+  # Burst-aware routing
+  burst_rank_consider: 2      # Only rank 1-2 considered for potential sharing
+  burst_rank_review: 4        # Rank 3-4 → Review, 5+ → Storage
+
+  # Share rate calibration
+  target_share_rate: 0.275    # Target 25-30% of photos in Share folder
+
+  # Diversity checking (prevent similar photos in Share)
+  enable_diversity_check: true
+  diversity_similarity_threshold: 0.95  # Cosine similarity threshold
+
+  # Safety filters
+  handle_blocked_safely: true  # Route blocked content to Review, not crash
+
+# ============================= BURST DETECTION ====================================
+burst_detection:
+  # Enable new burst detection (temporal + visual)
+  enabled: true
+
+  # Temporal proximity
+  time_window_seconds: 10     # Max seconds between photos in same burst
+
+  # Visual similarity
+  embedding_similarity_threshold: 0.92  # Min cosine similarity (0-1)
+
+  # Size limits
+  min_burst_size: 2           # Minimum photos to form a burst
+  max_burst_size: 50          # Maximum photos in a burst (split if larger)
+
+  # Chunking for large bursts
+  enable_chunking: true
+  chunk_size: 10              # Photos per chunk when processing large bursts
+
+# ============================= QUALITY SCORING ====================================
+quality:
+  # Quality score weights
+  sharpness_weight: 0.8       # Weight for sharpness score
+  brightness_weight: 0.2      # Weight for brightness weight
+
+  # Thresholds
+  sharpness_threshold: 200.0  # Laplacian variance threshold
+  quality_filter_threshold: 0.3  # Min quality to classify (0-1)
+
+  # Face detection
+  enable_face_detection: true
+  face_detection_method: "mediapipe"  # "mediapipe" or "face_recognition"
+  max_faces_to_report: 10     # Maximum number of faces to report per image
+
+# ============================= CACHING ============================================
+caching:
+  # Enable caching
+  enabled: true
+
+  # Cache specific features
+  cache_embeddings: true
+  cache_quality_scores: true
+  cache_features: true
+  cache_faces: true
+  cache_gemini_responses: true
+
+  # Cache behavior
+  force_recompute: false      # Set true to rebuild all caches
+
+  # Cache invalidation
+  ttl_days: 365               # Cache time-to-live in days (0 = never expire)
+  max_cache_size_gb: 10       # Maximum cache size before cleanup
+
+# ============================= PERFORMANCE ========================================
+performance:
+  # Batch sizes
+  embedding_batch_size: 128
+  quality_batch_size: 64
+  classification_batch_size: 32
+
+  # Parallel processing
+  use_multiprocessing: true
+  quality_workers: 4
+  dedup_workers: 4
+
+  # Device selection
+  device: "cuda"              # "cuda" or "cpu"
+
+# ============================= TRAINING ===========================================
+training:
+  # Data splits
+  validation_split: 0.2
+  random_seed: 1337
+
+  # Class balancing
+  max_negative_per_positive: 3
+  balance_method: "undersample"  # "smote", "oversample", "undersample", "none"
+
+  # Pairwise training weights
+  within_cluster_weight: 2.0  # Higher weight for within-burst comparisons
+  between_cluster_weight: 1.0
+
+  # Camera roll negatives
+  use_camera_roll_negatives: true
+  date_range_days: 30
+
+# ============================= COST ESTIMATION ====================================
+cost:
+  # Gemini 2.5 Flash pricing (as of 2025)
+  per_1m_input_tokens: 0.30   # $0.30 per 1M input tokens
+  per_1m_output_tokens: 2.50  # $2.50 per 1M output tokens
+
+  # Estimated costs (including prompt + output)
+  per_photo: 0.0008           # ~$0.0008 per singleton photo
+  per_burst_photo: 0.00026    # ~$0.00026 per photo in burst (shared prompt)
+
+  # Video costs
+  tokens_per_video_second: 300  # Visual tokens per second
+  prompt_tokens_video: 1500     # Video prompt tokens
+  output_tokens_video: 300      # Video response tokens
+
+# ============================= LEGACY FEATURES ====================================
+# These features are from the old classical ML approach and may be removed
+legacy:
+  # Two-stage filtering (pre-filter by quality)
+  use_two_stage_filter: false
+
+  # Baby gate (requires baby in photo)
+  skip_baby_gate: true
+  baby_gate_min_prob: 0.30
+  baby_gate_use_ratio: false
+
+  # Near-duplicate detection (phash-based)
+  enable_phash_dedup: false
+  dedup_hamming_max: 5
+
+  # Classical ML model training
+  enable_classical_training: false
+  model_type: "ensemble"      # "xgboost", "random_forest", "neural_net", "logistic", "ensemble"
+  use_quality_features: true
+  use_face_features: true
+  use_temporal_features: true
+  use_metadata_features: true
+
+# ============================= SYSTEM =============================================
+system:
+  # Dry run mode (don't move files, just report)
+  dry_run: false
+
+  # Verbose logging
+  verbose: true
+
+  # Progress bars
+  show_progress: true
+
+  # Checkpoint frequency
+  checkpoint_every_n: 50      # Save checkpoint every N photos
+
+  # Error handling
+  continue_on_error: true     # Continue processing after errors
+  max_retries: 3              # Max retries for API calls
+  retry_delay_seconds: 2      # Delay between retries

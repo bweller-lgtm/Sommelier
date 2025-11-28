@@ -1,0 +1,54 @@
+{
+  "description": "Explicit taste preferences for photo sorting - overrides learned patterns",
+
+  "top_priorities": [
+    "Parent-child interaction quality",
+    "Baby's expression (mischief, joy, engagement)",
+    "Parent expressions (should be engaged, not vacant)",
+    "Baby's face clearly visible",
+    "Genuine emotional moments"
+  ],
+
+  "share_criteria": {
+    "must_have": [
+      "Baby's face clearly visible",
+      "Good technical quality (sharp, well-lit)"
+    ],
+    "highly_valued": [
+      "Parent and baby both have good expressions",
+      "Subjects engaged with each other (eye contact, shared activity)",
+      "Emotional moments: mischief, joy, intimacy, playfulness",
+      "Natural interactions (not forced/posed)"
+    ],
+    "bonus_points": [
+      "Candid, unaware moments",
+      "Funny expressions or situations",
+      "Physical closeness/affection"
+    ]
+  },
+
+  "reject_criteria": {
+    "deal_breakers": [
+      "Can't see baby's face clearly",
+      "Unclear what's happening in the photo",
+      "Parent has vacant/disengaged expression",
+      "Major technical issues (very blurry, bad lighting)"
+    ],
+    "negative_factors": [
+      "Subjects looking in different directions (unless intentional)",
+      "Too zoomed out to see expressions",
+      "Ordinary moment without special quality",
+      "Awkward composition",
+      "Baby looks upset/unhappy (unless comedically so)"
+    ]
+  },
+
+  "contextual_notes": {
+    "parent_expressions": "Parent expressions matter as much as baby's. A photo with perfect baby but vacant parent is not share-worthy.",
+    "interaction_over_solo": "Photos showing interaction between parent and child are preferred over solo baby shots, unless baby is doing something particularly special.",
+    "technical_threshold": "Technical quality is important but not sufficient - a technically perfect photo of an ordinary moment is still Storage.",
+    "burst_philosophy": "In burst mode, only keep the absolute best 1-2 photos. Don't share from every burst."
+  },
+
+  "share_philosophy": "I want photos that capture genuine moments of connection, emotion, and personality - especially between parent and child. Technical quality matters, but the emotional content and interaction quality matter more."
+}

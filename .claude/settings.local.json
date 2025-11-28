@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(nul)",
+      "Bash(for dir in \"E:\\Dropbox\\Camera Roll\\2025_sorted\"/*)",
+      "Bash(done)",
+      "Bash(xargs -I {} python -c \"from PIL import Image; print(Image.open(''''{}'''').size)\")",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(mkdir:*)",
+      "Bash(git mv test_*.py analyze_missing_files.py check_babygate_cache.py check_gemini_cache_babygate.py find_failed_embeddings.py find_missing_files.py find_missing_videos.py trace_missing_files.py missing_files_list.txt old/tests/)",
+      "Bash(mv:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(dir /s \"E:\\OneDrive\\Evie and Elle\\LLM Taste Cloner\" /b)",
+      "Bash(dir:*)",
+      "Bash(tree:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
