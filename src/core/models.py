@@ -180,10 +180,13 @@ class GeminiClient:
         elif candidate.finish_reason not in [1, 2]:
             print(f"⚠️  Warning: Unusual finish reason: {candidate.finish_reason}")
 
-        # Extract text
+        # Extract text - handle truncated responses gracefully
         try:
             text = response.text.strip()
         except Exception as e:
+            # If MAX_TOKENS and text extraction fails, raise retriable error
+            if candidate.finish_reason == 2:
+                raise GeminiError(f"Response truncated (MAX_TOKENS) and could not extract text: {e}")
             raise GeminiError(f"Could not extract text from response: {e}")
 
         return GeminiResponse(
@@ -198,7 +201,7 @@ class GeminiClient:
         prompt: Union[str, List[Union[str, Image.Image, Path]]],
         generation_config: Optional[Dict[str, Any]] = None,
         handle_safety_errors: bool = True,
-        rate_limit_delay: float = 0.2,
+        rate_limit_delay: float = 0.5,
     ) -> GeminiResponse:
         """
         Generate content with retries and error handling.
@@ -224,7 +227,7 @@ class GeminiClient:
 
         # Default generation config
         if generation_config is None:
-            generation_config = {"max_output_tokens": 2048}
+            generation_config = {"max_output_tokens": 4096}
 
         # Rate limiting
         if rate_limit_delay > 0:
