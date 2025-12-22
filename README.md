@@ -14,6 +14,8 @@ Classifies photos/videos into 4 categories:
 - **Review** - Uncertain, needs manual review
 - **Ignore** - No children or inappropriate
 
+**NEW: Gray Zone Photo Improvement** - Detects meaningful family moments with technical issues (blur, noise, etc.) and uses Gemini AI to enhance them while preserving authenticity.
+
 ---
 
 ## 🚀 Quick Start (30 Seconds)
@@ -74,6 +76,77 @@ py -3.12 taste_classify.py "path/to/photos" --parallel-videos 20
 
 ---
 
+## 🎨 Photo Improvement (Gray Zone)
+
+**NEW in v2.1** - Automatically detects "gray zone" photos: meaningful family moments with technical issues that can be improved by AI.
+
+### What Gets Flagged?
+
+Photos with **high contextual value** (rare family groupings, parent-child interactions, emotional moments) **plus** technical issues:
+- Motion blur / focus blur
+- Noise / grain
+- Under/overexposure
+- White balance issues
+- Low resolution
+
+### Workflow
+
+1. **During Classification** - Gray zone photos are copied to `ImprovementCandidates/` with metadata saved to `improvement_candidates.csv`
+
+2. **Review** - After classification, you're prompted to review candidates:
+   - **Gradio UI** - Opens interactive review interface
+   - **Manual** - Edit CSV directly (set `approved` column to Y/N)
+
+3. **Improvement** - Process approved candidates:
+   ```bash
+   py -3.12 improve_photos.py "path/to/sorted_folder"
+   ```
+
+### Improve Photos Script
+
+```bash
+# Review in Gradio UI first, then improve
+py -3.12 improve_photos.py "path/to/sorted" --review
+
+# Dry run - see what would happen
+py -3.12 improve_photos.py "path/to/sorted" --dry-run
+
+# Improve all approved candidates
+py -3.12 improve_photos.py "path/to/sorted"
+
+# Use more parallel workers
+py -3.12 improve_photos.py "path/to/sorted" --parallel 10
+```
+
+### Cost
+
+- **Per image:** ~$0.134 (Gemini 3 Pro Image - best quality)
+- **Budget option:** ~$0.039 (Gemini 3 Flash Image - faster)
+- **Example:** 10 approved photos = ~$1.34 (Pro) or ~$0.39 (Flash)
+- Cost estimate shown before processing with confirmation prompt
+
+### Configuration
+
+```yaml
+photo_improvement:
+  enabled: true                    # Enable gray zone detection
+  contextual_value_threshold: high # "high" or "medium"
+  min_issues_for_candidate: 1      # Minimum technical issues
+  cost_per_image: 0.134            # For estimates
+  parallel_workers: 5              # Concurrent processing
+  model_name: "gemini-3-pro-image-preview"  # Best quality
+  review_after_sort: true          # Prompt to review after classification
+```
+
+### Important Notes
+
+- **Originals preserved** - Original photos are never modified
+- **Both versions saved** - `Improved/` contains `{name}_original.jpg` and `{name}_improved.jpg`
+- **Conservative prompts** - AI is instructed to preserve faces, expressions, and authenticity
+- **Manual approval required** - No photos are improved without explicit approval
+
+---
+
 ## ⚙️ Configuration
 
 All settings are in `config.yaml`. Key settings:
@@ -128,8 +201,13 @@ The project has been **completely refactored** with a clean, modular architectur
 - **`src/classification/classifier.py`** - Media classification (photos/videos)
 - **`src/classification/routing.py`** - Burst-aware routing with diversity checking
 
+### Photo Improvement
+- **`src/improvement/improver.py`** - Photo improvement using Gemini image generation
+- **`src/improvement/review_ui.py`** - Gradio UI for reviewing candidates
+
 ### Entry Points
 - **`taste_classify.py`** - Main classification script
+- **`improve_photos.py`** - Photo improvement script
 - **`taste_trainer_pairwise_v4.py`** - Training UI (Gradio)
 - **`generate_taste_profile.py`** - Generate AI taste profile
 
@@ -184,16 +262,20 @@ Each photo/burst is analyzed by Gemini AI based on your taste preferences.
 
 ## 💰 Cost Estimates
 
-**Gemini 2.5 Flash Pricing (2025):**
-- **Input:** $0.30 per 1M tokens
-- **Output:** $2.50 per 1M tokens
+**Gemini 3 Flash Pricing (Dec 2025):**
+- **Input:** $0.50 per 1M tokens
+- **Output:** $3.00 per 1M tokens
 
-**Per Item:**
-- **Photo:** ~$0.0008 per photo
-- **Burst Photo:** ~$0.00026 per photo (shared prompt cost)
-- **Video:** ~$0.0067 per minute
+**Per Item (Classification):**
+- **Photo:** ~$0.0013 per photo
+- **Burst Photo:** ~$0.00043 per photo (shared prompt cost)
+- **Video:** ~$0.011 per minute
 
-**Example:** 1,000 photos ≈ $0.80 (first run), $0.08 (cached re-run)
+**Photo Improvement (Gemini Image Generation):**
+- **Per improved photo:** ~$0.134 (Gemini 3 Pro) or ~$0.039 (Gemini 3 Flash)
+- **Example:** 10 improved photos ≈ $1.34 (Pro) or $0.39 (Flash)
+
+**Example:** 1,000 photos ≈ $1.30 classification (first run), ~$0 (cached re-run)
 
 ---
 
@@ -201,12 +283,16 @@ Each photo/burst is analyzed by Gemini AI based on your taste preferences.
 
 ```
 MyFolder_sorted/
-├── Share/          # 📸 Share-worthy photos/videos (25-30% target)
-├── Storage/        # 💾 Keep but don't share
-├── Review/         # 🤔 Uncertain, needs manual review
-├── Ignore/         # 🚫 No children or inappropriate
-├── Videos/         # 🎥 Videos (if classification disabled)
-└── Reports/        # 📊 Classification logs (CSV)
+├── Share/                    # 📸 Share-worthy photos/videos (25-30% target)
+├── Storage/                  # 💾 Keep but don't share
+├── Review/                   # 🤔 Uncertain, needs manual review
+├── Ignore/                   # 🚫 No children or inappropriate
+├── Videos/                   # 🎥 Videos (if classification disabled)
+├── ImprovementCandidates/    # 🎨 Gray zone photos (high value + technical issues)
+│   └── improvement_candidates.csv  # Metadata & approval status
+├── Improved/                 # ✨ AI-enhanced photos (after processing)
+│   └── improvement_results.csv     # Processing results
+└── Reports/                  # 📊 Classification logs (CSV)
 ```
 
 ---
@@ -225,18 +311,20 @@ pytest tests/test_classification.py -v
 pytest tests/ --cov=src --cov-report=html
 ```
 
-**Current Status:** 65 passing tests ✅
+**Current Status:** 110 passing tests ✅
 
 ### Project Structure
 ```
 src/
 ├── core/              # Configuration, caching, Gemini client
 ├── features/          # Quality, bursts, embeddings
-└── classification/    # Prompts, classifier, routing
+├── classification/    # Prompts, classifier, routing
+└── improvement/       # Photo improvement (gray zone)
 
-tests/                 # 65 passing unit + integration tests
+tests/                 # Unit + integration tests
 config.yaml            # All configuration in one place
-taste_classify.py      # Main entry point
+taste_classify.py      # Main classification entry point
+improve_photos.py      # Photo improvement entry point
 ```
 
 ---
@@ -258,8 +346,11 @@ taste_classify.py      # Main entry point
 ✅ **Video Classification** - ON by default, 10 parallel workers
 ✅ **Cost Optimization** - Smart caching saves ~90% on re-runs
 ✅ **Type-Safe Config** - YAML configuration with validation
-✅ **Comprehensive Tests** - 65 tests ensure quality
+✅ **Comprehensive Tests** - Unit and integration tests ensure quality
 ✅ **Taste Profile Integration** - Uses both manual and AI-generated preferences
+✅ **Gray Zone Detection** - Identifies valuable photos with technical issues
+✅ **AI Photo Improvement** - Enhance gray zone photos with Gemini image generation
+✅ **Gradio Review UI** - Interactive interface for approving improvement candidates
 
 ---
 
@@ -338,7 +429,7 @@ Personal project - Use at your own risk
 ## 🙏 Credits
 
 **Built with:**
-- Google Gemini 2.5 Flash (AI classification)
+- Google Gemini 3 Flash (AI classification)
 - OpenCLIP (visual embeddings)
 - Gradio (training UI)
 - Claude Code (AI-assisted development was transformative!)
@@ -359,6 +450,6 @@ For video-specific issues, see `VIDEO_CLASSIFICATION_GUIDE.md`.
 
 ---
 
-**Version:** 2.0.0 (Refactored)
-**Last Updated:** November 11, 2025
+**Version:** 2.1.0 (Photo Improvement)
+**Last Updated:** December 1, 2025
 **Status:** Production Ready ✅

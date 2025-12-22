@@ -1,12 +1,12 @@
-# Video Classification with Gemini 2.5 Flash
+# Video Classification with Gemini 3 Flash
 
 ## Overview
 
-Your LLM photo classification script now supports **video classification** using Gemini 2.5 Flash's video understanding capabilities!
+Your LLM photo classification script now supports **video classification** using Gemini 3 Flash's video understanding capabilities!
 
 ## How It Works
 
-- **Same model**: Uses `gemini-2.5-flash` (same as for photos)
+- **Same model**: Uses `gemini-3-flash-preview` (same as for photos)
 - **Files API**: Videos are uploaded to Gemini, processed, then analyzed
 - **Same categories**: Share, Storage, or Ignore
 - **Video-specific**: Also evaluates audio quality and video quality
@@ -61,12 +61,12 @@ The script automatically estimates cost **before** processing:
    💡 RECOMMENDATION: Test with 10-20 videos first to verify accuracy
 ```
 
-### Actual Gemini 2.5 Flash Pricing (2025)
+### Actual Gemini 3 Flash Pricing (Dec 2025)
 
 From https://ai.google.dev/gemini-api/docs/pricing:
 
-- **Input tokens**: $0.30 per 1M tokens (text/image/video)
-- **Output tokens**: $2.50 per 1M tokens (JSON responses)
+- **Input tokens**: $0.50 per 1M tokens (text/image/video)
+- **Output tokens**: $3.00 per 1M tokens (JSON responses)
 
 ### Cost Breakdown Per Video
 
@@ -74,29 +74,29 @@ From https://ai.google.dev/gemini-api/docs/pricing:
 - Input: 60 sec × 300 tokens/sec = 18,000 visual tokens
 - Input: +1,500 tokens (rich taste profile prompt)
 - Output: +300 tokens (JSON with reasoning)
-- **Input cost**: 19,500 × $0.30 / 1M = $0.0059
-- **Output cost**: 300 × $2.50 / 1M = $0.0008
-- **Total: ~$0.0067 per minute of video**
+- **Input cost**: 19,500 × $0.50 / 1M = $0.00975
+- **Output cost**: 300 × $3.00 / 1M = $0.0009
+- **Total: ~$0.011 per minute of video**
 
 ### Real-World Examples
 
 | Video Count | Avg Duration | Total Size | Estimated Cost | Notes |
 |------------|-------------|-----------|----------------|-------|
-| 10 videos | 30 sec | 150 MB | $0.04 | Good for testing |
-| 100 videos | 60 sec | 1.5 GB | $0.67 | Small batch |
-| 589 videos | 45 sec | 9 GB | $2.65 | Medium batch |
-| 1,415 videos | 60 sec | 20 GB | $9.48 | Large batch |
-| **5,000 videos** | **60 sec** | **80 GB** | **$33.50** | **Your full library** |
+| 10 videos | 30 sec | 150 MB | $0.06 | Good for testing |
+| 100 videos | 60 sec | 1.5 GB | $1.10 | Small batch |
+| 589 videos | 45 sec | 9 GB | $4.86 | Medium batch |
+| 1,415 videos | 60 sec | 20 GB | $15.57 | Large batch |
+| **5,000 videos** | **60 sec** | **80 GB** | **$55.00** | **Your full library** |
 
 ### Important Notes
 
 ⚠️ **File size ≠ duration**: The script estimates duration from file size (rough), but actual duration may be 2-3x different
 
-⚠️ **Output costs matter**: Output tokens cost 8x more than input ($2.50 vs $0.30 per million)
+⚠️ **Output costs matter**: Output tokens cost 6x more than input ($3.00 vs $0.50 per million)
 
 ⚠️ **Test first**: Run on 10-20 videos, check actual cost in Google AI Studio, then extrapolate
 
-**Recommendation**: For 80 GB of video, budget $30-60 depending on average video length.
+**Recommendation**: For 80 GB of video, budget $50-100 depending on average video length.
 
 ## Output
 
