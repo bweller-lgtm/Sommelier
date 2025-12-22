@@ -10,6 +10,7 @@ import os
 import sys
 import argparse
 import shutil
+import csv
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
@@ -102,16 +103,24 @@ Examples:
     return parser.parse_args()
 
 
-def setup_output_directories(output_base: Path) -> dict:
+def setup_output_directories(output_base: Path, classify_videos: bool = True, photo_improvement_enabled: bool = False) -> dict:
     """Create output directories for sorted media."""
     directories = {
         "Share": output_base / "Share",
         "Storage": output_base / "Storage",
         "Review": output_base / "Review",
         "Ignore": output_base / "Ignore",
-        "Videos": output_base / "Videos",
         "Reports": output_base / "Reports",
     }
+
+    # Only create Videos folder when video classification is disabled
+    if not classify_videos:
+        directories["Videos"] = output_base / "Videos"
+
+    # Create improvement directories if enabled
+    if photo_improvement_enabled:
+        directories["ImprovementCandidates"] = output_base / "ImprovementCandidates"
+        directories["Improved"] = output_base / "Improved"
 
     for dir_path in directories.values():
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -205,8 +214,8 @@ def process_images(
     print(f"\n📦 Step 4: Moving files to destination folders...")
     stats = move_files(results, output_dirs, dry_run)
 
-    # 6. Generate report
-    generate_report(results, output_dirs["Reports"])
+    # 6. Generate report (include improvement fields if enabled)
+    generate_report(results, output_dirs["Reports"], config.photo_improvement.enabled)
 
     return results
 
@@ -287,13 +296,13 @@ def move_files(results: list, output_dirs: dict, dry_run: bool) -> dict:
     return stats
 
 
-def generate_report(results: list, report_dir: Path):
+def generate_report(results: list, report_dir: Path, include_improvement: bool = False):
     """Generate classification report CSV."""
     rows = []
 
     for result in results:
         classification = result["classification"]
-        rows.append({
+        row = {
             "source": str(result["path"]),
             "destination": result["destination"],
             "classification": classification.get("classification", "Unknown"),
@@ -304,12 +313,102 @@ def generate_report(results: list, report_dir: Path):
             "reasoning": classification.get("reasoning", ""),
             "contains_children": classification.get("contains_children", None),
             "is_appropriate": classification.get("is_appropriate", None),
-        })
+        }
+
+        # Add improvement fields if enabled
+        if include_improvement:
+            row["improvement_candidate"] = classification.get("improvement_candidate", False)
+            row["improvement_reasons"] = ",".join(classification.get("improvement_reasons", []))
+            row["contextual_value"] = classification.get("contextual_value", "low")
+            row["contextual_value_reasoning"] = classification.get("contextual_value_reasoning", "")
+
+        rows.append(row)
 
     df = pd.DataFrame(rows)
     report_path = report_dir / f"classification_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     df.to_csv(report_path, index=False)
     print(f"\n📊 Report saved: {report_path}")
+
+
+def save_improvement_candidates_csv(results: list, output_dirs: dict, cost_per_image: float):
+    """
+    Save improvement candidates to a CSV file for human review.
+
+    Args:
+        results: List of classification results.
+        output_dirs: Dictionary of output directories.
+        cost_per_image: Cost per image improvement.
+    """
+    candidates_dir = output_dirs.get("ImprovementCandidates")
+    if candidates_dir is None:
+        return 0
+
+    # Filter to only improvement candidates
+    candidates = [r for r in results if r["destination"] == "ImprovementCandidates"]
+
+    if not candidates:
+        return 0
+
+    csv_path = candidates_dir / "improvement_candidates.csv"
+
+    rows = []
+    for result in candidates:
+        classification = result["classification"]
+        rows.append({
+            "filename": result["path"].name,
+            "original_path": str(result["path"]),
+            "contextual_value": classification.get("contextual_value", ""),
+            "contextual_reasoning": classification.get("contextual_value_reasoning", ""),
+            "improvement_reasons": ",".join(classification.get("improvement_reasons", [])),
+            "estimated_cost": f"${cost_per_image:.3f}",
+            "approved": "",  # Human fills this in
+            "status": "pending"
+        })
+
+    # Write CSV
+    fieldnames = ["filename", "original_path", "contextual_value", "contextual_reasoning",
+                  "improvement_reasons", "estimated_cost", "approved", "status"]
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"\n📋 Improvement candidates CSV saved: {csv_path}")
+    return len(candidates)
+
+
+def prompt_for_improvement_review(candidates_count: int, output_dirs: dict, total_cost: float) -> bool:
+    """
+    Prompt user to review improvement candidates.
+
+    Args:
+        candidates_count: Number of improvement candidates.
+        output_dirs: Dictionary of output directories.
+        total_cost: Total estimated cost for all candidates.
+
+    Returns:
+        True if user wants to review now, False otherwise.
+    """
+    if candidates_count == 0:
+        return False
+
+    print("\n" + "="*60)
+    print("🎨 IMPROVEMENT CANDIDATES DETECTED")
+    print("="*60)
+    print(f"\nFound {candidates_count} photos with high contextual value but technical issues.")
+    print(f"Estimated improvement cost: ${total_cost:.2f}")
+    print(f"\nCandidates saved to: {output_dirs['ImprovementCandidates']}")
+    print("CSV file: improvement_candidates.csv")
+    print("\nOptions:")
+    print("  [y] Review candidates now (opens Gradio UI)")
+    print("  [n] Review later (edit CSV or run improve_photos.py --review)")
+
+    try:
+        response = input("\nReview improvement candidates now? [y/N]: ").strip().lower()
+        return response == "y"
+    except (EOFError, KeyboardInterrupt):
+        return False
 
 
 def print_summary(image_stats: dict, video_stats: dict):
@@ -382,7 +481,11 @@ def main():
     print(f"📂 Output directory: {output_base}")
 
     # Setup output directories
-    output_dirs = setup_output_directories(output_base)
+    output_dirs = setup_output_directories(
+        output_base,
+        config.classification.classify_videos,
+        config.photo_improvement.enabled
+    )
 
     # Initialize cache manager
     cache_manager = CacheManager(
@@ -443,6 +546,79 @@ def main():
     if config.system.dry_run:
         print("\n💡 This was a dry run. No files were moved.")
         print("   Remove --dry-run to actually move files.")
+
+    # Handle improvement candidates
+    improvement_count = 0
+    if config.photo_improvement.enabled and not config.system.dry_run:
+        # Save improvement candidates CSV
+        improvement_count = save_improvement_candidates_csv(
+            image_results,
+            output_dirs,
+            config.photo_improvement.cost_per_image
+        )
+
+        # Prompt for review if candidates exist and review_after_sort is enabled
+        if improvement_count > 0 and config.photo_improvement.review_after_sort:
+            total_cost = improvement_count * config.photo_improvement.cost_per_image
+            wants_review = prompt_for_improvement_review(improvement_count, output_dirs, total_cost)
+
+            if wants_review:
+                try:
+                    from src.improvement.review_ui import launch_review_ui
+                    from src.improvement import PhotoImprover
+                    from src.core.models import GeminiImageClient
+
+                    print("\n🎨 Launching Gradio review UI...")
+                    launch_review_ui(output_dirs["ImprovementCandidates"])
+
+                    # After review, check for approved candidates and process them
+                    print("\n✅ Review complete!")
+                    improver = PhotoImprover(config)
+                    approved = improver.load_candidates(output_dirs["ImprovementCandidates"])
+
+                    if approved:
+                        approved_cost = len(approved) * config.photo_improvement.cost_per_image
+                        print(f"\n🎨 {len(approved)} photos approved for improvement")
+                        print(f"   Estimated cost: ${approved_cost:.2f}")
+                        print(f"   Model: {config.photo_improvement.model_name}")
+
+                        print("\n🤖 Initializing Gemini image client...")
+                        try:
+                            gemini_image_client = GeminiImageClient(
+                                model_name=config.photo_improvement.model_name,
+                                max_output_tokens=config.photo_improvement.max_output_tokens
+                            )
+                            improver.client = gemini_image_client
+                            print(f"   ✅ Ready")
+
+                            # Ensure Improved folder exists
+                            output_dirs["Improved"].mkdir(parents=True, exist_ok=True)
+
+                            # Process approved candidates
+                            print(f"\n🚀 Processing {len(approved)} photos...")
+                            results = improver.process_batch(
+                                approved,
+                                output_dirs["ImprovementCandidates"],
+                                output_dirs["Improved"],
+                                show_progress=True
+                            )
+
+                            # Save results and print summary
+                            improver.save_results_csv(results, output_dirs["Improved"])
+                            improver.print_summary(results)
+                            print(f"\n📂 Improved photos saved to: {output_dirs['Improved']}")
+
+                        except ImportError as e:
+                            print(f"   ❌ Missing dependency: {e}")
+                            print("   Run: pip install google-genai")
+                        except Exception as e:
+                            print(f"   ❌ Error: {e}")
+                    else:
+                        print("\n⚠️  No photos were approved for improvement.")
+
+                except ImportError:
+                    print("\n⚠️  Gradio review UI not available.")
+                    print(f"   Run: python improve_photos.py \"{output_base}\" --review")
 
     print("\n✅ Classification complete!")
 

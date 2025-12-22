@@ -2,6 +2,7 @@
 
 # Core AI/ML
 google-generativeai>=0.3.0
+google-genai>=1.0.0  # Required for image generation
 torch>=2.0.0
 open-clip-torch>=2.20.0
 numpy>=1.24.0

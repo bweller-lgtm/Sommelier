@@ -14,7 +14,12 @@
       "Bash(git commit:*)",
       "Bash(dir /s \"E:\\OneDrive\\Photos\\LLM Taste Cloner\" /b)",
       "Bash(dir:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(tar:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"E:\\OneDrive\\Photos\\Taste Cloner Photo Sorter\\create_zip.ps1\")",
+      "WebSearch",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

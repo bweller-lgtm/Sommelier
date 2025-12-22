@@ -4,7 +4,7 @@
 # ============================= MODEL SETTINGS =====================================
 model:
   # Gemini model to use for classification
-  name: "gemini-2.5-flash"
+  name: "gemini-3-flash-preview"
 
   # Maximum output tokens for API responses (increase if hitting truncation)
   max_output_tokens: 4096
@@ -168,13 +168,13 @@ training:
 
 # ============================= COST ESTIMATION ====================================
 cost:
-  # Gemini 2.5 Flash pricing (as of 2025)
-  per_1m_input_tokens: 0.30   # $0.30 per 1M input tokens
-  per_1m_output_tokens: 2.50  # $2.50 per 1M output tokens
+  # Gemini 3 Flash pricing (as of Dec 2025)
+  per_1m_input_tokens: 0.50   # $0.50 per 1M input tokens
+  per_1m_output_tokens: 3.00  # $3.00 per 1M output tokens
 
   # Estimated costs (including prompt + output)
-  per_photo: 0.0008           # ~$0.0008 per singleton photo
-  per_burst_photo: 0.00026    # ~$0.00026 per photo in burst (shared prompt)
+  per_photo: 0.0013           # ~$0.0013 per singleton photo
+  per_burst_photo: 0.00043    # ~$0.00043 per photo in burst (shared prompt)
 
   # Video costs
   tokens_per_video_second: 300  # Visual tokens per second
@@ -222,3 +222,42 @@ system:
   continue_on_error: true     # Continue processing after errors
   max_retries: 3              # Max retries for API calls
   retry_delay_seconds: 2      # Delay between retries
+
+# ============================= PHOTO IMPROVEMENT ==================================
+# Gray zone photo detection and AI-powered improvement
+# Identifies photos with high contextual value but poor technical quality
+photo_improvement:
+  # Enable gray zone photo detection and improvement pipeline
+  # Note: Gemini generates "improved" versions rather than pixel-editing originals.
+  # May alter minor details (objects, background) while fixing the core issues.
+  enabled: true
+
+  # Minimum contextual value to be considered for improvement
+  # "high" = only exceptional moments (rare family groupings, milestones)
+  # "medium" = good moments too (genuine interactions, candid shots)
+  contextual_value_threshold: "medium"
+
+  # Minimum number of technical issues to flag as improvement candidate
+  # Issues: motion_blur, focus_blur, noise, underexposed, overexposed,
+  #         white_balance, low_resolution, composition
+  min_issues_for_candidate: 1
+
+  # Cost per improved image (Gemini 3 Pro Image pricing)
+  cost_per_image: 0.134       # ~$0.134 per image (1K/2K resolution)
+
+  # Parallel workers for improvement processing
+  parallel_workers: 5
+
+  # Maximum retry attempts per image
+  max_retries: 2
+
+  # Gemini model for image generation/improvement
+  # gemini-3-pro-image-preview: Best quality, $0.134/image
+  # gemini-3-flash-preview-image: Faster, $0.039/image
+  model_name: "gemini-3-pro-image-preview"
+
+  # High token limit for image generation
+  max_output_tokens: 8192
+
+  # Prompt to review improvement candidates after sorting completes
+  review_after_sort: true

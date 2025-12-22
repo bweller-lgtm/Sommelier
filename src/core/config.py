@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, asdict
 @dataclass
 class ModelConfig:
     """Model configuration."""
-    name: str = "gemini-2.5-flash"
+    name: str = "gemini-3-flash-preview"
     max_output_tokens: int = 4096
     clip_model: str = "ViT-B-32"
     clip_pretrained: str = "laion2b_s34b_b79k"
@@ -167,10 +167,10 @@ class TrainingConfig:
 @dataclass
 class CostConfig:
     """Cost estimation configuration."""
-    per_1m_input_tokens: float = 0.30
-    per_1m_output_tokens: float = 2.50
-    per_photo: float = 0.0008
-    per_burst_photo: float = 0.00026
+    per_1m_input_tokens: float = 0.50
+    per_1m_output_tokens: float = 3.00
+    per_photo: float = 0.0013
+    per_burst_photo: float = 0.00043
     tokens_per_video_second: int = 300
     prompt_tokens_video: int = 1500
     output_tokens_video: int = 300
@@ -189,6 +189,31 @@ class SystemConfig:
 
 
 @dataclass
+class PhotoImprovementConfig:
+    """Photo improvement configuration for gray zone photos."""
+    enabled: bool = True
+    contextual_value_threshold: str = "high"  # "high" or "medium"
+    min_issues_for_candidate: int = 1
+    cost_per_image: float = 0.134  # Gemini 3 Pro Image pricing
+    parallel_workers: int = 5
+    max_retries: int = 2
+    model_name: str = "gemini-3-pro-image-preview"
+    max_output_tokens: int = 8192  # High token limit for image generation
+    review_after_sort: bool = True  # Prompt to review candidates after sorting
+
+    def __post_init__(self):
+        """Validate parameters."""
+        if self.contextual_value_threshold not in ["high", "medium"]:
+            raise ValueError(f"contextual_value_threshold must be 'high' or 'medium', got {self.contextual_value_threshold}")
+        if self.min_issues_for_candidate < 1:
+            raise ValueError(f"min_issues_for_candidate must be >= 1, got {self.min_issues_for_candidate}")
+        if self.cost_per_image < 0:
+            raise ValueError(f"cost_per_image must be >= 0, got {self.cost_per_image}")
+        if self.parallel_workers < 1:
+            raise ValueError(f"parallel_workers must be >= 1, got {self.parallel_workers}")
+
+
+@dataclass
 class Config:
     """Master configuration object."""
     model: ModelConfig = field(default_factory=ModelConfig)
@@ -202,6 +227,7 @@ class Config:
     training: TrainingConfig = field(default_factory=TrainingConfig)
     cost: CostConfig = field(default_factory=CostConfig)
     system: SystemConfig = field(default_factory=SystemConfig)
+    photo_improvement: PhotoImprovementConfig = field(default_factory=PhotoImprovementConfig)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Config":
@@ -218,6 +244,7 @@ class Config:
             training=TrainingConfig(**data.get("training", {})),
             cost=CostConfig(**data.get("cost", {})),
             system=SystemConfig(**data.get("system", {})),
+            photo_improvement=PhotoImprovementConfig(**data.get("photo_improvement", {})),
         )
 
 
@@ -281,6 +308,7 @@ def save_config(config: Config, config_path: Path):
         "training": asdict(config.training),
         "cost": asdict(config.cost),
         "system": asdict(config.system),
+        "photo_improvement": asdict(config.photo_improvement),
     }
 
     # Convert Path objects and sets to YAML-serializable formats
