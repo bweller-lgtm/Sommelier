@@ -488,7 +488,7 @@ def get_gemini_comparison(photo_a, photo_b, cache):
         img_a = fix_image_orientation(photo_a, max_size=800)
         img_b = fix_image_orientation(photo_b, max_size=800)
         
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         prompt = """Compare these two photos:
 

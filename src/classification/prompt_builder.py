@@ -203,6 +203,44 @@ class PromptBuilder:
 - In training: {self.share_ratio:.1%} of content is Share-worthy
 - Be selective! Not every cute photo/video is share-worthy"""
 
+    def _build_gray_zone_section(self) -> str:
+        """Build gray zone detection section for improvement candidates."""
+        cost = self.config.photo_improvement.cost_per_image
+        return f"""
+**GRAY ZONE DETECTION (IMPORTANT):**
+Some photos capture irreplaceable moments but have technical issues. Identify these "improvement candidates."
+
+**HIGH CONTEXTUAL VALUE indicators:**
+- Rare family groupings (child with both parents, grandparents, siblings together)
+- Parent-child interaction with genuine eye contact or emotional connection
+- First-time milestones (first steps, first words reaction, first day of school)
+- Candid moments showing authentic personality
+- Multi-generational moments
+
+**TECHNICAL ISSUES to detect:**
+- motion_blur: Subject or camera movement causing blur
+- focus_blur: Missed focus, wrong focal point
+- noise: High ISO grain, especially in low light
+- underexposed: Too dark, lost shadow detail
+- overexposed: Too bright, blown highlights
+- white_balance: Color cast (too orange, too blue)
+- low_resolution: Noticeably pixelated when viewed at full size
+- composition: Could benefit from cropping or straightening
+
+**IMPROVEMENT CANDIDATE CRITERIA:**
+Flag as improvement_candidate=true ONLY if:
+1. Photo has HIGH contextual value (irreplaceable moment)
+2. Photo has at least one significant technical issue
+3. The technical issue prevents this from being Share-worthy
+4. The moment captured is special enough to warrant ~${cost:.2f} improvement cost
+
+Include in your response:
+- "improvement_candidate": true or false
+- "improvement_reasons": ["issue1", "issue2"] (from list above, empty if not a candidate)
+- "contextual_value": "high", "medium", or "low"
+- "contextual_value_reasoning": "Why this moment matters (1 sentence, empty if low)"
+"""
+
     def build_singleton_prompt(self) -> str:
         """
         Build prompt for evaluating a single photo.
@@ -213,6 +251,33 @@ class PromptBuilder:
         taste_section = self._build_taste_section("singleton")
         appropriateness_section = self._build_appropriateness_section()
         calibration_section = self._build_calibration_section()
+
+        # Add gray zone section if improvement is enabled
+        gray_zone_section = ""
+        if self.config.photo_improvement.enabled:
+            gray_zone_section = self._build_gray_zone_section()
+
+        # Build JSON response format based on enabled features
+        if self.config.photo_improvement.enabled:
+            json_format = """{
+    "classification": "Share" or "Storage" or "Ignore",
+    "confidence": 0.0 to 1.0,
+    "reasoning": "Brief explanation (1 sentence max)",
+    "contains_children": true or false,
+    "is_appropriate": true or false,
+    "improvement_candidate": true or false,
+    "improvement_reasons": ["motion_blur", "noise", ...] or [],
+    "contextual_value": "high" or "medium" or "low",
+    "contextual_value_reasoning": "Why this moment matters (if high/medium)"
+}"""
+        else:
+            json_format = """{
+    "classification": "Share" or "Storage" or "Ignore",
+    "confidence": 0.0 to 1.0,
+    "reasoning": "Brief explanation (1 sentence max)",
+    "contains_children": true or false,
+    "is_appropriate": true or false  // Family-friendly? No inappropriate nudity?
+}"""
 
         prompt = f"""You are helping sort family photos of young children into three categories: SHARE, STORAGE, or IGNORE.
 {taste_section}
@@ -234,15 +299,9 @@ class PromptBuilder:
 - Parent expressions are poor/vacant
 
 {calibration_section}
-
+{gray_zone_section}
 Analyze this photo and respond with CONCISE JSON:
-{{
-    "classification": "Share" or "Storage" or "Ignore",
-    "confidence": 0.0 to 1.0,
-    "reasoning": "Brief explanation (1 sentence max)",
-    "contains_children": true or false,
-    "is_appropriate": true or false  // Family-friendly? No inappropriate nudity?
-}}"""
+{json_format}"""
 
         return prompt
 
@@ -259,6 +318,41 @@ Analyze this photo and respond with CONCISE JSON:
         taste_section = self._build_taste_section("burst")
         appropriateness_section = self._build_appropriateness_section()
         calibration_section = self._build_calibration_section()
+
+        # Add gray zone section if improvement is enabled
+        gray_zone_section = ""
+        if self.config.photo_improvement.enabled:
+            gray_zone_section = self._build_gray_zone_section()
+
+        # Build JSON response format based on enabled features
+        if self.config.photo_improvement.enabled:
+            json_example = f"""[
+  {{
+    "rank": 1 to {burst_size},
+    "classification": "Share" or "Storage" or "Ignore",
+    "confidence": 0.0 to 1.0,
+    "reasoning": "Why this rank? (1 sentence)",
+    "contains_children": true or false,
+    "is_appropriate": true or false,
+    "improvement_candidate": true or false,
+    "improvement_reasons": ["motion_blur", "noise", ...] or [],
+    "contextual_value": "high" or "medium" or "low",
+    "contextual_value_reasoning": "Why this moment matters (if high/medium)"
+  }},
+  ...
+]"""
+        else:
+            json_example = f"""[
+  {{
+    "rank": 1 to {burst_size},
+    "classification": "Share" or "Storage" or "Ignore",
+    "confidence": 0.0 to 1.0,
+    "reasoning": "Why this rank? (1 sentence)",
+    "contains_children": true or false,
+    "is_appropriate": true or false
+  }},
+  ...
+]"""
 
         prompt = f"""You are helping sort family photos of young children into three categories: SHARE, STORAGE, or IGNORE.
 
@@ -297,19 +391,9 @@ These are very similar - slight variations of the same moment.
 - If burst has 2 exceptional photos → Share both (rare)
 
 {calibration_section}
-
+{gray_zone_section}
 Respond with JSON array (one entry per photo, SAME ORDER as shown):
-[
-  {{
-    "rank": 1 to {burst_size},
-    "classification": "Share" or "Storage" or "Ignore",
-    "confidence": 0.0 to 1.0,
-    "reasoning": "Why this rank? (1 sentence)",
-    "contains_children": true or false,
-    "is_appropriate": true or false
-  }},
-  ...
-]"""
+{json_example}"""
 
         return prompt
 

@@ -19,7 +19,7 @@ class TestModelConfig:
     def test_defaults(self):
         """Test default values."""
         config = ModelConfig()
-        assert config.name == "gemini-2.5-flash"
+        assert config.name == "gemini-3-flash-preview"
         assert config.clip_model == "ViT-B-32"
 
     def test_custom_values(self):
@@ -113,7 +113,7 @@ class TestConfigLoading:
         # Create test config
         config_data = {
             "model": {
-                "name": "gemini-2.5-flash",
+                "name": "gemini-3-flash-preview",
                 "clip_model": "ViT-B-32",
             },
             "classification": {
@@ -129,7 +129,7 @@ class TestConfigLoading:
         # Load config
         config = load_config(config_file)
 
-        assert config.model.name == "gemini-2.5-flash"
+        assert config.model.name == "gemini-3-flash-preview"
         assert config.classification.share_threshold == 0.65
         assert config.classification.review_threshold == 0.30
 
@@ -172,7 +172,7 @@ class TestConfig:
 
     def test_defaults(self, sample_config):
         """Test default config creation."""
-        assert sample_config.model.name == "gemini-2.5-flash"
+        assert sample_config.model.name == "gemini-3-flash-preview"
         assert sample_config.classification.share_threshold == 0.60
         assert sample_config.burst_detection.enabled is True
 
