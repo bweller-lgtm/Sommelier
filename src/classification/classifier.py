@@ -342,6 +342,13 @@ class MediaClassifier:
         if is_video:
             response["audio_quality"] = "unknown"
 
+        # Add improvement fields if enabled (photos only, not videos)
+        if self.config.photo_improvement.enabled and not is_video:
+            response["improvement_candidate"] = False
+            response["improvement_reasons"] = []
+            response["contextual_value"] = "low"
+            response["contextual_value_reasoning"] = ""
+
         return response
 
     def _validate_singleton_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
@@ -366,6 +373,50 @@ class MediaClassifier:
             response["contains_children"] = None
         if "is_appropriate" not in response:
             response["is_appropriate"] = None
+
+        # Validate improvement fields if enabled
+        if self.config.photo_improvement.enabled:
+            response = self._validate_improvement_fields(response)
+
+        return response
+
+    def _validate_improvement_fields(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and fix improvement-related fields."""
+        # Valid improvement reasons
+        valid_reasons = {
+            "motion_blur", "focus_blur", "noise", "underexposed",
+            "overexposed", "white_balance", "low_resolution", "composition"
+        }
+
+        # Ensure improvement_candidate is boolean
+        if "improvement_candidate" not in response:
+            response["improvement_candidate"] = False
+        else:
+            response["improvement_candidate"] = bool(response["improvement_candidate"])
+
+        # Ensure improvement_reasons is a list of valid reasons
+        if "improvement_reasons" not in response:
+            response["improvement_reasons"] = []
+        else:
+            reasons = response["improvement_reasons"]
+            if not isinstance(reasons, list):
+                reasons = [reasons] if reasons else []
+            # Filter to only valid reasons
+            response["improvement_reasons"] = [
+                r for r in reasons if r in valid_reasons
+            ]
+
+        # Ensure contextual_value is valid
+        if "contextual_value" not in response:
+            response["contextual_value"] = "low"
+        elif response["contextual_value"] not in ["high", "medium", "low"]:
+            response["contextual_value"] = "low"
+
+        # Ensure contextual_value_reasoning exists
+        if "contextual_value_reasoning" not in response:
+            response["contextual_value_reasoning"] = ""
+        else:
+            response["contextual_value_reasoning"] = str(response["contextual_value_reasoning"])
 
         return response
 

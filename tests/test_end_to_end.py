@@ -330,7 +330,7 @@ def test_full_system_integration():
     # Test configuration
     config = load_config(Path("config.yaml"))
     assert config is not None
-    assert config.model.name == "gemini-2.5-flash"
+    assert config.model.name == "gemini-3-flash-preview"
 
     # Test logging
     logger = get_logger(__name__)

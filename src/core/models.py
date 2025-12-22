@@ -115,7 +115,7 @@ class GeminiClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-3-flash-preview",
         max_retries: int = 3,
         retry_delay: float = 2.0,
         timeout: float = 120.0,
@@ -391,7 +391,7 @@ class GeminiClient:
             return 0
 
 
-def initialize_gemini(api_key: Optional[str] = None, model_name: str = "gemini-2.5-flash") -> GeminiClient:
+def initialize_gemini(api_key: Optional[str] = None, model_name: str = "gemini-3-flash-preview") -> GeminiClient:
     """
     Initialize Gemini client with API key.
 
@@ -403,3 +403,188 @@ def initialize_gemini(api_key: Optional[str] = None, model_name: str = "gemini-2
         GeminiClient instance.
     """
     return GeminiClient(api_key=api_key, model_name=model_name)
+
+
+class GeminiImageClient:
+    """
+    Gemini client for image generation/improvement.
+
+    Uses Gemini's native image generation capabilities to enhance photos
+    while preserving their content.
+
+    NOTE: Requires the NEW google-genai SDK (not google-generativeai).
+    Install with: pip install google-genai
+    """
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model_name: str = "gemini-3-pro-image-preview",
+        max_output_tokens: int = 8192,
+        max_retries: int = 2,
+        retry_delay: float = 2.0,
+    ):
+        """
+        Initialize Gemini image client.
+
+        Args:
+            api_key: Gemini API key. If None, reads from GEMINI_API_KEY env var.
+            model_name: Model for image generation (default: gemini-3-pro-image-preview).
+            max_output_tokens: Maximum output tokens for image generation.
+            max_retries: Maximum number of retries.
+            retry_delay: Initial retry delay in seconds.
+        """
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY not set. Set environment variable or pass to constructor.")
+
+        self.model_name = model_name
+        self.max_output_tokens = max_output_tokens
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+
+        # Import and configure the NEW google-genai SDK
+        try:
+            from google import genai as genai_new
+            from google.genai import types
+            self._genai = genai_new
+            self._types = types
+            self._client = genai_new.Client(api_key=self.api_key)
+        except ImportError:
+            raise ImportError(
+                "Image generation requires the google-genai SDK.\n"
+                "Install with: pip install google-genai"
+            )
+
+    def _get_closest_aspect_ratio(self, width: int, height: int) -> str:
+        """
+        Find the closest supported aspect ratio for an image.
+
+        Supported ratios: 1:1, 2:3, 3:2, 3:4, 4:3, 9:16, 16:9, 21:9
+        """
+        SUPPORTED_RATIOS = {
+            "1:1": 1.0,
+            "2:3": 2/3,
+            "3:2": 3/2,
+            "3:4": 3/4,
+            "4:3": 4/3,
+            "9:16": 9/16,
+            "16:9": 16/9,
+            "21:9": 21/9,
+        }
+
+        actual_ratio = width / height
+        closest = min(SUPPORTED_RATIOS.items(), key=lambda x: abs(x[1] - actual_ratio))
+        return closest[0]
+
+    def generate_improved_image(
+        self,
+        image_path: Path,
+        prompt: str
+    ) -> Optional[bytes]:
+        """
+        Generate an improved version of an image using Gemini.
+
+        Args:
+            image_path: Path to the source image.
+            prompt: Improvement prompt describing what to enhance.
+
+        Returns:
+            Improved image bytes, or None if generation fails.
+        """
+        from .file_utils import ImageUtils
+
+        # Load source image at high resolution (up to 2048px for quality)
+        source_image = ImageUtils.load_and_fix_orientation(image_path, max_size=2048)
+        if source_image is None:
+            print(f"⚠️  Could not load image: {image_path}")
+            return None
+
+        # Get the aspect ratio to preserve
+        width, height = source_image.size
+        aspect_ratio = self._get_closest_aspect_ratio(width, height)
+
+        # Retry loop
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                # Pass PIL Image directly per Google's documentation
+                # Generate content with image input using new SDK
+                response = self._client.models.generate_content(
+                    model=self.model_name,
+                    contents=[prompt, source_image],
+                    config=self._types.GenerateContentConfig(
+                        response_modalities=["Text", "Image"],
+                        image_config=self._types.ImageConfig(
+                            aspect_ratio=aspect_ratio,
+                            image_size="2K"
+                        )
+                    )
+                )
+
+                # Extract image from response
+                if response.candidates and len(response.candidates) > 0:
+                    candidate = response.candidates[0]
+
+                    # Look for image part in response
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'inline_data') and part.inline_data:
+                            # Check if it's an image
+                            mime_type = part.inline_data.mime_type
+                            if mime_type and mime_type.startswith('image/'):
+                                return part.inline_data.data
+
+                # No image found in response
+                print(f"⚠️  No image generated in response")
+                return None
+
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+
+                # Check if rate limit error
+                if "rate" in error_str or "quota" in error_str:
+                    delay = self.retry_delay * (2 ** attempt)
+                    print(f"⚠️  Rate limit hit, retrying in {delay}s...")
+                    time.sleep(delay)
+                    continue
+
+                # Check if temporary error
+                if "unavailable" in error_str or "connection" in error_str:
+                    delay = self.retry_delay * (2 ** attempt)
+                    print(f"⚠️  Temporary error, retrying in {delay}s...")
+                    time.sleep(delay)
+                    continue
+
+                # Check for model not available
+                if "model" in error_str and ("not found" in error_str or "unavailable" in error_str):
+                    print(f"⚠️  Model {self.model_name} not available: {e}")
+                    print("   Check https://ai.google.dev/gemini-api/docs/pricing for current models")
+                    return None
+
+                # Unknown error
+                print(f"⚠️  Image generation error: {e}")
+                return None
+
+        # All retries failed
+        print(f"⚠️  Image generation failed after {self.max_retries} retries: {last_error}")
+        return None
+
+    def save_image(self, image_bytes: bytes, output_path: Path) -> bool:
+        """
+        Save generated image bytes to file.
+
+        Args:
+            image_bytes: Image data bytes.
+            output_path: Path to save the image.
+
+        Returns:
+            True if saved successfully, False otherwise.
+        """
+        try:
+            with open(output_path, "wb") as f:
+                f.write(image_bytes)
+            return True
+        except Exception as e:
+            print(f"⚠️  Error saving image: {e}")
+            return False
