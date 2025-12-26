@@ -1,7 +1,8 @@
 """Unified classifier for photos and videos."""
+import time
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 from tqdm import tqdm
 
 from ..core.models import GeminiClient
@@ -70,33 +71,34 @@ class MediaClassifier:
         # Load image
         img = ImageUtils.load_and_fix_orientation(photo_path, max_size=1024)
         if img is None:
-            return self._create_fallback_response("Failed to load image")
+            return self._create_fallback_response("Failed to load image", error_type="load_error")
 
         # Build prompt
         prompt = self.prompt_builder.build_singleton_prompt()
 
-        # Call Gemini
-        try:
-            result = self.client.generate_json(
-                prompt=[prompt, img],
-                fallback=self._create_fallback_response("API error"),
-                generation_config={"max_output_tokens": self.max_output_tokens},
-                handle_safety_errors=True
-            )
+        # Define the API call as a callable for retry wrapper
+        def call_gemini() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=[prompt, img],
+                    fallback=self._create_fallback_response("API error"),
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True
+                )
+                return self._validate_singleton_response(result)
+            except Exception as e:
+                print(f"⚠️  Classification error for {photo_path.name}: {e}")
+                return self._create_fallback_response(f"Error: {e}")
 
-            # Validate response
-            result = self._validate_singleton_response(result)
+        # Call with retry
+        result = self._execute_with_retry(call_gemini, f"Singleton {photo_path.name}")
 
-            # Cache result
-            if use_cache and self.cache_manager is not None:
-                cache_key = CacheKey.from_file(photo_path)
-                self.cache_manager.set("gemini", cache_key, result)
+        # Cache result (even error fallbacks, to avoid repeated failures)
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_file(photo_path)
+            self.cache_manager.set("gemini", cache_key, result)
 
-            return result
-
-        except Exception as e:
-            print(f"⚠️  Classification error for {photo_path.name}: {e}")
-            return self._create_fallback_response(f"Error: {e}")
+        return result
 
     def classify_burst(
         self,
@@ -157,39 +159,70 @@ class MediaClassifier:
                 # Placeholder text for failed images
                 content.append(f"[Image {i+1} failed to load]")
 
-        # Call Gemini
-        try:
-            result = self.client.generate_json(
-                prompt=content,
-                fallback=[self._create_fallback_response(f"API error") for _ in burst_photos],
-                generation_config={"max_output_tokens": self.max_output_tokens},
-                handle_safety_errors=True
-            )
+        # Define the API call as a callable for retry wrapper
+        def call_gemini_burst() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=content,
+                    fallback=[self._create_fallback_response(f"API error", rank=i+1) for i in range(len(burst_photos))],
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True
+                )
 
-            # Validate response
-            if isinstance(result, list) and len(result) == len(burst_photos):
-                result = [self._validate_burst_response(r, i+1) for i, r in enumerate(result)]
-            else:
-                # Invalid response format
-                print(f"⚠️  Invalid burst response format, using fallback")
-                result = [
-                    self._create_fallback_response(f"Invalid response", rank=i+1)
+                # Validate response
+                if isinstance(result, list) and len(result) == len(burst_photos):
+                    result = [self._validate_burst_response(r, i+1) for i, r in enumerate(result)]
+                    # Return a wrapper dict for retry logic (check first result for errors)
+                    return {"_burst_results": result, "is_error_fallback": False}
+                else:
+                    # Invalid response format
+                    print(f"⚠️  Invalid burst response format, using fallback")
+                    fallback_results = [
+                        self._create_fallback_response(f"Invalid response format", rank=i+1, error_type="invalid_response")
+                        for i in range(len(burst_photos))
+                    ]
+                    return {"_burst_results": fallback_results, "is_error_fallback": True, "error_type": "invalid_response"}
+
+            except Exception as e:
+                print(f"⚠️  Burst classification error: {e}")
+                fallback_results = [
+                    self._create_fallback_response(f"Error: {e}", rank=i+1)
                     for i in range(len(burst_photos))
                 ]
+                return {"_burst_results": fallback_results, "is_error_fallback": True, "error_type": "api_error"}
 
-            # Cache result
-            if use_cache and self.cache_manager is not None:
-                cache_key = CacheKey.from_files(burst_photos)
-                self.cache_manager.set("gemini", cache_key, result)
+        # Call with retry
+        wrapper_result = self._execute_with_retry(call_gemini_burst, f"Burst ({len(burst_photos)} photos)")
+        result = wrapper_result.get("_burst_results", [
+            self._create_fallback_response("Retry wrapper error", rank=i+1) for i in range(len(burst_photos))
+        ])
 
-            return result
+        # Generate burst ID and update all results
+        burst_id = CacheKey.from_files(burst_photos)
+        retry_count = wrapper_result.get("retry_count", 0)
+        for i, r in enumerate(result):
+            r["retry_count"] = retry_count
+            r["burst_id"] = burst_id
+            r["burst_position"] = i
 
-        except Exception as e:
-            print(f"⚠️  Burst classification error: {e}")
-            return [
-                self._create_fallback_response(f"Error: {e}", rank=i+1)
-                for i in range(len(burst_photos))
-            ]
+        # Store burst context for re-processing failed photos later
+        if self.cache_manager is not None:
+            failed_indices = [i for i, r in enumerate(result) if r.get("is_error_fallback")]
+            burst_context = {
+                "burst_id": burst_id,
+                "photo_paths": [str(p) for p in burst_photos],
+                "results": result,
+                "failed_indices": failed_indices,
+                "has_failures": len(failed_indices) > 0,
+            }
+            # Always store context (useful for re-processing)
+            self.cache_manager.set("burst_context", burst_id, burst_context)
+
+        # Cache gemini result
+        if use_cache and self.cache_manager is not None:
+            self.cache_manager.set("gemini", burst_id, result)
+
+        return result
 
     def _classify_burst_chunked(
         self,
@@ -260,28 +293,29 @@ class MediaClassifier:
         # Build prompt
         prompt = self.prompt_builder.build_video_prompt()
 
-        # Call Gemini (Gemini handles video upload automatically)
-        try:
-            result = self.client.generate_json(
-                prompt=[prompt, video_path],  # Path object will be uploaded
-                fallback=self._create_fallback_response("API error", is_video=True),
-                generation_config={"max_output_tokens": self.max_output_tokens},
-                handle_safety_errors=True
-            )
+        # Define the API call as a callable for retry wrapper
+        def call_gemini_video() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=[prompt, video_path],  # Path object will be uploaded
+                    fallback=self._create_fallback_response("API error", is_video=True),
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True
+                )
+                return self._validate_video_response(result)
+            except Exception as e:
+                print(f"⚠️  Video classification error for {video_path.name}: {e}")
+                return self._create_fallback_response(f"Error: {e}", is_video=True)
 
-            # Validate response
-            result = self._validate_video_response(result)
+        # Call with retry
+        result = self._execute_with_retry(call_gemini_video, f"Video {video_path.name}")
 
-            # Cache result
-            if use_cache and self.cache_manager is not None:
-                cache_key = CacheKey.from_file(video_path)
-                self.cache_manager.set("gemini", cache_key, result)
+        # Cache result
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_file(video_path)
+            self.cache_manager.set("gemini", cache_key, result)
 
-            return result
-
-        except Exception as e:
-            print(f"⚠️  Video classification error for {video_path.name}: {e}")
-            return self._create_fallback_response(f"Error: {e}", is_video=True)
+        return result
 
     def classify_batch(
         self,
@@ -315,7 +349,8 @@ class MediaClassifier:
         self,
         reason: str,
         rank: Optional[int] = None,
-        is_video: bool = False
+        is_video: bool = False,
+        error_type: str = "api_error"
     ) -> Dict[str, Any]:
         """
         Create fallback response for errors.
@@ -324,6 +359,13 @@ class MediaClassifier:
             reason: Reason for fallback.
             rank: Optional rank for burst responses.
             is_video: Whether this is a video response.
+            error_type: Type of error that caused fallback. One of:
+                - "api_error": General API call failure
+                - "load_error": Failed to load image/video file
+                - "safety_blocked": Content blocked by safety filters
+                - "invalid_response": JSON parsing or format error
+                - "timeout": Request timed out
+                - "rate_limit": Rate limit exceeded
 
         Returns:
             Fallback classification dict.
@@ -333,7 +375,12 @@ class MediaClassifier:
             "confidence": 0.3,
             "reasoning": f"Fallback response: {reason}",
             "contains_children": None,
-            "is_appropriate": None
+            "is_appropriate": None,
+            # Error tracking fields
+            "is_error_fallback": True,
+            "error_type": error_type,
+            "error_message": reason,
+            "retry_count": 0,
         }
 
         if rank is not None:
@@ -350,6 +397,60 @@ class MediaClassifier:
             response["contextual_value_reasoning"] = ""
 
         return response
+
+    def _execute_with_retry(
+        self,
+        classify_fn: Callable[[], Dict[str, Any]],
+        error_context: str = "classification"
+    ) -> Dict[str, Any]:
+        """
+        Execute a classification function with automatic retry on retriable errors.
+
+        Args:
+            classify_fn: Zero-argument callable that performs classification and returns result dict.
+            error_context: Context string for error messages (e.g., "singleton", "burst", "video").
+
+        Returns:
+            Classification result dict with retry_count updated.
+        """
+        max_retries = self.config.classification.classification_retries
+        retry_delay = self.config.classification.retry_delay_seconds
+        retriable_errors = set(self.config.classification.retry_on_errors)
+
+        last_result = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                result = classify_fn()
+
+                # Check if result is a retriable error fallback
+                if result.get("is_error_fallback") and result.get("error_type") in retriable_errors:
+                    last_result = result
+                    if attempt < max_retries:
+                        delay = retry_delay * (2 ** attempt)  # Exponential backoff
+                        print(f"   ⚠️  {error_context} error (attempt {attempt + 1}/{max_retries + 1}), retrying in {delay:.1f}s...")
+                        time.sleep(delay)
+                        continue
+
+                # Success or non-retriable error
+                result["retry_count"] = attempt
+                return result
+
+            except Exception as e:
+                # Unexpected exception - create fallback and potentially retry
+                last_result = self._create_fallback_response(f"Error: {e}", error_type="api_error")
+                if attempt < max_retries:
+                    delay = retry_delay * (2 ** attempt)
+                    print(f"   ⚠️  {error_context} exception (attempt {attempt + 1}/{max_retries + 1}): {e}, retrying in {delay:.1f}s...")
+                    time.sleep(delay)
+                    continue
+
+        # All retries exhausted
+        if last_result:
+            last_result["retry_count"] = max_retries
+            return last_result
+
+        return self._create_fallback_response("All retries exhausted", error_type="api_error")
 
     def _validate_singleton_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and fix singleton response."""
@@ -373,6 +474,13 @@ class MediaClassifier:
             response["contains_children"] = None
         if "is_appropriate" not in response:
             response["is_appropriate"] = None
+
+        # Mark as successful (non-error) response
+        if "is_error_fallback" not in response:
+            response["is_error_fallback"] = False
+            response["error_type"] = None
+            response["error_message"] = None
+            response["retry_count"] = 0
 
         # Validate improvement fields if enabled
         if self.config.photo_improvement.enabled:

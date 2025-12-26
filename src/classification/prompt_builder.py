@@ -305,6 +305,50 @@ Analyze this photo and respond with CONCISE JSON:
 
         return prompt
 
+    def build_singleton_with_burst_context(
+        self,
+        burst_size: int,
+        sibling_classifications: List[str],
+        original_position: int = 0
+    ) -> str:
+        """
+        Build singleton prompt with burst context for retry scenarios.
+
+        Used when re-processing a failed photo that was originally part of a burst.
+        Provides context about the sibling photos without requiring them to be re-classified.
+
+        Args:
+            burst_size: Total number of photos in the original burst.
+            sibling_classifications: List of classifications for successful siblings
+                (e.g., ["Share", "Storage", "Storage"]).
+            original_position: Original position of this photo in the burst (0-indexed).
+
+        Returns:
+            Complete prompt string with burst context.
+        """
+        base_prompt = self.build_singleton_prompt()
+
+        # Build context section
+        context_lines = [
+            "\n\n**BURST CONTEXT (for reference only):**",
+            f"This photo was originally part of a burst of {burst_size} photos.",
+            f"It was photo #{original_position + 1} in the sequence.",
+        ]
+
+        if sibling_classifications:
+            class_summary = ", ".join(sibling_classifications[:5])
+            if len(sibling_classifications) > 5:
+                class_summary += f", ... (+{len(sibling_classifications) - 5} more)"
+            context_lines.append(f"The other photos were classified as: {class_summary}.")
+
+        context_lines.append(
+            "Evaluate this photo on its own merits, but consider that it captures a similar moment."
+        )
+
+        context_section = "\n".join(context_lines)
+
+        return base_prompt + context_section
+
     def build_burst_prompt(self, burst_size: int) -> str:
         """
         Build prompt for evaluating a burst of photos.

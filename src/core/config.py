@@ -63,6 +63,12 @@ class ClassificationConfig:
     enable_diversity_check: bool = True
     diversity_similarity_threshold: float = 0.95
     handle_blocked_safely: bool = True
+    # Retry settings for failed classifications
+    classification_retries: int = 2
+    retry_delay_seconds: float = 2.0
+    retry_on_errors: List[str] = field(default_factory=lambda: [
+        "api_error", "invalid_response", "timeout", "rate_limit"
+    ])
 
     def __post_init__(self):
         """Validate thresholds."""
@@ -74,6 +80,8 @@ class ClassificationConfig:
             raise ValueError(f"review_threshold ({self.review_threshold}) must be < share_threshold ({self.share_threshold})")
         if self.parallel_video_workers < 1:
             raise ValueError(f"parallel_video_workers must be >= 1, got {self.parallel_video_workers}")
+        if self.classification_retries < 0:
+            raise ValueError(f"classification_retries must be >= 0, got {self.classification_retries}")
 
 
 @dataclass

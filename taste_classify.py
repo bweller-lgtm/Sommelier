@@ -313,6 +313,12 @@ def generate_report(results: list, report_dir: Path, include_improvement: bool =
             "reasoning": classification.get("reasoning", ""),
             "contains_children": classification.get("contains_children", None),
             "is_appropriate": classification.get("is_appropriate", None),
+            # Error tracking fields
+            "is_error_fallback": classification.get("is_error_fallback", False),
+            "error_type": classification.get("error_type", ""),
+            "error_message": classification.get("error_message", ""),
+            "retry_count": classification.get("retry_count", 0),
+            "burst_id": classification.get("burst_id", ""),
         }
 
         # Add improvement fields if enabled
