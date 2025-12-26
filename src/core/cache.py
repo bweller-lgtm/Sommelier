@@ -245,6 +245,7 @@ class CacheManager:
             "phash": self.cache_root / "phash",
             "gemini": self.cache_root / "labeling_pairwise",
             "checkpoints": self.cache_root / "checkpoints",
+            "burst_context": self.cache_root / "burst_context",
         }
 
         # Create cache instances
@@ -256,6 +257,7 @@ class CacheManager:
             "phash": PickleCache(self.cache_dirs["phash"], ttl_days),
             "gemini": JSONCache(self.cache_dirs["gemini"], ttl_days),
             "checkpoints": JSONCache(self.cache_dirs["checkpoints"], ttl_days),
+            "burst_context": JSONCache(self.cache_dirs["burst_context"], ttl_days),
         }
 
     def get(self, cache_type: str, key: str) -> Optional[Any]:
