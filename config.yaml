@@ -80,6 +80,15 @@ classification:
   # Safety filters
   handle_blocked_safely: true  # Route blocked content to Review, not crash
 
+  # Classification retry settings
+  classification_retries: 2    # Number of retries before falling back to Review
+  retry_delay_seconds: 2.0     # Delay between retries (with exponential backoff)
+  retry_on_errors:             # Error types to retry
+    - "api_error"              # General API call failures
+    - "invalid_response"       # JSON parsing or format errors
+    - "timeout"                # Request timeouts
+    - "rate_limit"             # Rate limit exceeded
+
 # ============================= BURST DETECTION ====================================
 burst_detection:
   # Enable new burst detection (temporal + visual)

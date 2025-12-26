@@ -16,6 +16,8 @@ Classifies photos/videos into 4 categories:
 
 **NEW: Gray Zone Photo Improvement** - Detects meaningful family moments with technical issues (blur, noise, etc.) and uses Gemini AI to enhance them while preserving authenticity.
 
+**NEW: Error Tracking & Retry** - Automatic retry with exponential backoff for API failures. Failed classifications are tracked with error metadata for easy reprocessing.
+
 ---
 
 ## 🚀 Quick Start (30 Seconds)
@@ -147,6 +149,65 @@ photo_improvement:
 
 ---
 
+## 🔄 Error Tracking & Retry
+
+**NEW in v2.2** - Robust error handling with automatic retry and tracking for failed classifications.
+
+### How It Works
+
+When API calls fail (timeouts, rate limits, connection errors), the system:
+1. **Automatic Retry** - Retries up to 2 times with exponential backoff (2s, 4s delays)
+2. **Error Tracking** - Failed photos are marked with `is_error_fallback=True` in reports
+3. **Review Fallback** - Photos that fail all retries go to `Review/` with low confidence (0.3)
+4. **Burst Awareness** - When reprocessing, entire bursts are cleared to maintain grouping context
+
+### Error Types
+
+| Error Type | Retriable | Description |
+|------------|-----------|-------------|
+| `api_error` | Yes | General API failures (connection, server errors) |
+| `timeout` | Yes | Request timeout |
+| `rate_limit` | Yes | API rate limiting |
+| `invalid_response` | Yes | Malformed API response |
+| `safety_blocked` | No | Content blocked by safety filters |
+| `load_error` | No | Failed to load/process image |
+
+### Reprocessing Failed Photos
+
+After a classification run, you can identify and reprocess photos that failed due to errors:
+
+```bash
+# See what would be cleared (dry run)
+py -3.12 clear_failed_for_retry.py "path/to/sorted" --dry-run
+
+# Clear failed photos from sorted folders and cache
+py -3.12 clear_failed_for_retry.py "path/to/sorted"
+
+# Then re-run classification - only cleared photos will be processed
+py -3.12 taste_classify.py "path/to/source"
+```
+
+The `clear_failed_for_retry.py` script:
+- Reads the latest classification report to find error fallbacks
+- Clears entire bursts when any photo in the burst failed
+- Removes photos from all sorted folders (Share, Storage, Review, Ignore)
+- Clears corresponding cache entries so photos will be re-classified
+
+### Configuration
+
+```yaml
+classification:
+  classification_retries: 2        # Number of retry attempts
+  retry_delay_seconds: 2.0         # Initial delay (doubles on each retry)
+  retry_on_errors:                 # Error types that trigger retry
+    - api_error
+    - timeout
+    - rate_limit
+    - invalid_response
+```
+
+---
+
 ## ⚙️ Configuration
 
 All settings are in `config.yaml`. Key settings:
@@ -208,6 +269,7 @@ The project has been **completely refactored** with a clean, modular architectur
 ### Entry Points
 - **`taste_classify.py`** - Main classification script
 - **`improve_photos.py`** - Photo improvement script
+- **`clear_failed_for_retry.py`** - Clear failed classifications for reprocessing
 - **`taste_trainer_pairwise_v4.py`** - Training UI (Gradio)
 - **`generate_taste_profile.py`** - Generate AI taste profile
 
@@ -311,7 +373,7 @@ pytest tests/test_classification.py -v
 pytest tests/ --cov=src --cov-report=html
 ```
 
-**Current Status:** 110 passing tests ✅
+**Current Status:** 130+ passing tests ✅
 
 ### Project Structure
 ```
@@ -351,6 +413,8 @@ improve_photos.py      # Photo improvement entry point
 ✅ **Gray Zone Detection** - Identifies valuable photos with technical issues
 ✅ **AI Photo Improvement** - Enhance gray zone photos with Gemini image generation
 ✅ **Gradio Review UI** - Interactive interface for approving improvement candidates
+✅ **Error Tracking & Retry** - Automatic retry with exponential backoff for API failures
+✅ **Failed Reprocessing** - Easy identification and reprocessing of error fallbacks
 
 ---
 
@@ -450,6 +514,6 @@ For video-specific issues, see `VIDEO_CLASSIFICATION_GUIDE.md`.
 
 ---
 
-**Version:** 2.1.0 (Photo Improvement)
-**Last Updated:** December 1, 2025
+**Version:** 2.2.0 (Error Tracking & Retry)
+**Last Updated:** December 25, 2025
 **Status:** Production Ready ✅
