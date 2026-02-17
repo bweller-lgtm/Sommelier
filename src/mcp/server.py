@@ -485,6 +485,204 @@ def create_mcp_server():
                     "required": ["profile_name", "good_examples_folder"],
                 },
             ),
+            # ── Pairwise Training Tools ──────────────────────────────
+            Tool(
+                name="sommelier_start_training",
+                description=(
+                    "Start a HIGH-FIDELITY pairwise training session. Scans a folder, "
+                    "detects photo bursts, and returns the first comparison for you to "
+                    "present to the user.\n\n"
+                    "Fidelity spectrum:\n"
+                    "  Quick Profile (description) = Low fidelity\n"
+                    "  Generate from Examples (folders) = Medium fidelity\n"
+                    "  **Pairwise Training (this tool)** = HIGH fidelity\n"
+                    "  Corrective Refinement (post-classification) = Highest fidelity\n\n"
+                    "The user compares photos side-by-side and explains their preferences "
+                    "in free text. After 15+ comparisons, synthesize into a profile with "
+                    "sommelier_synthesize_profile. Present each comparison conversationally."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "folder_path": {
+                            "type": "string",
+                            "description": "Full path to folder of photos to train on",
+                        },
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name for the profile that will be generated",
+                        },
+                        "skip_embeddings": {
+                            "type": "boolean",
+                            "description": "If true, use temporal-only burst detection (faster, no CLIP). Default false.",
+                            "default": False,
+                        },
+                    },
+                    "required": ["folder_path", "profile_name"],
+                },
+            ),
+            Tool(
+                name="sommelier_get_comparison",
+                description=(
+                    "Get the next comparison from an active pairwise training session. "
+                    "Returns either a pairwise comparison (two photos) or a gallery "
+                    "review (burst of 5+ photos). Present the comparison to the user "
+                    "conversationally and ask for their choice and reasoning."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Training session ID from sommelier_start_training",
+                        },
+                    },
+                    "required": ["session_id"],
+                },
+            ),
+            Tool(
+                name="sommelier_submit_comparison",
+                description=(
+                    "Record a pairwise choice with reasoning. The reasoning text is the "
+                    "critical learning signal — encourage users to explain WHY they prefer "
+                    "one photo. Piggybacks the next comparison in the response."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Training session ID",
+                        },
+                        "choice": {
+                            "type": "string",
+                            "enum": ["left", "right", "both", "neither"],
+                            "description": "Which photo(s) to share: left (photo A), right (photo B), both, or neither",
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "User's free-text reasoning for their choice (the key learning signal)",
+                        },
+                    },
+                    "required": ["session_id", "choice", "reason"],
+                },
+            ),
+            Tool(
+                name="sommelier_submit_gallery",
+                description=(
+                    "Record burst gallery selections. For bursts of 5+ photos, users "
+                    "select which photos are keepers. Include reasoning for the selections."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Training session ID",
+                        },
+                        "selected_indices": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": "Indices (0-based) of photos the user selected as keepers",
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "User's reasoning for their selections",
+                        },
+                    },
+                    "required": ["session_id", "selected_indices", "reason"],
+                },
+            ),
+            Tool(
+                name="sommelier_training_status",
+                description=(
+                    "Get training session stats and progress. If no session_id is provided, "
+                    "lists all training sessions."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Training session ID (optional — omit to list all sessions)",
+                        },
+                    },
+                },
+            ),
+            Tool(
+                name="sommelier_synthesize_profile",
+                description=(
+                    "Convert accumulated pairwise training data into a taste profile. "
+                    "Requires at least 15 comparisons. Uses AI to analyze the user's "
+                    "reasoning text, visually analyze Share and Storage photos, and "
+                    "synthesize a comprehensive profile. Requires an API key."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Training session ID to synthesize from",
+                        },
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name for the profile (optional — defaults to session's profile_name)",
+                        },
+                        "refine_existing": {
+                            "type": "boolean",
+                            "description": "If true and profile exists, merge/refine rather than replace. Default false.",
+                            "default": False,
+                        },
+                    },
+                    "required": ["session_id"],
+                },
+            ),
+            Tool(
+                name="sommelier_refine_profile",
+                description=(
+                    "Apply post-classification corrections to refine an existing profile. "
+                    "Unlike sommelier_submit_feedback (which just stores corrections), "
+                    "this tool ACTS on corrections — it analyzes patterns in "
+                    "misclassifications and updates the profile criteria accordingly. "
+                    "This is the HIGHEST fidelity method for improving profiles."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name of the profile to refine",
+                        },
+                        "corrections": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "file_path": {
+                                        "type": "string",
+                                        "description": "Path to the misclassified file",
+                                    },
+                                    "original_category": {
+                                        "type": "string",
+                                        "description": "Category it was incorrectly sorted into",
+                                    },
+                                    "correct_category": {
+                                        "type": "string",
+                                        "description": "Category it should have been sorted into",
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "description": "Why this category is correct",
+                                    },
+                                },
+                                "required": ["file_path", "original_category", "correct_category"],
+                            },
+                            "description": "Array of classification corrections with reasoning",
+                        },
+                    },
+                    "required": ["profile_name", "corrections"],
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -577,6 +775,20 @@ def _handle_tool(name: str, arguments: dict) -> Any:
         return _handle_view_feedback()
     elif name == "sommelier_generate_profile":
         return _handle_generate_profile(pm, arguments)
+    elif name == "sommelier_start_training":
+        return _handle_start_training(pm, arguments)
+    elif name == "sommelier_get_comparison":
+        return _handle_get_comparison(pm, arguments)
+    elif name == "sommelier_submit_comparison":
+        return _handle_submit_comparison(pm, arguments)
+    elif name == "sommelier_submit_gallery":
+        return _handle_submit_gallery(pm, arguments)
+    elif name == "sommelier_training_status":
+        return _handle_training_status(pm, arguments)
+    elif name == "sommelier_synthesize_profile":
+        return _handle_synthesize_profile(pm, arguments)
+    elif name == "sommelier_refine_profile":
+        return _handle_refine_profile(pm, arguments)
     else:
         return {"error": f"Unknown tool: {name}"}
 
@@ -614,8 +826,10 @@ def _handle_status(pm: ProfileManager) -> Any:
         status["available_features"] = [
             "list/view/create/update/delete profiles",
             "classify files and folders",
-            "generate profiles from descriptions (AI)",
-            "generate profiles from example files (AI)",
+            "generate profiles from descriptions (AI) — low fidelity",
+            "generate profiles from example files (AI) — medium fidelity",
+            "pairwise training sessions — HIGH fidelity",
+            "corrective profile refinement — HIGHEST fidelity",
             "submit and review classification feedback",
         ]
     else:
@@ -633,6 +847,9 @@ def _handle_status(pm: ProfileManager) -> Any:
             "classify files and folders",
             "generate profiles from descriptions",
             "generate profiles from example files",
+            "pairwise training (burst detection with embeddings)",
+            "profile synthesis from training data",
+            "corrective profile refinement",
         ]
 
     return status
@@ -1291,4 +1508,399 @@ you observed in the examples, not generic platitudes. Only output valid JSON."""
             "bad_docs": len(bad_docs),
         },
         "profile": profile.to_dict(),
+    }
+
+
+# ── Pairwise Training Handlers ────────────────────────────────────────
+
+
+def _handle_start_training(pm: ProfileManager, arguments: dict) -> Any:
+    """Start a pairwise training session."""
+    from ..core.file_utils import FileTypeRegistry
+    from ..training.session import TrainingSession
+    from ..training.sampler import ComparisonSampler
+
+    folder = Path(arguments["folder_path"])
+    profile_name = arguments["profile_name"]
+    skip_embeddings = arguments.get("skip_embeddings", False)
+
+    if not folder.is_dir():
+        return {"error": f"Folder not found: {folder}"}
+
+    # Collect image files
+    images = FileTypeRegistry.list_images(folder, recursive=True)
+    if not images:
+        return {"error": f"No image files found in {folder}"}
+
+    # Detect bursts
+    bursts: list[list[str]]
+    singletons: list[str]
+
+    api_err = _require_api_key()
+    if skip_embeddings or api_err:
+        # Temporal-only burst detection
+        bursts, singletons = _detect_bursts_temporal_only(images)
+    else:
+        bursts, singletons = _detect_bursts_with_embeddings(images)
+
+    # Create session
+    session = TrainingSession.create(
+        profile_name=profile_name,
+        folder_path=str(folder),
+        bursts=bursts,
+        singletons=singletons,
+    )
+
+    # Generate first comparison
+    sampler = ComparisonSampler(session)
+    first_comparison = sampler.get_next()
+
+    if first_comparison:
+        session.current_comparison = first_comparison
+        session.comparisons_served = 1
+
+    session.save(pm.profiles_dir)
+
+    return {
+        "session_id": session.session_id,
+        "total_photos": session.total_photos,
+        "total_bursts": len(bursts),
+        "total_singletons": len(singletons),
+        "first_comparison": first_comparison,
+        "message": (
+            f"Training session started with {session.total_photos} photos "
+            f"({len(bursts)} bursts, {len(singletons)} singletons). "
+            f"Present comparisons to the user and collect their choices with reasoning."
+        ),
+    }
+
+
+def _detect_bursts_temporal_only(
+    images: list[Path],
+) -> tuple[list[list[str]], list[str]]:
+    """Detect bursts using only EXIF timestamps (no embeddings)."""
+    from ..core.config import BurstDetectionConfig
+    from ..features.burst_detector import BurstDetector
+
+    config = BurstDetectionConfig()
+    detector = BurstDetector(config)
+
+    # Extract timestamps and group temporally
+    photo_times = detector._extract_timestamps(images)
+
+    if not photo_times:
+        # No timestamps available — all singletons
+        return [], [str(p) for p in images]
+
+    temporal_groups = detector._create_temporal_groups(photo_times)
+
+    bursts = []
+    singletons = []
+    for group in temporal_groups:
+        paths = [str(item[1]) for item in group]
+        if len(paths) >= 2:
+            bursts.append(paths)
+        else:
+            singletons.extend(paths)
+
+    # Add photos without timestamps as singletons
+    grouped_indices = {item[0] for group in temporal_groups for item in group}
+    for i, img in enumerate(images):
+        if i not in grouped_indices:
+            singletons.append(str(img))
+
+    return bursts, singletons
+
+
+def _detect_bursts_with_embeddings(
+    images: list[Path],
+) -> tuple[list[list[str]], list[str]]:
+    """Detect bursts using CLIP embeddings + temporal proximity."""
+    from ..core.config import BurstDetectionConfig
+    from ..features.burst_detector import BurstDetector
+
+    config = _get_config()
+
+    try:
+        from ..features.embeddings import EmbeddingExtractor
+        from ..core.cache import CacheManager
+
+        cache_manager = CacheManager(
+            config.paths.cache_root,
+            ttl_days=config.caching.ttl_days,
+            enabled=config.caching.enabled,
+        )
+        extractor = EmbeddingExtractor(
+            config.model, config.performance, cache_manager
+        )
+        embeddings = extractor.extract_embeddings_batch(
+            images, show_progress=False
+        )
+
+        burst_config = BurstDetectionConfig()
+        detector = BurstDetector(burst_config)
+        burst_groups = detector.detect_bursts(images, embeddings)
+
+        bursts = []
+        singletons = []
+        for group in burst_groups:
+            paths = [str(p) for p in group]
+            if len(paths) >= 2:
+                bursts.append(paths)
+            else:
+                singletons.extend(paths)
+
+        return bursts, singletons
+
+    except Exception as e:
+        print(
+            f"[sommelier] Embedding-based burst detection failed: {e}, "
+            f"falling back to temporal-only",
+            file=sys.stderr, flush=True,
+        )
+        return _detect_bursts_temporal_only(images)
+
+
+def _handle_get_comparison(pm: ProfileManager, arguments: dict) -> Any:
+    """Get next comparison from an active training session."""
+    from ..training.session import TrainingSession
+    from ..training.sampler import ComparisonSampler
+
+    session_id = arguments["session_id"]
+    session = TrainingSession.load(session_id, pm.profiles_dir)
+
+    if session.status != "active":
+        return {"error": f"Session '{session_id}' is {session.status}, not active."}
+
+    sampler = ComparisonSampler(session)
+    comparison = sampler.get_next()
+
+    if comparison is None:
+        return {
+            "status": "exhausted",
+            "message": "No more comparisons available. All photos have been labeled.",
+            "stats": session.get_stats(),
+        }
+
+    session.current_comparison = comparison
+    session.comparisons_served += 1
+    session.save(pm.profiles_dir)
+
+    return {
+        **comparison,
+        "stats": session.get_stats(),
+    }
+
+
+def _handle_submit_comparison(pm: ProfileManager, arguments: dict) -> Any:
+    """Record a pairwise comparison choice with reasoning."""
+    from ..training.session import TrainingSession
+    from ..training.sampler import ComparisonSampler
+
+    session_id = arguments["session_id"]
+    choice = arguments["choice"]
+    reason = arguments.get("reason", "")
+
+    session = TrainingSession.load(session_id, pm.profiles_dir)
+
+    if session.status != "active":
+        return {"error": f"Session '{session_id}' is {session.status}, not active."}
+
+    current = session.current_comparison
+    if not current or current.get("type") not in ("pairwise_within", "pairwise_between"):
+        return {"error": "No active pairwise comparison. Use sommelier_get_comparison first."}
+
+    # Record the comparison
+    session.add_pairwise(
+        photo_a=current["photo_a"],
+        photo_b=current["photo_b"],
+        choice=choice,
+        reason=reason,
+        comparison_type=current["comparison_type"],
+    )
+
+    # Get next comparison (piggyback)
+    sampler = ComparisonSampler(session)
+    next_comparison = sampler.get_next()
+
+    if next_comparison:
+        session.current_comparison = next_comparison
+        session.comparisons_served += 1
+    else:
+        session.current_comparison = None
+
+    session.save(pm.profiles_dir)
+
+    stats = session.get_stats()
+    return {
+        "status": "recorded",
+        "stats": stats,
+        "ready_to_synthesize": stats["ready_to_synthesize"],
+        "next_comparison": next_comparison,
+    }
+
+
+def _handle_submit_gallery(pm: ProfileManager, arguments: dict) -> Any:
+    """Record a burst gallery selection."""
+    from ..training.session import TrainingSession
+    from ..training.sampler import ComparisonSampler
+
+    session_id = arguments["session_id"]
+    selected_indices = arguments["selected_indices"]
+    reason = arguments.get("reason", "")
+
+    session = TrainingSession.load(session_id, pm.profiles_dir)
+
+    if session.status != "active":
+        return {"error": f"Session '{session_id}' is {session.status}, not active."}
+
+    current = session.current_comparison
+    if not current or current.get("type") != "gallery":
+        return {"error": "No active gallery review. Use sommelier_get_comparison first."}
+
+    # Record the gallery selection
+    session.add_gallery(
+        photos=current["photos"],
+        selected_indices=selected_indices,
+        reason=reason,
+    )
+
+    # Get next comparison (piggyback)
+    sampler = ComparisonSampler(session)
+    next_comparison = sampler.get_next()
+
+    if next_comparison:
+        session.current_comparison = next_comparison
+        session.comparisons_served += 1
+    else:
+        session.current_comparison = None
+
+    session.save(pm.profiles_dir)
+
+    stats = session.get_stats()
+    return {
+        "status": "recorded",
+        "stats": stats,
+        "ready_to_synthesize": stats["ready_to_synthesize"],
+        "next_comparison": next_comparison,
+    }
+
+
+def _handle_training_status(pm: ProfileManager, arguments: dict) -> Any:
+    """Get training session status or list all sessions."""
+    from ..training.session import TrainingSession
+
+    session_id = arguments.get("session_id")
+
+    if session_id:
+        session = TrainingSession.load(session_id, pm.profiles_dir)
+        return session.get_stats()
+    else:
+        sessions = TrainingSession.list_sessions(pm.profiles_dir)
+        if not sessions:
+            return {
+                "sessions": [],
+                "message": (
+                    "No training sessions found. Use sommelier_start_training to begin "
+                    "a high-fidelity pairwise training session."
+                ),
+            }
+        return {"sessions": sessions}
+
+
+def _handle_synthesize_profile(pm: ProfileManager, arguments: dict) -> Any:
+    """Synthesize training data into a taste profile."""
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
+    from ..core.provider_factory import create_ai_client
+    from ..training.session import TrainingSession
+    from ..training.synthesizer import ProfileSynthesizer
+
+    config = _get_config()
+    session_id = arguments["session_id"]
+    session = TrainingSession.load(session_id, pm.profiles_dir)
+
+    stats = session.get_stats()
+    if not stats["ready_to_synthesize"]:
+        return {
+            "error": (
+                f"Not enough training data. Have {stats['total_labeled']} labels, "
+                f"need at least 15. Continue labeling with sommelier_get_comparison."
+            ),
+            "stats": stats,
+        }
+
+    profile_name = arguments.get("profile_name") or session.profile_name
+    refine_existing = arguments.get("refine_existing", False)
+
+    existing_profile = None
+    if refine_existing and pm.profile_exists(profile_name):
+        existing_profile = pm.load_profile(profile_name)
+
+    ai_client = create_ai_client(config)
+    synthesizer = ProfileSynthesizer(ai_client, pm)
+
+    profile = synthesizer.synthesize(session, profile_name, existing_profile)
+
+    # Mark session as completed
+    session.status = "completed"
+    session.save(pm.profiles_dir)
+
+    return {
+        "status": "created" if not existing_profile else "refined",
+        "training_summary": {
+            "pairwise_comparisons": stats["pairwise_count"],
+            "gallery_reviews": stats["gallery_count"],
+            "unique_photos": stats["unique_photos_labeled"],
+            "coverage": f"{stats['coverage_pct']}%",
+        },
+        "profile": profile.to_dict(),
+        "message": (
+            f"Profile '{profile_name}' {'refined' if existing_profile else 'created'} "
+            f"from {stats['total_labeled']} training labels "
+            f"({stats['pairwise_count']} pairwise, {stats['gallery_count']} gallery)."
+        ),
+    }
+
+
+def _handle_refine_profile(pm: ProfileManager, arguments: dict) -> Any:
+    """Refine a profile based on post-classification corrections."""
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
+    from ..core.provider_factory import create_ai_client
+    from ..training.synthesizer import ProfileSynthesizer
+
+    config = _get_config()
+    profile_name = arguments["profile_name"]
+    corrections = arguments["corrections"]
+
+    if not pm.profile_exists(profile_name):
+        return {
+            "error": f"Profile '{profile_name}' not found.",
+            "hint": "Use sommelier_list_profiles to see available profiles.",
+        }
+
+    if not corrections:
+        return {"error": "No corrections provided."}
+
+    ai_client = create_ai_client(config)
+    synthesizer = ProfileSynthesizer(ai_client, pm)
+
+    updated = synthesizer.refine_from_corrections(profile_name, corrections)
+
+    changes = getattr(updated, "_refinement_changes", [])
+
+    return {
+        "status": "refined",
+        "corrections_applied": len(corrections),
+        "changes_made": changes,
+        "profile": updated.to_dict(),
+        "message": (
+            f"Profile '{profile_name}' refined based on {len(corrections)} corrections. "
+            f"{len(changes)} criteria changes applied."
+        ),
     }

@@ -176,6 +176,13 @@ class TrainingConfig:
     between_cluster_weight: float = 1.0
     use_camera_roll_negatives: bool = True
     date_range_days: int = 30
+    # Pairwise training settings
+    pairwise_within_ratio: float = 0.5
+    pairwise_between_ratio: float = 0.3
+    pairwise_gallery_ratio: float = 0.2
+    gallery_weight: float = 1.5
+    large_burst_threshold: int = 5
+    min_labels_before_synthesis: int = 15
 
 
 @dataclass
