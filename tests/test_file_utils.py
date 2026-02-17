@@ -87,6 +87,71 @@ class TestFileTypeRegistry:
         assert len(images) == 2
 
 
+    def test_is_document_traditional(self):
+        """Test traditional document detection."""
+        assert FileTypeRegistry.is_document(Path("report.pdf"))
+        assert FileTypeRegistry.is_document(Path("notes.txt"))
+        assert FileTypeRegistry.is_document(Path("readme.md"))
+        assert FileTypeRegistry.is_document(Path("data.csv"))
+        assert not FileTypeRegistry.is_document(Path("photo.jpg"))
+        assert not FileTypeRegistry.is_document(Path("video.mp4"))
+
+    def test_is_code(self):
+        """Test code file detection."""
+        assert FileTypeRegistry.is_code(Path("main.py"))
+        assert FileTypeRegistry.is_code(Path("app.js"))
+        assert FileTypeRegistry.is_code(Path("server.ts"))
+        assert FileTypeRegistry.is_code(Path("Main.java"))
+        assert FileTypeRegistry.is_code(Path("lib.rs"))
+        assert FileTypeRegistry.is_code(Path("handler.go"))
+        assert FileTypeRegistry.is_code(Path("style.cpp"))
+        assert FileTypeRegistry.is_code(Path("config.yaml"))
+        assert FileTypeRegistry.is_code(Path("deploy.tf"))
+        assert not FileTypeRegistry.is_code(Path("photo.jpg"))
+        assert not FileTypeRegistry.is_code(Path("report.pdf"))
+
+    def test_code_files_are_documents(self):
+        """Code files should be detected as documents for classification."""
+        assert FileTypeRegistry.is_document(Path("main.py"))
+        assert FileTypeRegistry.is_document(Path("app.tsx"))
+        assert FileTypeRegistry.is_document(Path("server.go"))
+        assert FileTypeRegistry.is_document(Path("Makefile.sh"))
+
+    def test_is_media_excludes_code(self):
+        """is_media only covers images/videos, not documents/code."""
+        assert not FileTypeRegistry.is_media(Path("main.py"))
+        assert not FileTypeRegistry.is_media(Path("report.pdf"))
+        assert FileTypeRegistry.is_media(Path("photo.jpg"))
+
+    def test_list_documents_includes_code(self, tmp_path):
+        """list_documents should include code files."""
+        (tmp_path / "main.py").touch()
+        (tmp_path / "utils.js").touch()
+        (tmp_path / "readme.md").touch()
+        (tmp_path / "report.pdf").touch()
+        (tmp_path / "photo.jpg").touch()
+
+        docs = FileTypeRegistry.list_documents(tmp_path)
+        names = {p.name for p in docs}
+        assert "main.py" in names
+        assert "utils.js" in names
+        assert "readme.md" in names
+        assert "report.pdf" in names
+        assert "photo.jpg" not in names
+
+    def test_list_all_media_includes_code(self, tmp_path):
+        """list_all_media should include code files under 'documents'."""
+        (tmp_path / "main.py").touch()
+        (tmp_path / "photo.jpg").touch()
+        (tmp_path / "video.mp4").touch()
+
+        media = FileTypeRegistry.list_all_media(tmp_path)
+        doc_names = {p.name for p in media.get("documents", [])}
+        assert "main.py" in doc_names
+        assert len(media["images"]) == 1
+        assert len(media["videos"]) == 1
+
+
 class TestImageUtils:
     """Tests for ImageUtils."""
 
