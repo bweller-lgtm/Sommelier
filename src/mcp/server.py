@@ -1,6 +1,7 @@
 """MCP server exposing Taste Cloner tools for Claude Desktop integration."""
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Lazy imports to avoid loading heavy dependencies at import time
+# Eager imports — do all heavy loading at module import time so the MCP
+# server is ready before it starts accepting tool calls from Claude Desktop.
+from ..core.config import load_config, Config
+from ..core.profiles import ProfileManager
+
 _config = None
 _profile_manager = None
 _classification_service = None
@@ -17,12 +22,10 @@ _classification_service = None
 def _get_config():
     global _config
     if _config is None:
-        from ..core.config import load_config
         config_path = Path(os.environ.get("TASTE_CLONER_CONFIG", "config.yaml"))
         if config_path.exists():
             _config = load_config(config_path)
         else:
-            from ..core.config import Config
             _config = Config()
     return _config
 
@@ -30,7 +33,6 @@ def _get_config():
 def _get_profile_manager():
     global _profile_manager
     if _profile_manager is None:
-        from ..core.profiles import ProfileManager
         config = _get_config()
         _profile_manager = ProfileManager(config.profiles.profiles_dir)
     return _profile_manager
@@ -48,6 +50,12 @@ def create_mcp_server():
     """Create and configure the MCP server with all Taste Cloner tools."""
     from mcp.server import Server
     from mcp.types import Tool, TextContent
+
+    # Pre-initialize config and profile manager during startup
+    print("[taste-cloner] Pre-loading config and profiles...", file=sys.stderr, flush=True)
+    _get_config()
+    _get_profile_manager()
+    print("[taste-cloner] Ready.", file=sys.stderr, flush=True)
 
     server = Server("taste-cloner")
 
@@ -181,10 +189,14 @@ def create_mcp_server():
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+        import sys
+        print(f"[taste-cloner] call_tool invoked: {name}", file=sys.stderr, flush=True)
         try:
             result = _handle_tool(name, arguments)
+            print(f"[taste-cloner] call_tool success: {name}", file=sys.stderr, flush=True)
             return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
         except Exception as e:
+            print(f"[taste-cloner] call_tool error: {name}: {e}", file=sys.stderr, flush=True)
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
     return server
@@ -192,7 +204,10 @@ def create_mcp_server():
 
 def _handle_tool(name: str, arguments: dict) -> Any:
     """Dispatch tool calls to appropriate handlers."""
+    import sys
+    print(f"[taste-cloner] _handle_tool start: {name}", file=sys.stderr, flush=True)
     pm = _get_profile_manager()
+    print(f"[taste-cloner] profile manager loaded", file=sys.stderr, flush=True)
 
     if name == "taste_cloner_list_profiles":
         profiles = pm.list_profiles()
@@ -222,34 +237,98 @@ def _handle_tool(name: str, arguments: dict) -> Any:
         return {"status": "created", "profile": profile.to_dict()}
 
     elif name == "taste_cloner_classify_folder":
-        svc = _get_classification_service()
-        job_id = svc.start_job(
-            folder_path=arguments["folder_path"],
-            profile_name=arguments["profile_name"],
-            dry_run=arguments.get("dry_run", False),
+        # Lightweight classification — uses Gemini directly, no CLIP/torch.
+        # Classifies each photo individually (no burst detection).
+        print(f"[taste-cloner] classify_folder: {arguments}", file=sys.stderr, flush=True)
+
+        from ..core.cache import CacheManager
+        from ..core.models import GeminiClient
+        from ..classification.prompt_builder import PromptBuilder
+        from ..classification.classifier import MediaClassifier
+        from ..classification.routing import Router
+        from ..core.file_utils import FileTypeRegistry
+
+        config = _get_config()
+        profile = pm.load_profile(arguments["profile_name"])
+        folder = Path(arguments["folder_path"])
+
+        if not folder.is_dir():
+            return {"error": f"Folder not found: {folder}"}
+
+        cache_manager = CacheManager(
+            config.paths.cache_root,
+            ttl_days=config.caching.ttl_days,
+            enabled=config.caching.enabled,
         )
+        gemini_client = GeminiClient(
+            model_name=config.model.name,
+            max_retries=config.system.max_retries,
+            retry_delay=config.system.retry_delay_seconds,
+        )
+        prompt_builder = PromptBuilder(config, profile=profile)
+        classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
+        router = Router(config, gemini_client, profile=profile)
 
-        # Wait for completion (MCP tools are synchronous from the user's perspective)
-        import time
-        for _ in range(600):  # 10 minute timeout
-            status = svc.get_job_status(job_id)
-            if status["status"] in ("completed", "failed"):
-                break
-            time.sleep(1)
+        # Discover files
+        all_files = FileTypeRegistry.list_all_media(folder)
+        images = all_files.get("images", [])
+        videos = all_files.get("videos", [])
+        documents = all_files.get("documents", [])
+        total = len(images) + len(videos) + len(documents)
 
-        if status["status"] == "completed":
-            results = svc.get_job_results(job_id)
-            return {
-                "status": "completed",
-                "job_id": job_id,
-                "stats": status.get("stats", {}),
-                "result_count": len(results),
-                "results": results[:50],  # Limit response size
-            }
-        elif status["status"] == "failed":
-            return {"status": "failed", "job_id": job_id, "error": status.get("error", "Unknown error")}
-        else:
-            return {"status": "timeout", "job_id": job_id, "message": "Classification still running"}
+        print(f"[taste-cloner] Found {len(images)} images, {len(videos)} videos, {len(documents)} documents", file=sys.stderr, flush=True)
+
+        dry_run = arguments.get("dry_run", False)
+        results = []
+        stats = {}
+
+        for i, img_path in enumerate(images):
+            try:
+                print(f"[taste-cloner] Classifying {i+1}/{total}: {img_path.name}", file=sys.stderr, flush=True)
+                classification = classifier.classify_singleton(img_path)
+                destination = router.route_singleton(classification)
+                results.append({
+                    "file": str(img_path),
+                    "name": img_path.name,
+                    "type": "image",
+                    "classification": classification.get("classification"),
+                    "confidence": classification.get("confidence"),
+                    "reasoning": classification.get("reasoning", ""),
+                    "destination": destination,
+                })
+                stats[destination] = stats.get(destination, 0) + 1
+            except Exception as e:
+                print(f"[taste-cloner] ERROR classifying {img_path.name}: {e}", file=sys.stderr, flush=True)
+                results.append({"file": str(img_path), "name": img_path.name, "error": str(e)})
+
+        for vid_path in videos:
+            try:
+                print(f"[taste-cloner] Classifying video: {vid_path.name}", file=sys.stderr, flush=True)
+                classification = classifier.classify_video(vid_path)
+                destination = router.route_video(classification)
+                results.append({
+                    "file": str(vid_path),
+                    "name": vid_path.name,
+                    "type": "video",
+                    "classification": classification.get("classification"),
+                    "confidence": classification.get("confidence"),
+                    "reasoning": classification.get("reasoning", ""),
+                    "destination": destination,
+                })
+                stats[destination] = stats.get(destination, 0) + 1
+            except Exception as e:
+                print(f"[taste-cloner] ERROR classifying {vid_path.name}: {e}", file=sys.stderr, flush=True)
+                results.append({"file": str(vid_path), "name": vid_path.name, "error": str(e)})
+
+        print(f"[taste-cloner] Classification complete. Stats: {stats}", file=sys.stderr, flush=True)
+
+        return {
+            "status": "completed",
+            "dry_run": dry_run,
+            "total_files": total,
+            "stats": stats,
+            "results": results[:50],
+        }
 
     elif name == "taste_cloner_classify_files":
         # For individual files, classify them directly
@@ -309,9 +388,7 @@ def _handle_tool(name: str, arguments: dict) -> Any:
         return results
 
     elif name == "taste_cloner_get_results":
-        svc = _get_classification_service()
-        results = svc.get_job_results(arguments["job_id"])
-        return results
+        return {"error": "Job-based results are only available via the REST API. Use taste_cloner_classify_folder for direct results."}
 
     elif name == "taste_cloner_submit_feedback":
         from ..api.services.training_service import TrainingService

@@ -71,7 +71,7 @@ class ProfileSummary(BaseModel):
     name: str
     description: str
     media_types: List[str]
-    category_count: int
+    categories: List[str]
     created_at: str
     updated_at: str
     version: int
