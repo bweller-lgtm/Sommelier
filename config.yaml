@@ -13,6 +13,18 @@ model:
   clip_model: "ViT-B-32"
   clip_pretrained: "laion2b_s34b_b79k"
 
+  # AI provider: null = auto-detect from API keys. Options: gemini, openai, anthropic
+  # Gemini is recommended (cheapest, native video/PDF support)
+  provider: null
+
+  # Model names for non-Gemini providers
+  openai_model: "gpt-4.1"
+  anthropic_model: "claude-sonnet-4-20250514"
+
+  # Settings for non-Gemini providers (video frame extraction, PDF rendering)
+  video_frame_count: 8
+  pdf_render_dpi: 150
+
 # ============================= PATHS ==============================================
 paths:
   # Root directory for family photos (optional, can be overridden)

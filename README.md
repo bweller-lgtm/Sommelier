@@ -2,7 +2,7 @@
 
 **Universal AI-Powered Media Classification Platform**
 
-Classify and sort any media -- photos, videos, and documents -- using Google Gemini AI with customizable taste profiles. Originally built for family photo sorting, now extensible to any classification task.
+Classify and sort any media -- photos, videos, and documents -- using AI with customizable taste profiles. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go. Originally built for family photo sorting, now extensible to any classification task.
 
 ---
 
@@ -28,6 +28,7 @@ Create **custom profiles** with any categories, criteria, and thresholds for you
 
 ## Key Features
 
+- **Multi-Provider AI** -- Gemini (recommended), OpenAI, or Anthropic -- use whatever key you have
 - **Universal Classification** -- Photos, videos, PDFs, Word docs, Excel, PowerPoint, HTML, plain text
 - **Taste Profiles** -- Named, reusable classification profiles with custom categories
 - **Multiple Interfaces** -- CLI, REST API (FastAPI), and MCP server (Claude Desktop)
@@ -50,19 +51,26 @@ py -3.12 -m pip install -r requirements.txt
 
 ### 2. Configure API Key
 
-Create `.env` file:
+Create a `.env` file with **any one** of these:
 ```
-GEMINI_API_KEY=your_api_key_here
+GEMINI_API_KEY=your_key_here      # Recommended (cheapest, native video/PDF)
+OPENAI_API_KEY=your_key_here      # GPT-4o / GPT-4.1
+ANTHROPIC_API_KEY=your_key_here   # Claude
 ```
+
+The system auto-detects which key is available. If you have multiple keys, it prefers Gemini > OpenAI > Anthropic (or use `--provider` to override).
 
 ### 3. Run Classification
 
 ```bash
-# Classify a folder (auto-detects media types)
+# Classify a folder (auto-detects media types and provider)
 py -3.12 taste_classify.py "C:\Photos\MyFolder"
 
 # Use a specific taste profile
 py -3.12 taste_classify.py "C:\Photos\MyFolder" --profile default-photos
+
+# Force a specific AI provider
+py -3.12 taste_classify.py "C:\Photos\MyFolder" --provider openai
 
 # Classify documents
 py -3.12 taste_classify.py "C:\Docs\Reports" --profile default-documents
@@ -75,16 +83,51 @@ That's it! Files will be sorted into `C:\Photos\MyFolder_sorted/`.
 
 ---
 
+## AI Providers
+
+Taste Cloner supports three AI providers. Install only the SDK(s) you need.
+
+| Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) |
+|---------|--------|---------------------|-------------------|
+| Images | Native | Base64 | Base64 |
+| Videos | Native upload | Frame extraction | Frame extraction |
+| PDFs | Native upload | Page-to-image | Native |
+| Relative cost | Cheapest | Mid | Most expensive |
+| Env var | `GEMINI_API_KEY` | `OPENAI_API_KEY` | `ANTHROPIC_API_KEY` |
+
+Gemini is recommended as the default -- it is the cheapest and has native support for video and PDF uploads. OpenAI and Anthropic work by extracting video frames and rendering PDF pages as images, so they work with all media types but at slightly lower fidelity for video.
+
+Provider selection (in priority order):
+1. `--provider` CLI flag or `config.yaml > model > provider`
+2. Auto-detect from environment variables (gemini > openai > anthropic)
+
+### Configuration
+
+```yaml
+model:
+  provider: null          # null = auto-detect. Options: gemini, openai, anthropic
+  name: "gemini-3-flash-preview"
+  openai_model: "gpt-4.1"
+  anthropic_model: "claude-sonnet-4-20250514"
+  video_frame_count: 8    # Frames extracted for non-Gemini video
+  pdf_render_dpi: 150     # DPI for OpenAI PDF rendering
+```
+
+---
+
 ## Complete Usage
 
 ### CLI Classification
 
 ```bash
-# Basic classification (auto-detects media type)
+# Basic classification (auto-detects media type and provider)
 py -3.12 taste_classify.py "path/to/media"
 
 # With a specific profile
 py -3.12 taste_classify.py "path/to/media" --profile my-custom-profile
+
+# Force a specific AI provider
+py -3.12 taste_classify.py "path/to/media" --provider openai
 
 # Disable video classification
 py -3.12 taste_classify.py "path/to/photos" --no-classify-videos
@@ -347,10 +390,17 @@ See `config.yaml` for all options with inline documentation.
 
 ```
 src/
-+-- core/                  # Configuration, caching, Gemini client, profiles
++-- core/                  # Configuration, caching, AI clients, profiles
+|   +-- ai_client.py       # AIClient ABC + AIResponse
+|   +-- provider_factory.py # Auto-detect provider from API keys
+|   +-- media_prep.py      # Video frame extraction, PDF rendering, base64 encoding
+|   +-- providers/         # AI provider implementations
+|   |   +-- gemini.py      # Gemini (native video/PDF)
+|   |   +-- openai_provider.py   # OpenAI (GPT-4o/4.1)
+|   |   +-- anthropic_provider.py # Anthropic (Claude)
 |   +-- config.py          # Type-safe YAML configuration
 |   +-- cache.py           # Unified caching system
-|   +-- models.py          # Gemini API client
+|   +-- models.py          # Gemini API client (extends AIClient)
 |   +-- file_utils.py      # File type detection (images, videos, documents)
 |   +-- profiles.py        # Taste profile management system
 |   +-- logging_config.py  # Logging utilities
@@ -361,7 +411,7 @@ src/
 |   +-- document_features.py  # Document text/metadata extraction
 +-- classification/        # AI classification
 |   +-- prompt_builder.py  # Dynamic prompt generation (any media + profile)
-|   +-- classifier.py      # Gemini classification (photos, videos, documents)
+|   +-- classifier.py      # AI classification (photos, videos, documents)
 |   +-- routing.py         # Category routing with profile support
 +-- pipelines/             # Orchestration
 |   +-- base.py            # Abstract pipeline interface
@@ -420,6 +470,8 @@ Submit corrections via API or MCP, then regenerate profiles from accumulated fee
 
 ## Cost Estimates
 
+Costs vary by provider. Gemini is the cheapest option. The estimates below use Gemini 3 Flash.
+
 **Gemini 3 Flash Pricing:**
 - **Input:** $0.50 per 1M tokens
 - **Output:** $3.00 per 1M tokens
@@ -475,7 +527,8 @@ py -3.12 -m pip install -r requirements.txt
 
 | Category | Packages |
 |----------|----------|
-| AI/ML | google-generativeai, torch, open-clip-torch, sentence-transformers |
+| AI Providers | google-generativeai (Gemini), openai (OpenAI), anthropic (Anthropic) |
+| ML | torch, open-clip-torch, sentence-transformers |
 | Images | Pillow, pillow-heif, opencv-python |
 | Documents | pypdf, python-docx, openpyxl, python-pptx, beautifulsoup4 |
 | API | fastapi, uvicorn |
@@ -493,10 +546,12 @@ cd "path/to/Taste Cloner Photo Sorter"
 py -3.12 taste_classify.py ...
 ```
 
-### "GEMINI_API_KEY not set"
-Create `.env` file in project root:
+### "No AI provider configured"
+Create `.env` file in project root with at least one key:
 ```
-GEMINI_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here      # Recommended
+OPENAI_API_KEY=your_key_here      # Alternative
+ANTHROPIC_API_KEY=your_key_here   # Alternative
 ```
 
 ### "Config file not found"
@@ -535,7 +590,7 @@ py -3.12 -m pip install pypdf python-docx openpyxl python-pptx beautifulsoup4
 ## Credits
 
 **Built with:**
-- Google Gemini 3 Flash (AI classification)
+- Google Gemini, OpenAI, Anthropic (AI classification)
 - OpenCLIP (visual embeddings)
 - sentence-transformers (text embeddings)
 - FastAPI (REST API)

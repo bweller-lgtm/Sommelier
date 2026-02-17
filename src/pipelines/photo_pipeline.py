@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from ..core.config import Config
 from ..core.cache import CacheManager
-from ..core.models import GeminiClient
+from ..core.ai_client import AIClient
 from ..core.file_utils import FileTypeRegistry
 from ..core.profiles import TasteProfile
 from ..features.embeddings import EmbeddingExtractor
@@ -27,7 +27,7 @@ class PhotoPipeline(ClassificationPipeline):
         config: Config,
         profile: Optional[TasteProfile] = None,
         cache_manager: Optional[CacheManager] = None,
-        gemini_client: Optional[GeminiClient] = None,
+        gemini_client: Optional[AIClient] = None,
     ):
         super().__init__(config, profile)
         self.cache_manager = cache_manager

@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 from src.core import (
     load_config,
     CacheManager,
-    GeminiClient,
+    create_ai_client,
 )
 from src.classification import (
     PromptBuilder,
@@ -443,17 +443,12 @@ def main():
         enabled=config.caching.enabled
     )
 
-    # Initialize Gemini client
+    # Initialize AI client
     try:
-        gemini_client = GeminiClient(
-            model_name=config.model.name,
-            max_retries=config.system.max_retries,
-            retry_delay=config.system.retry_delay_seconds
-        )
-        print(f"✅ Gemini client initialized ({config.model.name})")
+        gemini_client = create_ai_client(config)
+        print(f"AI client initialized: {gemini_client.provider_name}")
     except ValueError as e:
-        print(f"❌ Error: {e}")
-        print("   Make sure GEMINI_API_KEY is set in .env file")
+        print(f"Error: {e}")
         sys.exit(1)
 
     # Initialize classification components

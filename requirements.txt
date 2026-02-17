@@ -1,8 +1,10 @@
 # LLM Taste Cloner Dependencies
 
-# Core AI/ML
-google-generativeai>=0.3.0
-google-genai>=1.0.0  # Required for image generation
+# AI providers (install the ones you need — at least one required)
+google-generativeai>=0.3.0     # For Gemini (recommended — cheapest, native video/PDF)
+google-genai>=1.0.0            # Required for Gemini image generation
+openai>=1.0.0                  # For OpenAI (GPT-4o / GPT-4.1)
+anthropic>=0.40.0              # For Anthropic (Claude)
 torch>=2.0.0
 open-clip-torch>=2.20.0
 numpy>=1.24.0

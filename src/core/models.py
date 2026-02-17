@@ -8,6 +8,8 @@ from pathlib import Path
 import google.generativeai as genai
 from PIL import Image
 
+from .ai_client import AIClient, AIResponse
+
 
 class GeminiError(Exception):
     """Base exception for Gemini API errors."""
@@ -29,78 +31,11 @@ class RateLimitError(GeminiError):
     pass
 
 
-class GeminiResponse:
-    """Parsed response from Gemini API."""
-
-    def __init__(
-        self,
-        text: str,
-        raw_response: Any,
-        blocked: bool = False,
-        finish_reason: Optional[int] = None
-    ):
-        """
-        Initialize response.
-
-        Args:
-            text: Response text.
-            raw_response: Raw API response object.
-            blocked: Whether response was blocked.
-            finish_reason: Finish reason code.
-        """
-        self.text = text
-        self.raw_response = raw_response
-        self.blocked = blocked
-        self.finish_reason = finish_reason
-
-    def parse_json(self, fallback: Optional[Dict] = None) -> Dict[str, Any]:
-        """
-        Parse JSON from response text.
-
-        Handles markdown code blocks and other formatting.
-
-        Args:
-            fallback: Fallback dict if parsing fails.
-
-        Returns:
-            Parsed JSON dict or fallback.
-        """
-        # Remove markdown code blocks
-        text_cleaned = re.sub(r'^```json\s*\n', '', self.text, flags=re.MULTILINE)
-        text_cleaned = re.sub(r'^```\s*\n', '', text_cleaned, flags=re.MULTILINE)
-        text_cleaned = re.sub(r'\n```\s*$', '', text_cleaned, flags=re.MULTILINE)
-        text_cleaned = text_cleaned.strip()
-
-        # Try to parse entire text
-        try:
-            return json.loads(text_cleaned)
-        except json.JSONDecodeError:
-            pass
-
-        # Try to find JSON object in text
-        json_match = re.search(r'\{[^{}]*\}', text_cleaned, re.DOTALL)
-        if json_match:
-            try:
-                return json.loads(json_match.group(0))
-            except json.JSONDecodeError:
-                pass
-
-        # Try to find nested JSON
-        json_match = re.search(r'\{.*\}', text_cleaned, re.DOTALL)
-        if json_match:
-            try:
-                return json.loads(json_match.group(0))
-            except json.JSONDecodeError:
-                pass
-
-        # Give up and return fallback
-        if fallback is not None:
-            return fallback
-
-        raise ValueError(f"Could not parse JSON from response: {self.text[:200]}")
+# Backward compatibility alias
+GeminiResponse = AIResponse
 
 
-class GeminiClient:
+class GeminiClient(AIClient):
     """
     Unified Gemini API client with proper error handling and retries.
 
@@ -111,6 +46,14 @@ class GeminiClient:
     - JSON parsing
     - Retries with exponential backoff
     """
+
+    provider_name = "gemini"
+
+    def supports_video(self) -> bool:
+        return True
+
+    def supports_pdf(self) -> bool:
+        return True
 
     def __init__(
         self,
@@ -189,11 +132,12 @@ class GeminiClient:
                 raise GeminiError(f"Response truncated (MAX_TOKENS) and could not extract text: {e}")
             raise GeminiError(f"Could not extract text from response: {e}")
 
-        return GeminiResponse(
+        return AIResponse(
             text=text,
             raw_response=response,
             blocked=False,
-            finish_reason=candidate.finish_reason
+            finish_reason=candidate.finish_reason,
+            provider="gemini",
         )
 
     def generate(
@@ -253,11 +197,12 @@ class GeminiClient:
                 if handle_safety_errors:
                     # Return fallback response
                     print(f"⚠️  Safety filter triggered: {e}")
-                    return GeminiResponse(
+                    return AIResponse(
                         text='{"classification": "Review", "confidence": 0.3, "reasoning": "Blocked by safety filters"}',
                         raw_response=None,
                         blocked=True,
-                        finish_reason=3
+                        finish_reason=3,
+                        provider="gemini",
                     )
                 else:
                     raise

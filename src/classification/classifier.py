@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable
 from tqdm import tqdm
 
-from ..core.models import GeminiClient
+from ..core.ai_client import AIClient
 from ..core.config import Config
 from ..core.cache import CacheManager, CacheKey
 from ..core.file_utils import ImageUtils
@@ -23,7 +23,7 @@ class MediaClassifier:
     def __init__(
         self,
         config: Config,
-        gemini_client: GeminiClient,
+        gemini_client: AIClient,
         prompt_builder: PromptBuilder,
         cache_manager: Optional[CacheManager] = None,
         profile: Optional[TasteProfile] = None
@@ -33,7 +33,7 @@ class MediaClassifier:
 
         Args:
             config: Configuration object.
-            gemini_client: Gemini API client.
+            gemini_client: AI provider client.
             prompt_builder: Prompt builder for generating prompts.
             cache_manager: Optional cache manager for caching responses.
             profile: Optional TasteProfile for dynamic category validation.
