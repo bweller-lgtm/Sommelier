@@ -4,11 +4,11 @@
 
 Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best code. Screen 500 resumes against criteria you didn't have to write by hand.
 
-Sommelier learns what "good" looks like from your examples, turns that into a reusable taste profile, then applies your judgment at scale. Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go.
-
 ### You don't need to know your criteria.
 
-Point Sommelier at examples you like and it figures out what they have in common. The generated profile is both a human-readable style guide and an executable classifier -- your documented standards, synthesized from examples. This is what makes it different from a one-shot prompt: your taste compounds over time.
+Point Sommelier at examples you like and it figures out what they have in common, then applies your judgment at scale. The generated profile is both a human-readable style guide and an executable classifier -- your documented standards, synthesized from examples. This is what makes it different from a one-shot prompt: your taste compounds over time.
+
+Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go.
 
 ---
 
@@ -28,47 +28,36 @@ Each cycle sharpens the profile. What starts as "sort my photos" becomes a rich,
 
 The original use case. Ships with a built-in profile that classifies photos into Share / Storage / Review / Ignore. Run it on a year of camera roll and get the 200 worth sharing for about a dollar.
 
-Here's a real profile Sommelier generated from a family photo library. Nobody wrote this by hand:
+Here's a real profile Sommelier generated from a family photo library. Nobody wrote this by hand -- it was synthesized from examples:
 
-**Philosophy:**
-> Photos worth sharing capture genuine moments of connection and joy between baby and loved ones. They should highlight the baby's expressions, engagement with the world, and the loving interactions they share, all presented in a visually clear and appealing manner.
+<details>
+<summary><strong>Generated taste profile: baby photos</strong></summary>
 
-**Top priorities (ranked):**
-1. Baby's face is visible, well-lit, and in focus
-2. Baby actively engaging with people or objects
-3. Clear and expressive facial expressions (joy, curiosity, mischief)
-4. Positive interactions between baby and parent/caregiver
-5. Well-framed photos that focus on the baby and minimize distractions
-6. Photos that evoke positive emotions -- joy, love, wonder, humor
-7. Good lighting, sharpness, and minimal blur
+> **Philosophy:** Photos worth sharing capture genuine moments of connection and joy between baby and loved ones. They should highlight the baby's expressions, engagement with the world, and the loving interactions they share, all presented in a visually clear and appealing manner.
+>
+> **Top priorities (ranked):**
+> 1. Baby's face is visible, well-lit, and in focus
+> 2. Baby actively engaging with people or objects
+> 3. Clear and expressive facial expressions (joy, curiosity, mischief)
+> 4. Positive interactions between baby and parent/caregiver
+> 5. Well-framed photos that focus on the baby and minimize distractions
+> 6. Photos that evoke positive emotions -- joy, love, wonder, humor
+> 7. Good lighting, sharpness, and minimal blur
+>
+> **Must-have:** Baby's face clearly visible and in focus. Baby engaged in the activity or with another person. Well-lit and sharp. Expressive and genuine emotion conveyed.
+>
+> **Highly valued:** Interactions between baby and parent (especially eye contact or physical touch). Baby displaying positive emotions. Photos that tell a story or capture a special moment.
+>
+> **Deal-breakers:** Baby's face not visible or obscured. Blurry or out of focus. Poor lighting. Baby displaying negative expression without context. Child too small in frame.
+>
+> **Burst guidance:** Prioritize the clearest expressions, best focus on the baby's face, and minimal distractions. Choose the photo that best captures the moment's essence.
+>
+> **Specific guidance:**
+> - *"Does this photo capture the baby's personality and current stage of development?"*
+> - *"If both parent and baby are in the photo, ensure both have engaged and positive expressions."*
+> - *"Reject photos even if technically good if the baby looks unhappy (unless comically so)."*
 
-**Must-have criteria:**
-- Baby's face clearly visible and in focus
-- Baby engaged in the activity or with another person
-- Well-lit and sharp (minimal blur)
-- Expressive and genuine emotion conveyed
-
-**Highly valued:**
-- Interactions between baby and parent (especially eye contact or physical touch)
-- Baby displaying positive emotions (smiling, laughing, curious)
-- Photos that tell a story or capture a special moment
-- Close-up or medium shots emphasizing the baby's face and expressions
-
-**Deal-breakers:**
-- Baby's face not visible or obscured
-- Blurry or out of focus
-- Poor lighting (too dark or overexposed)
-- Baby displaying negative expression without context
-- Child too small in frame
-
-**Burst photo guidance:**
-> From burst photos, prioritize those with the clearest expressions, best focus on the baby's face, and minimal distractions. Choose the photo that best captures the moment's essence and positive emotional impact.
-
-**Specific guidance:**
-- *"When evaluating photos, ask yourself: does this photo capture the baby's personality and current stage of development?"*
-- *"If both parent and baby are in the photo, ensure both have engaged and positive expressions."*
-- *"Reject photos even if technically good if the baby looks unhappy (unless comically so)."*
-- *"Focus on quality over quantity; it's better to have a few excellent photos than many mediocre ones."*
+</details>
 
 That profile is both a human-readable style guide *and* an executable classifier. Every future photo is evaluated against those exact criteria.
 
