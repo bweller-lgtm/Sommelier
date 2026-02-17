@@ -1,41 +1,34 @@
-# Taste Cloner
+# Sommelier
 
-**Universal AI-Powered Media Classification Platform**
+**Teach AI your taste. Apply it to everything.**
 
-Classify and sort any media -- photos, videos, and documents -- using AI with customizable taste profiles. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go. Originally built for family photo sorting, now extensible to any classification task.
+Sort 1,000 family photos in 10 minutes for $1.30. Or extract coding standards from your best code. Or screen 500 resumes against criteria you didn't have to write by hand.
 
----
+Sommelier learns what "good" looks like from your examples, turns that into a reusable taste profile, then applies your judgment at scale. Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go.
 
-## What It Does
-
-Classifies media into **user-defined categories** based on configurable taste profiles. Ships with two default profiles:
-
-**Family Photos** (`default-photos`):
-- **Share** -- Worth sharing with family (target: 25-30%)
-- **Storage** -- Keep but don't share
-- **Review** -- Uncertain, needs manual review
-- **Ignore** -- No children or inappropriate
-
-**Documents** (`default-documents`):
-- **Exemplary** -- Outstanding, high-quality documents
-- **Acceptable** -- Adequate quality, keep for reference
-- **Review** -- Uncertain quality, needs manual review
-- **Discard** -- Low quality or irrelevant
-
-Create **custom profiles** with any categories, criteria, and thresholds for your specific needs.
+> **Don't know your criteria yet?** Point Sommelier at examples you like and it'll figure it out. The generated profile *is* your documented standards -- and it's executable.
 
 ---
 
-## Key Features
+## What People Use It For
 
-- **Multi-Provider AI** -- Gemini (recommended), OpenAI, or Anthropic -- use whatever key you have
-- **Universal Classification** -- Photos, videos, PDFs, Word docs, Excel, PowerPoint, HTML, plain text
-- **Taste Profiles** -- Named, reusable classification profiles with custom categories
-- **Multiple Interfaces** -- CLI, REST API (FastAPI), and MCP server (Claude Desktop)
-- **Smart Grouping** -- Burst detection for photos, similarity grouping for documents
-- **Photo Improvement** -- AI enhancement of gray zone photos with technical issues
-- **Error Recovery** -- Automatic retry with exponential backoff for API failures
-- **Aggressive Caching** -- Saves ~90% on re-runs
+**Sort family photos** -- the original use case. Ship with a built-in profile that classifies photos into Share / Storage / Review / Ignore. Run it on a year of camera roll, get the 200 worth sharing, for about a dollar.
+
+**Extract coding standards** -- point it at your `src/` directory with a code quality profile. It classifies every file into quality tiers. Then feed the "Exemplary" bucket back in and Sommelier synthesizes *what makes those files good* into a reusable profile -- error handling patterns, naming conventions, architectural choices. That profile becomes both a style guide and an automated reviewer for future code.
+
+**Screen applications at scale** -- resumes, grant proposals, student papers, vendor submissions. Create a profile from the last 10 candidates you actually hired. Sommelier extracts what they had in common and applies it to the next 500 applicants. Your criteria, not a generic model's.
+
+**Curate any collection** -- research papers, product photos, legal documents, design assets. Anything where you "know it when you see it" but can't write the rules upfront. Sommelier closes the gap between tacit taste and explicit, repeatable judgment.
+
+---
+
+## How It Works
+
+1. **Classify** -- AI evaluates each file against your profile's criteria and sorts it into categories
+2. **Learn** -- Feed exemplary results back in, and Sommelier synthesizes what makes them good
+3. **Apply** -- The generated profile becomes a reusable classifier for future runs
+
+This is the loop that makes Sommelier different from a one-shot classifier. Your taste improves over time.
 
 ---
 
@@ -85,7 +78,7 @@ That's it! Files will be sorted into `C:\Photos\MyFolder_sorted/`.
 
 ## AI Providers
 
-Taste Cloner supports three AI providers. Install only the SDK(s) you need.
+Sommelier supports three AI providers. Install only the SDK(s) you need.
 
 | Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) |
 |---------|--------|---------------------|-------------------|
@@ -305,7 +298,7 @@ document:
 
 ### Codebase Analysis
 
-Use Taste Cloner to extract best practices from a codebase:
+Use Sommelier to extract best practices from a codebase:
 
 **Step 1: Classify code by quality.** Create a profile and point it at your `src/` folder:
 ```
@@ -575,7 +568,7 @@ py -3.12 -m pip install -r requirements.txt
 ### "No module named 'src'"
 Run from the project root directory:
 ```bash
-cd "path/to/Taste Cloner Photo Sorter"
+cd "path/to/sommelier"
 py -3.12 taste_classify.py ...
 ```
 
@@ -633,6 +626,6 @@ py -3.12 -m pip install pypdf python-docx openpyxl python-pptx beautifulsoup4
 
 ---
 
-**Version:** 3.0.0 (Universal Media Classification Platform)
+**Version:** 3.1.0
 **Last Updated:** February 2026
 **Status:** Production Ready
