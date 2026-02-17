@@ -133,3 +133,153 @@ def test_component_imports():
     assert PromptBuilder is not None
     assert MediaClassifier is not None
     assert Router is not None
+
+
+# ── Custom profile tests (document/resume screening) ────────────────
+
+
+class TestCustomProfileClassification:
+    """Tests for classification with custom profiles (e.g., resume screening)."""
+
+    @pytest.fixture
+    def resume_profile(self):
+        """Create a resume screening taste profile."""
+        from src.core.profiles import TasteProfile, CategoryDefinition
+        return TasteProfile(
+            name="resume-screener",
+            description="Screen resumes for engineering candidates",
+            media_types=["document"],
+            categories=[
+                CategoryDefinition(name="Strong", description="Excellent candidates to interview"),
+                CategoryDefinition(name="Maybe", description="Worth a second look"),
+                CategoryDefinition(name="Pass", description="Not a match for this role"),
+            ],
+            default_category="Maybe",
+            top_priorities=[
+                "Relevant engineering experience",
+                "Track record of increasing responsibility",
+            ],
+            positive_criteria={
+                "must_have": ["Relevant technical experience"],
+                "highly_valued": ["Leadership experience", "Open source contributions"],
+            },
+            negative_criteria={
+                "deal_breakers": ["No relevant experience"],
+            },
+            philosophy="Focus on demonstrated impact over credentials.",
+            thresholds={"Strong": 0.70, "Maybe": 0.40},
+        )
+
+    @pytest.fixture
+    def config(self):
+        return load_config(Path("config.yaml"))
+
+    def test_prompt_uses_custom_categories(self, config, resume_profile):
+        """PromptBuilder should use profile's categories, not defaults."""
+        pb = PromptBuilder(config, profile=resume_profile)
+        prompt = pb.build_singleton_prompt(media_type="document")
+
+        assert "strong" in prompt.lower()
+        assert "maybe" in prompt.lower()
+        assert "pass" in prompt.lower()
+        # Should NOT contain default photo categories
+        assert "share" not in prompt.lower() or "sharepoint" in prompt.lower()
+
+    def test_prompt_includes_criteria(self, config, resume_profile):
+        """PromptBuilder should include profile criteria in document prompts."""
+        pb = PromptBuilder(config, profile=resume_profile)
+        prompt = pb.build_singleton_prompt(media_type="document")
+
+        assert "relevant" in prompt.lower()
+        assert "impact" in prompt.lower() or "philosophy" in prompt.lower() or "experience" in prompt.lower()
+
+    def test_classifier_valid_categories(self, config, resume_profile):
+        """Classifier should accept profile's categories as valid."""
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        pb = PromptBuilder(config, profile=resume_profile)
+        classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
+
+        assert "Strong" in classifier._valid_categories
+        assert "Maybe" in classifier._valid_categories
+        assert "Pass" in classifier._valid_categories
+        # "Review" should NOT be in valid categories (not a profile category)
+        assert "Review" not in classifier._valid_categories
+
+    def test_classifier_default_category(self, config, resume_profile):
+        """Classifier should use profile's default_category, not 'Review'."""
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        pb = PromptBuilder(config, profile=resume_profile)
+        classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
+
+        assert classifier._default_category == "Maybe"
+
+    def test_fallback_uses_profile_default(self, config, resume_profile):
+        """Fallback response should use profile's default_category."""
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        pb = PromptBuilder(config, profile=resume_profile)
+        classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
+
+        fallback = classifier._create_fallback_response("API error")
+        assert fallback["classification"] == "Maybe"
+        assert fallback["is_error_fallback"] is True
+
+    def test_validation_remaps_invalid_category(self, config, resume_profile):
+        """Validator should remap invalid categories to profile default."""
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        pb = PromptBuilder(config, profile=resume_profile)
+        classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
+
+        response = {"classification": "Share", "confidence": 0.8, "reasoning": "test"}
+        validated = classifier._validate_singleton_response(response)
+        assert validated["classification"] == "Maybe"  # remapped to default
+
+    def test_validation_keeps_valid_category(self, config, resume_profile):
+        """Validator should keep valid profile categories."""
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        pb = PromptBuilder(config, profile=resume_profile)
+        classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
+
+        response = {"classification": "Strong", "confidence": 0.9, "reasoning": "great candidate"}
+        validated = classifier._validate_singleton_response(response)
+        assert validated["classification"] == "Strong"
+
+    def test_document_validation_remaps_invalid(self, config, resume_profile):
+        """Document validator should remap invalid categories to profile default."""
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        pb = PromptBuilder(config, profile=resume_profile)
+        classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
+
+        response = {"classification": "Exemplary", "confidence": 0.7, "reasoning": "test"}
+        validated = classifier._validate_document_response(response)
+        assert validated["classification"] == "Maybe"
+
+    def test_router_respects_profile_categories(self, config, resume_profile):
+        """Router should accept profile categories for documents."""
+        router = Router(config, profile=resume_profile)
+
+        classification = {"classification": "Strong", "confidence": 0.85}
+        dest = router.route_document(classification)
+        assert dest == "Strong"
+
+    def test_router_applies_profile_thresholds(self, config, resume_profile):
+        """Router should apply profile thresholds to documents."""
+        router = Router(config, profile=resume_profile)
+
+        # Below "Strong" threshold of 0.70
+        classification = {"classification": "Strong", "confidence": 0.50}
+        dest = router.route_document(classification)
+        assert dest == "Maybe"  # falls to default
+
+    def test_router_invalid_category_falls_to_default(self, config, resume_profile):
+        """Router should remap invalid categories to profile default."""
+        router = Router(config, profile=resume_profile)
+
+        classification = {"classification": "Share", "confidence": 0.9}
+        dest = router.route_document(classification)
+        assert dest == "Maybe"

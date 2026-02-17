@@ -46,10 +46,21 @@ class MediaClassifier:
         self.max_output_tokens = config.model.max_output_tokens
 
     @property
+    def _default_category(self) -> str:
+        """Get the default/fallback category name."""
+        if self.profile:
+            return self.profile.default_category
+        return "Review"
+
+    @property
     def _valid_categories(self) -> List[str]:
         """Get valid classification categories."""
         if self.profile:
-            return self.profile.category_names + ["Review"]
+            cats = self.profile.category_names
+            # Ensure default_category is always valid
+            if self.profile.default_category not in cats:
+                cats = cats + [self.profile.default_category]
+            return cats
         return ["Share", "Storage", "Review", "Ignore"]
 
     def classify_singleton(
@@ -512,7 +523,7 @@ class MediaClassifier:
     def _validate_document_response(self, response: Dict[str, Any], default_rank: Optional[int] = None) -> Dict[str, Any]:
         """Validate and fix document classification response."""
         if "classification" not in response:
-            response["classification"] = self.profile.default_category if self.profile else "Review"
+            response["classification"] = self._default_category
         if "confidence" not in response:
             response["confidence"] = 0.3
         if "reasoning" not in response:
@@ -521,7 +532,7 @@ class MediaClassifier:
         # Validate category against profile
         valid = self._valid_categories
         if response["classification"] not in valid:
-            response["classification"] = self.profile.default_category if self.profile else "Review"
+            response["classification"] = self._default_category
 
         response["confidence"] = max(0.0, min(1.0, float(response.get("confidence", 0.3))))
 
@@ -567,7 +578,7 @@ class MediaClassifier:
             Fallback classification dict.
         """
         response = {
-            "classification": "Review",
+            "classification": self._default_category,
             "confidence": 0.3,
             "reasoning": f"Fallback response: {reason}",
             "contains_children": None,
@@ -652,7 +663,7 @@ class MediaClassifier:
         """Validate and fix singleton response."""
         # Ensure required fields
         if "classification" not in response:
-            response["classification"] = "Review"
+            response["classification"] = self._default_category
         if "confidence" not in response:
             response["confidence"] = 0.3
         if "reasoning" not in response:
@@ -661,7 +672,7 @@ class MediaClassifier:
         # Ensure classification is valid (dynamic categories from profile)
         valid = self._valid_categories
         if response["classification"] not in valid:
-            response["classification"] = self.profile.default_category if self.profile else "Review"
+            response["classification"] = self._default_category
 
         # Ensure confidence is in range
         response["confidence"] = max(0.0, min(1.0, float(response.get("confidence", 0.3))))
