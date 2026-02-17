@@ -16,7 +16,6 @@ from ..core.profiles import ProfileManager
 
 _config = None
 _profile_manager = None
-_classification_service = None
 
 
 def _get_config():
@@ -38,18 +37,10 @@ def _get_profile_manager():
     return _profile_manager
 
 
-def _get_classification_service():
-    global _classification_service
-    if _classification_service is None:
-        from ..api.services.classification_service import ClassificationService
-        _classification_service = ClassificationService(_get_config())
-    return _classification_service
-
-
 def create_mcp_server():
     """Create and configure the MCP server with all Taste Cloner tools."""
     from mcp.server import Server
-    from mcp.types import Tool, TextContent
+    from mcp.types import Tool, TextContent, Prompt, PromptMessage, PromptArgument
 
     # Pre-initialize config and profile manager during startup
     print("[taste-cloner] Pre-loading config and profiles...", file=sys.stderr, flush=True)
@@ -59,12 +50,68 @@ def create_mcp_server():
 
     server = Server("taste-cloner")
 
+    # ── MCP Prompts ─────────────────────────────────────────────────────
+    # These give Claude Desktop context about what Taste Cloner is and how
+    # to guide users through common workflows.
+
+    @server.list_prompts()
+    async def list_prompts() -> list[Prompt]:
+        return [
+            Prompt(
+                name="taste_cloner_getting_started",
+                description="Introduction to Taste Cloner and how to use it. Start here if you're new.",
+                arguments=[],
+            ),
+            Prompt(
+                name="taste_cloner_create_profile_wizard",
+                description="Step-by-step guide to create a new taste profile through conversation.",
+                arguments=[
+                    PromptArgument(
+                        name="use_case",
+                        description="Brief description of what you want to sort (e.g., 'family photos', 'resumes', 'product images')",
+                        required=False,
+                    ),
+                ],
+            ),
+        ]
+
+    @server.get_prompt()
+    async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> list[PromptMessage]:
+        if name == "taste_cloner_getting_started":
+            return [PromptMessage(
+                role="user",
+                content=TextContent(
+                    type="text",
+                    text=_GETTING_STARTED_PROMPT,
+                ),
+            )]
+        elif name == "taste_cloner_create_profile_wizard":
+            use_case = (arguments or {}).get("use_case", "")
+            prompt = _PROFILE_WIZARD_PROMPT
+            if use_case:
+                prompt += f"\n\nThe user wants to sort: {use_case}"
+            return [PromptMessage(
+                role="user",
+                content=TextContent(
+                    type="text",
+                    text=prompt,
+                ),
+            )]
+        raise ValueError(f"Unknown prompt: {name}")
+
+    # ── MCP Tools ───────────────────────────────────────────────────────
+
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         return [
             Tool(
                 name="taste_cloner_list_profiles",
-                description="List all available taste profiles with their names, descriptions, and media types.",
+                description=(
+                    "List all taste profiles available for classifying media. "
+                    "Each profile defines categories (like Share/Storage/Ignore for photos) "
+                    "and criteria for sorting files. Use this first to see what's available, "
+                    "then use taste_cloner_classify_folder to sort files with a profile."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {},
@@ -72,13 +119,17 @@ def create_mcp_server():
             ),
             Tool(
                 name="taste_cloner_get_profile",
-                description="Get the full details of a specific taste profile.",
+                description=(
+                    "Get the full details of a taste profile, including its categories, "
+                    "priorities, criteria, and philosophy. Use this to understand how a "
+                    "profile makes classification decisions, or to review before classifying."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "profile_name": {
                             "type": "string",
-                            "description": "Name of the profile to retrieve",
+                            "description": "Name of the profile (e.g., 'default-photos', 'default-documents')",
                         },
                     },
                     "required": ["profile_name"],
@@ -86,16 +137,28 @@ def create_mcp_server():
             ),
             Tool(
                 name="taste_cloner_create_profile",
-                description="Create a new taste profile for classifying media.",
+                description=(
+                    "Create a new taste profile with custom categories and criteria. "
+                    "This is the structured version — you provide specific categories, "
+                    "priorities, and criteria. For a simpler approach, use "
+                    "taste_cloner_quick_profile which generates a profile from a "
+                    "plain English description."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "name": {"type": "string", "description": "Profile name (used as identifier)"},
-                        "description": {"type": "string", "description": "Human-readable description"},
+                        "name": {
+                            "type": "string",
+                            "description": "Profile name (lowercase with hyphens, e.g., 'wedding-photos')",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "What this profile is for, in plain English",
+                        },
                         "media_types": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Media types: image, video, document, mixed",
+                            "description": "What kind of files: 'image', 'video', 'document', or 'mixed'",
                         },
                         "categories": {
                             "type": "array",
@@ -107,80 +170,176 @@ def create_mcp_server():
                                 },
                                 "required": ["name", "description"],
                             },
-                            "description": "Output categories for classification",
+                            "description": "Output categories (e.g., [{name: 'Keep', description: 'Worth keeping'}, ...])",
                         },
                         "top_priorities": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Ranked list of what matters most",
+                            "description": "Ranked list of what matters most when classifying",
                         },
-                        "philosophy": {"type": "string", "description": "Overall philosophy statement"},
+                        "positive_criteria": {
+                            "type": "object",
+                            "description": "What makes something good. Keys: 'must_have', 'highly_valued', 'bonus_points'. Values: arrays of strings.",
+                        },
+                        "negative_criteria": {
+                            "type": "object",
+                            "description": "What makes something bad. Keys: 'deal_breakers', 'negative_factors'. Values: arrays of strings.",
+                        },
+                        "specific_guidance": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Additional rules or guidance for the classifier",
+                        },
+                        "philosophy": {
+                            "type": "string",
+                            "description": "Overall philosophy statement guiding classification decisions",
+                        },
                     },
                     "required": ["name", "description", "media_types", "categories"],
                 },
             ),
             Tool(
-                name="taste_cloner_classify_folder",
-                description="Classify all media files in a folder using a taste profile. Returns classification results.",
+                name="taste_cloner_quick_profile",
+                description=(
+                    "Generate a complete taste profile from a plain English description. "
+                    "Just describe what you want to sort and how — the AI will create "
+                    "appropriate categories, criteria, and priorities. "
+                    "Example: 'I want to sort my family vacation photos. Keep the ones "
+                    "that show everyone having fun, discard blurry ones and duplicates.' "
+                    "This is the easiest way to create a new profile."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "folder_path": {"type": "string", "description": "Path to folder containing files to classify"},
-                        "profile_name": {"type": "string", "description": "Name of the taste profile to use"},
-                        "dry_run": {"type": "boolean", "description": "If true, don't move files", "default": False},
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name for the profile (lowercase with hyphens, e.g., 'vacation-photos')",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Plain English description of what you want to sort and how. Be as detailed as you like — the more context, the better the profile.",
+                        },
+                        "media_type": {
+                            "type": "string",
+                            "enum": ["image", "video", "document", "mixed"],
+                            "description": "What kind of files you're sorting",
+                            "default": "image",
+                        },
+                    },
+                    "required": ["profile_name", "description"],
+                },
+            ),
+            Tool(
+                name="taste_cloner_classify_folder",
+                description=(
+                    "Classify all media files in a folder using a taste profile. "
+                    "Each file is analyzed by AI and assigned to a category. "
+                    "For large folders (50+ files), use batch_size=30 to process in chunks "
+                    "— the response includes next_offset so you can continue where you left off. "
+                    "Use dry_run=true first to preview results without moving files."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "folder_path": {
+                            "type": "string",
+                            "description": "Full path to the folder (e.g., 'C:\\Users\\me\\Photos\\Unsorted')",
+                        },
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Profile to use (run taste_cloner_list_profiles to see options)",
+                        },
+                        "dry_run": {
+                            "type": "boolean",
+                            "description": "If true, classify but don't move files. Good for previewing.",
+                            "default": True,
+                        },
+                        "offset": {
+                            "type": "integer",
+                            "description": "Start from this file index. Use next_offset from a previous partial result to continue.",
+                            "default": 0,
+                        },
+                        "batch_size": {
+                            "type": "integer",
+                            "description": "Max files to process. Use 30-50 for large folders. 0 = all files.",
+                            "default": 0,
+                        },
                     },
                     "required": ["folder_path", "profile_name"],
                 },
             ),
             Tool(
                 name="taste_cloner_classify_files",
-                description="Classify specific files using a taste profile.",
+                description=(
+                    "Classify specific files (by path) using a taste profile. "
+                    "Use this when you want to classify individual files rather than "
+                    "a whole folder. Good for re-classifying files or testing a profile."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "file_paths": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of file paths to classify",
+                            "description": "Full paths to files to classify",
                         },
-                        "profile_name": {"type": "string", "description": "Name of the taste profile to use"},
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Profile to use for classification",
+                        },
                     },
                     "required": ["file_paths", "profile_name"],
                 },
             ),
             Tool(
-                name="taste_cloner_get_results",
-                description="Get results from a previous classification run.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "job_id": {"type": "string", "description": "Job ID from a classification run"},
-                    },
-                    "required": ["job_id"],
-                },
-            ),
-            Tool(
                 name="taste_cloner_submit_feedback",
-                description="Submit a correction/feedback on a classification result.",
+                description=(
+                    "Correct a classification result. If a file was sorted into the wrong "
+                    "category, submit the correction here. This feedback is stored and can "
+                    "be used to improve profiles over time."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the file being corrected"},
-                        "correct_category": {"type": "string", "description": "The correct category for this file"},
-                        "reasoning": {"type": "string", "description": "Why this category is correct"},
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file that was misclassified",
+                        },
+                        "correct_category": {
+                            "type": "string",
+                            "description": "The category it should have been sorted into",
+                        },
+                        "reasoning": {
+                            "type": "string",
+                            "description": "Why this category is correct (helps improve the profile)",
+                        },
                     },
                     "required": ["file_path", "correct_category"],
                 },
             ),
             Tool(
                 name="taste_cloner_generate_profile",
-                description="AI-generate a taste profile from example files in folders.",
+                description=(
+                    "Generate a taste profile by analyzing example files. "
+                    "Point it at a folder of 'good' examples (and optionally 'bad' examples) "
+                    "and it will analyze them to create a profile that captures your taste. "
+                    "Best with 5-20 examples in each folder."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "profile_name": {"type": "string", "description": "Name for the new profile"},
-                        "good_examples_folder": {"type": "string", "description": "Folder with good/positive examples"},
-                        "bad_examples_folder": {"type": "string", "description": "Folder with bad/negative examples (optional)"},
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name for the new profile",
+                        },
+                        "good_examples_folder": {
+                            "type": "string",
+                            "description": "Folder containing good/positive examples",
+                        },
+                        "bad_examples_folder": {
+                            "type": "string",
+                            "description": "Folder containing bad/negative examples (optional but recommended)",
+                        },
                     },
                     "required": ["profile_name", "good_examples_folder"],
                 },
@@ -197,10 +356,50 @@ def create_mcp_server():
             return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
         except Exception as e:
             print(f"[taste-cloner] call_tool error: {name}: {e}", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
     return server
 
+
+# ── Prompt templates ────────────────────────────────────────────────────
+
+_GETTING_STARTED_PROMPT = """\
+I have Taste Cloner connected. Help me understand what it can do and how to get started.
+
+Taste Cloner is a media classification tool that sorts files (photos, videos, documents) \
+into categories based on "taste profiles" — customizable rules that define what's good, \
+what's bad, and how to sort things.
+
+It comes with two built-in profiles:
+- **default-photos**: Sorts family photos/videos into Share, Storage, Review, and Ignore
+- **default-documents**: Sorts documents into Exemplary, Acceptable, Review, and Discard
+
+I can also create custom profiles for any sorting task.
+
+Please start by listing my available profiles, then help me choose what to do next."""
+
+_PROFILE_WIZARD_PROMPT = """\
+Help me create a new taste profile for Taste Cloner. Walk me through it conversationally.
+
+A taste profile needs:
+1. **Name** — a short identifier (lowercase-with-hyphens)
+2. **What I'm sorting** — photos, videos, documents, or a mix
+3. **Categories** — the buckets files get sorted into (e.g., Keep/Maybe/Discard)
+4. **What makes something good** — positive criteria
+5. **What makes something bad** — negative criteria
+6. **Overall philosophy** — the guiding principle
+
+Ask me about each one conversationally. Once you have enough information, use the \
+taste_cloner_quick_profile tool to generate the profile, or taste_cloner_create_profile \
+if you want full control over every field.
+
+Important: Don't ask all questions at once. Start with what I'm sorting and why, \
+then build from there."""
+
+
+# ── Tool dispatch ───────────────────────────────────────────────────────
 
 def _handle_tool(name: str, arguments: dict) -> Any:
     """Dispatch tool calls to appropriate handlers."""
@@ -210,202 +409,503 @@ def _handle_tool(name: str, arguments: dict) -> Any:
     print(f"[taste-cloner] profile manager loaded", file=sys.stderr, flush=True)
 
     if name == "taste_cloner_list_profiles":
-        profiles = pm.list_profiles()
-        return [
-            {
-                "name": p.name,
-                "description": p.description,
-                "media_types": p.media_types,
-                "categories": [c.name for c in p.categories],
-            }
-            for p in profiles
-        ]
-
+        return _handle_list_profiles(pm)
     elif name == "taste_cloner_get_profile":
-        profile = pm.load_profile(arguments["profile_name"])
-        return profile.to_dict()
-
+        return _handle_get_profile(pm, arguments)
     elif name == "taste_cloner_create_profile":
-        profile = pm.create_profile(
-            name=arguments["name"],
-            description=arguments["description"],
-            media_types=arguments["media_types"],
-            categories=arguments["categories"],
-            top_priorities=arguments.get("top_priorities", []),
-            philosophy=arguments.get("philosophy", ""),
-        )
-        return {"status": "created", "profile": profile.to_dict()}
-
+        return _handle_create_profile(pm, arguments)
+    elif name == "taste_cloner_quick_profile":
+        return _handle_quick_profile(pm, arguments)
     elif name == "taste_cloner_classify_folder":
-        # Lightweight classification — uses Gemini directly, no CLIP/torch.
-        # Classifies each photo individually (no burst detection).
-        print(f"[taste-cloner] classify_folder: {arguments}", file=sys.stderr, flush=True)
-
-        from ..core.cache import CacheManager
-        from ..core.models import GeminiClient
-        from ..classification.prompt_builder import PromptBuilder
-        from ..classification.classifier import MediaClassifier
-        from ..classification.routing import Router
-        from ..core.file_utils import FileTypeRegistry
-
-        config = _get_config()
-        profile = pm.load_profile(arguments["profile_name"])
-        folder = Path(arguments["folder_path"])
-
-        if not folder.is_dir():
-            return {"error": f"Folder not found: {folder}"}
-
-        cache_manager = CacheManager(
-            config.paths.cache_root,
-            ttl_days=config.caching.ttl_days,
-            enabled=config.caching.enabled,
-        )
-        gemini_client = GeminiClient(
-            model_name=config.model.name,
-            max_retries=config.system.max_retries,
-            retry_delay=config.system.retry_delay_seconds,
-        )
-        prompt_builder = PromptBuilder(config, profile=profile)
-        classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
-        router = Router(config, gemini_client, profile=profile)
-
-        # Discover files
-        all_files = FileTypeRegistry.list_all_media(folder)
-        images = all_files.get("images", [])
-        videos = all_files.get("videos", [])
-        documents = all_files.get("documents", [])
-        total = len(images) + len(videos) + len(documents)
-
-        print(f"[taste-cloner] Found {len(images)} images, {len(videos)} videos, {len(documents)} documents", file=sys.stderr, flush=True)
-
-        dry_run = arguments.get("dry_run", False)
-        results = []
-        stats = {}
-
-        for i, img_path in enumerate(images):
-            try:
-                print(f"[taste-cloner] Classifying {i+1}/{total}: {img_path.name}", file=sys.stderr, flush=True)
-                classification = classifier.classify_singleton(img_path)
-                destination = router.route_singleton(classification)
-                results.append({
-                    "file": str(img_path),
-                    "name": img_path.name,
-                    "type": "image",
-                    "classification": classification.get("classification"),
-                    "confidence": classification.get("confidence"),
-                    "reasoning": classification.get("reasoning", ""),
-                    "destination": destination,
-                })
-                stats[destination] = stats.get(destination, 0) + 1
-            except Exception as e:
-                print(f"[taste-cloner] ERROR classifying {img_path.name}: {e}", file=sys.stderr, flush=True)
-                results.append({"file": str(img_path), "name": img_path.name, "error": str(e)})
-
-        for vid_path in videos:
-            try:
-                print(f"[taste-cloner] Classifying video: {vid_path.name}", file=sys.stderr, flush=True)
-                classification = classifier.classify_video(vid_path)
-                destination = router.route_video(classification)
-                results.append({
-                    "file": str(vid_path),
-                    "name": vid_path.name,
-                    "type": "video",
-                    "classification": classification.get("classification"),
-                    "confidence": classification.get("confidence"),
-                    "reasoning": classification.get("reasoning", ""),
-                    "destination": destination,
-                })
-                stats[destination] = stats.get(destination, 0) + 1
-            except Exception as e:
-                print(f"[taste-cloner] ERROR classifying {vid_path.name}: {e}", file=sys.stderr, flush=True)
-                results.append({"file": str(vid_path), "name": vid_path.name, "error": str(e)})
-
-        print(f"[taste-cloner] Classification complete. Stats: {stats}", file=sys.stderr, flush=True)
-
-        return {
-            "status": "completed",
-            "dry_run": dry_run,
-            "total_files": total,
-            "stats": stats,
-            "results": results[:50],
-        }
-
+        return _handle_classify_folder(pm, arguments)
     elif name == "taste_cloner_classify_files":
-        # For individual files, classify them directly
-        from ..core.config import load_config
-        from ..core.cache import CacheManager
-        from ..core.models import GeminiClient
-        from ..classification.prompt_builder import PromptBuilder
-        from ..classification.classifier import MediaClassifier
-        from ..classification.routing import Router
-        from ..core.file_utils import FileTypeRegistry
-
-        config = _get_config()
-        profile = pm.load_profile(arguments["profile_name"])
-
-        cache_manager = CacheManager(
-            config.paths.cache_root,
-            ttl_days=config.caching.ttl_days,
-            enabled=config.caching.enabled,
-        )
-        gemini_client = GeminiClient(
-            model_name=config.model.name,
-            max_retries=config.system.max_retries,
-            retry_delay=config.system.retry_delay_seconds,
-        )
-        prompt_builder = PromptBuilder(config, profile=profile)
-        classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
-        router = Router(config, gemini_client, profile=profile)
-
-        results = []
-        for fp in arguments["file_paths"]:
-            path = Path(fp)
-            if not path.exists():
-                results.append({"file": fp, "error": "File not found"})
-                continue
-
-            if FileTypeRegistry.is_image(path):
-                classification = classifier.classify_singleton(path)
-                destination = router.route_singleton(classification)
-            elif FileTypeRegistry.is_video(path):
-                classification = classifier.classify_video(path)
-                destination = router.route_video(classification)
-            elif FileTypeRegistry.is_document(path):
-                classification = classifier.classify_document(path)
-                destination = router.route_document(classification)
-            else:
-                results.append({"file": fp, "error": "Unsupported file type"})
-                continue
-
-            results.append({
-                "file": fp,
-                "classification": classification.get("classification"),
-                "confidence": classification.get("confidence"),
-                "reasoning": classification.get("reasoning"),
-                "destination": destination,
-            })
-
-        return results
-
-    elif name == "taste_cloner_get_results":
-        return {"error": "Job-based results are only available via the REST API. Use taste_cloner_classify_folder for direct results."}
-
+        return _handle_classify_files(pm, arguments)
     elif name == "taste_cloner_submit_feedback":
-        from ..api.services.training_service import TrainingService
-        config = _get_config()
-        ts = TrainingService(config.profiles.profiles_dir)
-        return ts.submit_feedback(
-            file_path=arguments["file_path"],
-            correct_category=arguments["correct_category"],
-            reasoning=arguments.get("reasoning", ""),
-        )
-
+        return _handle_submit_feedback(arguments)
     elif name == "taste_cloner_generate_profile":
-        return {
-            "status": "not_yet_implemented",
-            "message": "AI profile generation from examples is planned for a future update.",
-            "profile_name": arguments["profile_name"],
-        }
-
+        return _handle_generate_profile(pm, arguments)
     else:
         return {"error": f"Unknown tool: {name}"}
+
+
+def _handle_list_profiles(pm: ProfileManager) -> Any:
+    profiles = pm.list_profiles()
+    return [
+        {
+            "name": p.name,
+            "description": p.description,
+            "media_types": p.media_types,
+            "categories": [c.name for c in p.categories],
+        }
+        for p in profiles
+    ]
+
+
+def _handle_get_profile(pm: ProfileManager, arguments: dict) -> Any:
+    profile = pm.load_profile(arguments["profile_name"])
+    return profile.to_dict()
+
+
+def _handle_create_profile(pm: ProfileManager, arguments: dict) -> Any:
+    profile = pm.create_profile(
+        name=arguments["name"],
+        description=arguments["description"],
+        media_types=arguments["media_types"],
+        categories=arguments["categories"],
+        top_priorities=arguments.get("top_priorities", []),
+        positive_criteria=arguments.get("positive_criteria", {}),
+        negative_criteria=arguments.get("negative_criteria", {}),
+        specific_guidance=arguments.get("specific_guidance", []),
+        philosophy=arguments.get("philosophy", ""),
+    )
+    return {"status": "created", "profile": profile.to_dict()}
+
+
+def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
+    """Generate a complete taste profile from a natural language description."""
+    from ..core.models import GeminiClient
+
+    config = _get_config()
+    profile_name = arguments["profile_name"]
+    description = arguments["description"]
+    media_type = arguments.get("media_type", "image")
+
+    # Check if profile already exists
+    if pm.profile_exists(profile_name):
+        return {"error": f"Profile '{profile_name}' already exists. Choose a different name or delete it first."}
+
+    print(f"[taste-cloner] Generating profile '{profile_name}' from description...", file=sys.stderr, flush=True)
+
+    gemini_client = GeminiClient(
+        model_name=config.model.name,
+        max_retries=config.system.max_retries,
+        retry_delay=config.system.retry_delay_seconds,
+    )
+
+    prompt = f"""\
+You are a taste profile generator for a media classification system.
+
+The user wants to create a profile to sort their {media_type} files. Here's what they said:
+
+"{description}"
+
+Generate a complete taste profile as a JSON object with these fields:
+
+{{
+  "description": "A clear 1-sentence description of what this profile does",
+  "media_types": ["{media_type}"],
+  "categories": [
+    {{"name": "CategoryName", "description": "When to put files here"}}
+  ],
+  "default_category": "The fallback category name",
+  "top_priorities": ["Priority 1", "Priority 2", ...],
+  "positive_criteria": {{
+    "must_have": ["Required quality 1", ...],
+    "highly_valued": ["Valued quality 1", ...],
+    "bonus_points": ["Nice to have 1", ...]
+  }},
+  "negative_criteria": {{
+    "deal_breakers": ["Automatic reject reason 1", ...],
+    "negative_factors": ["Counts against 1", ...]
+  }},
+  "specific_guidance": ["Rule 1", "Rule 2", ...],
+  "philosophy": "One sentence capturing the overall sorting philosophy"
+}}
+
+Rules:
+- Create 3-5 categories that make sense for the use case
+- Categories should be ordered from best to worst
+- Include a middle/uncertain category for borderline cases
+- Be specific and practical in criteria — vague criteria lead to bad classifications
+- The philosophy should capture the user's intent in one clear sentence
+- Only output valid JSON, no markdown or explanation"""
+
+    result = gemini_client.generate_json(
+        prompt=prompt,
+        fallback=None,
+    )
+
+    if result is None:
+        return {"error": "Failed to generate profile. Please try again or use taste_cloner_create_profile for manual creation."}
+
+    # Create the profile
+    profile = pm.create_profile(
+        name=profile_name,
+        description=result.get("description", description),
+        media_types=result.get("media_types", [media_type]),
+        categories=result.get("categories", []),
+        default_category=result.get("default_category", "Review"),
+        top_priorities=result.get("top_priorities", []),
+        positive_criteria=result.get("positive_criteria", {}),
+        negative_criteria=result.get("negative_criteria", {}),
+        specific_guidance=result.get("specific_guidance", []),
+        philosophy=result.get("philosophy", ""),
+    )
+
+    print(f"[taste-cloner] Profile '{profile_name}' generated with {len(profile.categories)} categories", file=sys.stderr, flush=True)
+
+    return {
+        "status": "created",
+        "message": f"Profile '{profile_name}' created with {len(profile.categories)} categories: {', '.join(c.name for c in profile.categories)}",
+        "profile": profile.to_dict(),
+    }
+
+
+def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
+    """Classify media files in a folder with batch/pagination support."""
+    import time as _time
+
+    print(f"[taste-cloner] classify_folder: {arguments}", file=sys.stderr, flush=True)
+
+    from ..core.cache import CacheManager
+    from ..core.models import GeminiClient
+    from ..classification.prompt_builder import PromptBuilder
+    from ..classification.classifier import MediaClassifier
+    from ..classification.routing import Router
+    from ..core.file_utils import FileTypeRegistry
+
+    config = _get_config()
+    profile = pm.load_profile(arguments["profile_name"])
+    folder = Path(arguments["folder_path"])
+
+    if not folder.is_dir():
+        return {"error": f"Folder not found: {folder}"}
+
+    cache_manager = CacheManager(
+        config.paths.cache_root,
+        ttl_days=config.caching.ttl_days,
+        enabled=config.caching.enabled,
+    )
+    gemini_client = GeminiClient(
+        model_name=config.model.name,
+        max_retries=config.system.max_retries,
+        retry_delay=config.system.retry_delay_seconds,
+    )
+    prompt_builder = PromptBuilder(config, profile=profile)
+    classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
+    router = Router(config, gemini_client, profile=profile)
+
+    # Discover files
+    all_files = FileTypeRegistry.list_all_media(folder)
+    images = all_files.get("images", [])
+    videos = all_files.get("videos", [])
+    documents = all_files.get("documents", [])
+    all_media = (
+        [(p, "image") for p in images]
+        + [(p, "video") for p in videos]
+        + [(p, "document") for p in documents]
+    )
+    total = len(all_media)
+
+    if total == 0:
+        return {
+            "status": "completed",
+            "total_files_in_folder": 0,
+            "message": "No media files found in folder.",
+        }
+
+    # Pagination: offset and batch_size let Claude call this repeatedly
+    # for large folders without hitting the 4-minute MCP timeout.
+    offset = int(arguments.get("offset", 0))
+    batch_size = int(arguments.get("batch_size", 0)) or total
+    batch = all_media[offset:offset + batch_size]
+
+    print(f"[taste-cloner] Found {total} total files. Processing batch: offset={offset}, size={len(batch)}", file=sys.stderr, flush=True)
+
+    dry_run = arguments.get("dry_run", True)
+    results = []
+    stats = {}
+    errors = 0
+    start_time = _time.time()
+    TIME_LIMIT = 200  # seconds — return before MCP 4-min timeout
+
+    for i, (file_path, media_type) in enumerate(batch):
+        elapsed = _time.time() - start_time
+        if elapsed > TIME_LIMIT:
+            remaining = len(batch) - i
+            print(f"[taste-cloner] Time limit reached ({elapsed:.0f}s). {remaining} files remaining.", file=sys.stderr, flush=True)
+            return {
+                "status": "partial",
+                "dry_run": dry_run,
+                "total_files_in_folder": total,
+                "batch_offset": offset,
+                "batch_requested": len(batch),
+                "processed": len(results),
+                "remaining_in_batch": remaining,
+                "next_offset": offset + i,
+                "stats": stats,
+                "results": results,
+                "message": f"Processed {len(results)} of {len(batch)} files before time limit. Call again with offset={offset + i} to continue.",
+            }
+
+        try:
+            pct = ((offset + i + 1) / total) * 100
+            print(f"[taste-cloner] [{offset+i+1}/{total}] ({pct:.0f}%) {file_path.name}", file=sys.stderr, flush=True)
+
+            if media_type == "image":
+                classification = classifier.classify_singleton(file_path)
+                destination = router.route_singleton(classification)
+            elif media_type == "video":
+                classification = classifier.classify_video(file_path)
+                destination = router.route_video(classification)
+            else:
+                classification = classifier.classify_document(file_path)
+                destination = router.route_document(classification)
+
+            results.append({
+                "file": str(file_path),
+                "name": file_path.name,
+                "type": media_type,
+                "classification": classification.get("classification"),
+                "confidence": classification.get("confidence"),
+                "reasoning": classification.get("reasoning", ""),
+                "destination": destination,
+            })
+            stats[destination] = stats.get(destination, 0) + 1
+        except Exception as e:
+            print(f"[taste-cloner] ERROR classifying {file_path.name}: {e}", file=sys.stderr, flush=True)
+            results.append({"file": str(file_path), "name": file_path.name, "error": str(e)})
+            errors += 1
+
+    elapsed = _time.time() - start_time
+    next_offset = offset + len(batch)
+    has_more = next_offset < total
+
+    print(f"[taste-cloner] Batch complete in {elapsed:.0f}s. {len(results)} classified, {errors} errors. Stats: {stats}", file=sys.stderr, flush=True)
+
+    return {
+        "status": "completed" if not has_more else "partial",
+        "dry_run": dry_run,
+        "total_files_in_folder": total,
+        "batch_offset": offset,
+        "processed": len(results),
+        "errors": errors,
+        "elapsed_seconds": round(elapsed, 1),
+        "has_more": has_more,
+        "next_offset": next_offset if has_more else None,
+        "stats": stats,
+        "results": results,
+        "message": f"Processed {len(results)} files in {elapsed:.0f}s." + (f" Call again with offset={next_offset} to continue ({total - next_offset} remaining)." if has_more else ""),
+    }
+
+
+def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
+    """Classify specific files by path."""
+    from ..core.cache import CacheManager
+    from ..core.models import GeminiClient
+    from ..classification.prompt_builder import PromptBuilder
+    from ..classification.classifier import MediaClassifier
+    from ..classification.routing import Router
+    from ..core.file_utils import FileTypeRegistry
+
+    config = _get_config()
+    profile = pm.load_profile(arguments["profile_name"])
+
+    cache_manager = CacheManager(
+        config.paths.cache_root,
+        ttl_days=config.caching.ttl_days,
+        enabled=config.caching.enabled,
+    )
+    gemini_client = GeminiClient(
+        model_name=config.model.name,
+        max_retries=config.system.max_retries,
+        retry_delay=config.system.retry_delay_seconds,
+    )
+    prompt_builder = PromptBuilder(config, profile=profile)
+    classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
+    router = Router(config, gemini_client, profile=profile)
+
+    results = []
+    for fp in arguments["file_paths"]:
+        path = Path(fp)
+        if not path.exists():
+            results.append({"file": fp, "error": "File not found"})
+            continue
+
+        if FileTypeRegistry.is_image(path):
+            classification = classifier.classify_singleton(path)
+            destination = router.route_singleton(classification)
+        elif FileTypeRegistry.is_video(path):
+            classification = classifier.classify_video(path)
+            destination = router.route_video(classification)
+        elif FileTypeRegistry.is_document(path):
+            classification = classifier.classify_document(path)
+            destination = router.route_document(classification)
+        else:
+            results.append({"file": fp, "error": "Unsupported file type"})
+            continue
+
+        results.append({
+            "file": fp,
+            "classification": classification.get("classification"),
+            "confidence": classification.get("confidence"),
+            "reasoning": classification.get("reasoning"),
+            "destination": destination,
+        })
+
+    return results
+
+
+def _handle_submit_feedback(arguments: dict) -> Any:
+    """Submit a correction on a classification result."""
+    from ..api.services.training_service import TrainingService
+    config = _get_config()
+    ts = TrainingService(config.profiles.profiles_dir)
+    return ts.submit_feedback(
+        file_path=arguments["file_path"],
+        correct_category=arguments["correct_category"],
+        reasoning=arguments.get("reasoning", ""),
+    )
+
+
+def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
+    """Generate a taste profile by analyzing example files in folders."""
+    from ..core.models import GeminiClient
+    from ..core.file_utils import FileTypeRegistry
+
+    config = _get_config()
+    profile_name = arguments["profile_name"]
+    good_folder = Path(arguments["good_examples_folder"])
+    bad_folder = Path(arguments.get("bad_examples_folder", "")) if arguments.get("bad_examples_folder") else None
+
+    if pm.profile_exists(profile_name):
+        return {"error": f"Profile '{profile_name}' already exists. Choose a different name."}
+
+    if not good_folder.is_dir():
+        return {"error": f"Good examples folder not found: {good_folder}"}
+
+    if bad_folder and not bad_folder.is_dir():
+        return {"error": f"Bad examples folder not found: {bad_folder}"}
+
+    print(f"[taste-cloner] Generating profile from examples in {good_folder}...", file=sys.stderr, flush=True)
+
+    gemini_client = GeminiClient(
+        model_name=config.model.name,
+        max_retries=config.system.max_retries,
+        retry_delay=config.system.retry_delay_seconds,
+    )
+
+    # Collect sample files (up to 10 good, 10 bad)
+    good_files = FileTypeRegistry.list_all_media(good_folder)
+    good_images = good_files.get("images", [])[:10]
+    good_docs = good_files.get("documents", [])[:5]
+
+    bad_images = []
+    bad_docs = []
+    if bad_folder:
+        bad_files = FileTypeRegistry.list_all_media(bad_folder)
+        bad_images = bad_files.get("images", [])[:10]
+        bad_docs = bad_files.get("documents", [])[:5]
+
+    # Detect media type from examples
+    has_images = len(good_images) > 0 or len(bad_images) > 0
+    has_docs = len(good_docs) > 0 or len(bad_docs) > 0
+    if has_images and has_docs:
+        media_type = "mixed"
+    elif has_docs:
+        media_type = "document"
+    else:
+        media_type = "image"
+
+    # Analyze good examples with Gemini
+    analysis_parts = []
+
+    if good_images:
+        # Send up to 5 images to Gemini for analysis
+        sample_images = good_images[:5]
+        prompt_parts = [
+            "Analyze these GOOD example images. What do they have in common? "
+            "What qualities make them good? Be specific about visual qualities, "
+            "content, composition, and emotional impact."
+        ]
+        for img_path in sample_images:
+            prompt_parts.append(img_path)
+        prompt_parts.append(
+            "Summarize what makes these examples GOOD. List specific, observable qualities."
+        )
+        good_analysis = gemini_client.generate(prompt_parts)
+        analysis_parts.append(f"GOOD examples analysis:\n{good_analysis.text}")
+
+    if bad_images:
+        sample_bad = bad_images[:5]
+        prompt_parts = [
+            "Analyze these BAD example images. What do they have in common? "
+            "What qualities make them bad? Be specific."
+        ]
+        for img_path in sample_bad:
+            prompt_parts.append(img_path)
+        prompt_parts.append(
+            "Summarize what makes these examples BAD. List specific, observable qualities."
+        )
+        bad_analysis = gemini_client.generate(prompt_parts)
+        analysis_parts.append(f"BAD examples analysis:\n{bad_analysis.text}")
+
+    if not analysis_parts:
+        return {"error": "No analyzable media files found in the example folders."}
+
+    # Generate profile from analysis
+    analysis_text = "\n\n".join(analysis_parts)
+
+    generation_prompt = f"""\
+Based on this analysis of example files, generate a taste profile for classifying {media_type} files.
+
+{analysis_text}
+
+Generate a JSON taste profile:
+
+{{
+  "description": "One sentence describing what this profile sorts",
+  "media_types": ["{media_type}"],
+  "categories": [
+    {{"name": "CategoryName", "description": "When to put files here"}}
+  ],
+  "default_category": "Fallback category name",
+  "top_priorities": ["Priority 1", ...],
+  "positive_criteria": {{
+    "must_have": [...],
+    "highly_valued": [...],
+    "bonus_points": [...]
+  }},
+  "negative_criteria": {{
+    "deal_breakers": [...],
+    "negative_factors": [...]
+  }},
+  "specific_guidance": ["Guidance 1", ...],
+  "philosophy": "One sentence philosophy"
+}}
+
+Create 3-5 categories ordered best to worst. Be specific — use the actual qualities \
+you observed in the examples, not generic platitudes. Only output valid JSON."""
+
+    result = gemini_client.generate_json(
+        prompt=generation_prompt,
+        fallback=None,
+    )
+
+    if result is None:
+        return {"error": "Failed to generate profile from examples."}
+
+    profile = pm.create_profile(
+        name=profile_name,
+        description=result.get("description", f"Generated from examples in {good_folder.name}"),
+        media_types=result.get("media_types", [media_type]),
+        categories=result.get("categories", []),
+        default_category=result.get("default_category", "Review"),
+        top_priorities=result.get("top_priorities", []),
+        positive_criteria=result.get("positive_criteria", {}),
+        negative_criteria=result.get("negative_criteria", {}),
+        specific_guidance=result.get("specific_guidance", []),
+        philosophy=result.get("philosophy", ""),
+    )
+
+    return {
+        "status": "created",
+        "message": f"Profile '{profile_name}' generated from {len(good_images)} good and {len(bad_images)} bad examples. Categories: {', '.join(c.name for c in profile.categories)}",
+        "analyzed": {
+            "good_images": len(good_images),
+            "bad_images": len(bad_images),
+            "good_docs": len(good_docs),
+            "bad_docs": len(bad_docs),
+        },
+        "profile": profile.to_dict(),
+    }
