@@ -159,7 +159,7 @@ class TestEndToEndWorkflow:
         print(f"  Burst prompt length: {len(burst_prompt)} chars")
         assert len(singleton_prompt) > 100
         assert len(burst_prompt) > 100
-        assert "SHARE" in singleton_prompt
+        assert "share" in singleton_prompt.lower()
         assert "BURST" in burst_prompt
 
         # Router (without GeminiClient for this test)

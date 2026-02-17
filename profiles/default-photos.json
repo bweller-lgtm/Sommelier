@@ -1,0 +1,72 @@
+{
+  "name": "default-photos",
+  "description": "Family photo and video classification - sorts by share-worthiness",
+  "media_types": ["image", "video"],
+  "categories": [
+    {"name": "Share", "description": "Photos worth sharing with family", "color": "#4CAF50"},
+    {"name": "Storage", "description": "Keep but don't share", "color": "#2196F3"},
+    {"name": "Review", "description": "Uncertain, needs manual review", "color": "#FF9800"},
+    {"name": "Ignore", "description": "No children or inappropriate", "color": "#9E9E9E"}
+  ],
+  "default_category": "Review",
+  "top_priorities": [
+    "Parent-child interaction quality",
+    "Baby's expression (mischief, joy, engagement)",
+    "Parent expressions (should be engaged, not vacant)",
+    "Baby's face clearly visible",
+    "Genuine emotional moments"
+  ],
+  "positive_criteria": {
+    "must_have": [
+      "Baby's face clearly visible",
+      "Good technical quality (sharp, well-lit)"
+    ],
+    "highly_valued": [
+      "Parent and baby both have good expressions",
+      "Subjects engaged with each other (eye contact, shared activity)",
+      "Emotional moments: mischief, joy, intimacy, playfulness",
+      "Natural interactions (not forced/posed)"
+    ],
+    "bonus_points": [
+      "Candid, unaware moments",
+      "Funny expressions or situations",
+      "Physical closeness/affection"
+    ]
+  },
+  "negative_criteria": {
+    "deal_breakers": [
+      "Can't see baby's face clearly",
+      "Unclear what's happening in the photo",
+      "Parent has vacant/disengaged expression",
+      "Major technical issues (very blurry, bad lighting)"
+    ],
+    "negative_factors": [
+      "Subjects looking in different directions",
+      "Too zoomed out to see expressions",
+      "Ordinary moment without special quality",
+      "Awkward composition"
+    ]
+  },
+  "specific_guidance": [
+    "Parent expressions matter as much as baby's.",
+    "Photos showing interaction between parent and child are preferred over solo baby shots.",
+    "Technical quality is important but not sufficient - a technically perfect photo of an ordinary moment is still Storage.",
+    "In burst mode, only keep the absolute best 1-2 photos."
+  ],
+  "philosophy": "Photos that capture genuine moments of connection, emotion, and personality - especially between parent and child.",
+  "thresholds": {
+    "Share": 0.60,
+    "Review": 0.35
+  },
+  "photo_settings": {
+    "enable_burst_detection": true,
+    "enable_face_detection": true,
+    "enable_improvement": true,
+    "contains_children_check": true,
+    "appropriateness_check": true
+  },
+  "document_settings": null,
+  "created_at": "2026-02-17T00:00:00",
+  "updated_at": "2026-02-17T00:00:00",
+  "version": 1
+}

@@ -190,6 +190,52 @@ cost:
   prompt_tokens_video: 1500     # Video prompt tokens
   output_tokens_video: 300      # Video response tokens
 
+# ============================= DOCUMENT PROCESSING ================================
+# Settings for document classification (PDF, Word, Excel, PowerPoint, HTML, text)
+document:
+  # Supported document extensions
+  supported_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".xlsx"
+    - ".pptx"
+    - ".html"
+    - ".htm"
+    - ".txt"
+    - ".md"
+    - ".csv"
+    - ".rtf"
+
+  # Maximum file size to process (in MB)
+  max_file_size_mb: 50.0
+
+  # Maximum pages to analyze per document (for PDFs sent to Gemini)
+  max_pages_per_document: 20
+
+  # Maximum characters to extract per document
+  text_extraction_max_chars: 50000
+
+  # Enable text embeddings for document similarity grouping
+  enable_text_embeddings: true
+
+  # Sentence-transformer model for text embeddings
+  text_embedding_model: "all-MiniLM-L6-v2"
+
+  # Cosine similarity threshold for grouping similar documents
+  similarity_threshold: 0.85
+
+# ============================= PROFILES ===========================================
+# Taste profile management
+profiles:
+  # Directory where profile JSON files are stored
+  profiles_dir: "profiles"
+
+  # Default active profile (used when no --profile argument is given)
+  active_profile: "default-photos"
+
+  # Auto-detect media type and select appropriate default profile
+  auto_detect_media_type: true
+
 # ============================= LEGACY FEATURES ====================================
 # These features are from the old classical ML approach and may be removed
 legacy:

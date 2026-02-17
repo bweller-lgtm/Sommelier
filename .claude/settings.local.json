@@ -19,7 +19,12 @@
       "Bash(powershell -Command:*)",
       "Bash(powershell -ExecutionPolicy Bypass -File \"E:\\OneDrive\\Photos\\Taste Cloner Photo Sorter\\create_zip.ps1\")",
       "WebSearch",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create --title \"Add error tracking and automatic retry for classification failures\" --body \"$\\(cat <<''EOF''\n## Summary\n\n- **Error Tracking**: Failed classifications now include structured error metadata \\(`is_error_fallback`, `error_type`, `error_message`, `retry_count`\\) enabling easy identification and reprocessing\n- **Automatic Retry**: API failures \\(timeouts, rate limits, connection errors\\) trigger up to 2 automatic retries with exponential backoff \\(2s, 4s\\)\n- **Burst-Aware Reprocessing**: New `clear_failed_for_retry.py` script clears entire bursts when any photo in the burst failed, preserving grouping context\n- **Context-Aware Prompts**: When retrying burst photos as singletons, includes context about sibling classifications\n\n## Changes\n\n### Core Classification\n- `src/classification/classifier.py`: Added `_create_fallback_response\\(\\)` with error fields, `_execute_with_retry\\(\\)` wrapper, burst context storage\n- `src/classification/prompt_builder.py`: Added `build_singleton_with_burst_context\\(\\)` for context-aware retry\n\n### Configuration\n- `src/core/config.py`: Added `classification_retries`, `retry_delay_seconds`, `retry_on_errors` settings\n- `config.yaml`: Added retry configuration section\n- `src/core/cache.py`: Added `burst_context` cache type\n\n### Reporting\n- `taste_classify.py`: Updated CSV reports to include error tracking columns\n\n### New Scripts\n- `clear_failed_for_retry.py`: Identifies photos with error fallbacks, clears cache and sorted folders for re-classification\n- `reprocess_failed.py`: Standalone reprocessing with burst context awareness\n\n### Documentation & Tests\n- `README.md`: Added Error Tracking & Retry section, updated version to 2.2.0\n- `tests/test_error_tracking.py`: 20+ unit tests for error tracking and retry functionality\n\n## Test plan\n\n- [x] Unit tests pass \\(`pytest tests/test_error_tracking.py -v`\\)\n- [ ] Run `clear_failed_for_retry.py` with `--dry-run` on a sorted folder with known failures\n- [ ] Clear failed photos and verify re-classification works correctly\n- [ ] Verify CSV reports include new error tracking columns\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\nEOF\n\\)\")",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr merge:*)"
     ],
     "deny": [],
     "ask": []

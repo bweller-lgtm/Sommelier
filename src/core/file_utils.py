@@ -19,6 +19,12 @@ class FileTypeRegistry:
         ".3gp", ".wmv", ".flv", ".webm"
     }
 
+    # Supported document extensions
+    DOCUMENT_EXTENSIONS = {
+        ".pdf", ".docx", ".xlsx", ".pptx",
+        ".html", ".htm", ".txt", ".md", ".csv", ".rtf"
+    }
+
     @classmethod
     def is_image(cls, path: Path) -> bool:
         """
@@ -44,6 +50,11 @@ class FileTypeRegistry:
             True if video, False otherwise.
         """
         return path.suffix.lower() in cls.VIDEO_EXTENSIONS
+
+    @classmethod
+    def is_document(cls, path: Path) -> bool:
+        """Check if file is a document."""
+        return path.suffix.lower() in cls.DOCUMENT_EXTENSIONS
 
     @classmethod
     def is_media(cls, path: Path) -> bool:
@@ -125,6 +136,39 @@ class FileTypeRegistry:
         return sorted(videos)
 
     @classmethod
+    def list_documents(cls, directory: Path, recursive: bool = False) -> List[Path]:
+        """
+        List all documents in directory.
+
+        Args:
+            directory: Directory to search.
+            recursive: Search recursively.
+
+        Returns:
+            List of document paths.
+
+        Raises:
+            FileNotFoundError: If directory doesn't exist.
+            NotADirectoryError: If path is not a directory.
+        """
+        directory = Path(directory)
+
+        if not directory.exists():
+            raise FileNotFoundError(f"Directory not found: {directory}")
+
+        if not directory.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {directory}")
+
+        pattern = "**/*" if recursive else "*"
+
+        documents = []
+        for path in directory.glob(pattern):
+            if path.is_file() and cls.is_document(path):
+                documents.append(path)
+
+        return sorted(documents)
+
+    @classmethod
     def list_media(cls, directory: Path, recursive: bool = False) -> Dict[str, List[Path]]:
         """
         List all media files in directory.
@@ -140,6 +184,49 @@ class FileTypeRegistry:
             "images": cls.list_images(directory, recursive),
             "videos": cls.list_videos(directory, recursive),
         }
+
+    @classmethod
+    def list_all_media(cls, directory: Path, recursive: bool = False) -> Dict[str, List[Path]]:
+        """
+        List all media files including documents in directory.
+
+        Args:
+            directory: Directory to search.
+            recursive: Search recursively.
+
+        Returns:
+            Dictionary with 'images', 'videos', and 'documents' keys.
+        """
+        return {
+            "images": cls.list_images(directory, recursive),
+            "videos": cls.list_videos(directory, recursive),
+            "documents": cls.list_documents(directory, recursive),
+        }
+
+    @classmethod
+    def detect_media_type(cls, directory: Path, recursive: bool = False) -> str:
+        """
+        Detect the predominant media type in a directory.
+
+        Args:
+            directory: Directory to scan.
+            recursive: Search recursively.
+
+        Returns:
+            "image", "video", "document", or "mixed".
+        """
+        media = cls.list_all_media(directory, recursive)
+        has_images = len(media["images"]) > 0 or len(media["videos"]) > 0
+        has_documents = len(media["documents"]) > 0
+
+        if has_images and has_documents:
+            return "mixed"
+        elif has_documents:
+            return "document"
+        elif len(media["videos"]) > 0 and len(media["images"]) == 0:
+            return "video"
+        else:
+            return "image"
 
 
 class ImageUtils:

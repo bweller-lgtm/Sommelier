@@ -1,428 +1,494 @@
-# Taste Cloner Photo Sorter
+# Taste Cloner
 
-**AI-Powered Photo & Video Classification System**
+**Universal AI-Powered Media Classification Platform**
 
-Automatically sort family photos and videos using Google Gemini AI. Learns your personal taste and organizes thousands of images with 75-80% automation.
-
----
-
-## 🎯 What It Does
-
-Classifies photos/videos into 4 categories:
-- **Share** - Worth sharing with family (target: 25-30%)
-- **Storage** - Keep but don't share
-- **Review** - Uncertain, needs manual review
-- **Ignore** - No children or inappropriate
-
-**NEW: Gray Zone Photo Improvement** - Detects meaningful family moments with technical issues (blur, noise, etc.) and uses Gemini AI to enhance them while preserving authenticity.
-
-**NEW: Error Tracking & Retry** - Automatic retry with exponential backoff for API failures. Failed classifications are tracked with error metadata for easy reprocessing.
+Classify and sort any media -- photos, videos, and documents -- using Google Gemini AI with customizable taste profiles. Originally built for family photo sorting, now extensible to any classification task.
 
 ---
 
-## 🚀 Quick Start (30 Seconds)
+## What It Does
 
-**Requires Python 3.12**
+Classifies media into **user-defined categories** based on configurable taste profiles. Ships with two default profiles:
+
+**Family Photos** (`default-photos`):
+- **Share** -- Worth sharing with family (target: 25-30%)
+- **Storage** -- Keep but don't share
+- **Review** -- Uncertain, needs manual review
+- **Ignore** -- No children or inappropriate
+
+**Documents** (`default-documents`):
+- **Exemplary** -- Outstanding, high-quality documents
+- **Acceptable** -- Adequate quality, keep for reference
+- **Review** -- Uncertain quality, needs manual review
+- **Discard** -- Low quality or irrelevant
+
+Create **custom profiles** with any categories, criteria, and thresholds for your specific needs.
+
+---
+
+## Key Features
+
+- **Universal Classification** -- Photos, videos, PDFs, Word docs, Excel, PowerPoint, HTML, plain text
+- **Taste Profiles** -- Named, reusable classification profiles with custom categories
+- **Multiple Interfaces** -- CLI, REST API (FastAPI), and MCP server (Claude Desktop)
+- **Smart Grouping** -- Burst detection for photos, similarity grouping for documents
+- **Photo Improvement** -- AI enhancement of gray zone photos with technical issues
+- **Error Recovery** -- Automatic retry with exponential backoff for API failures
+- **Aggressive Caching** -- Saves ~90% on re-runs
+
+---
+
+## Quick Start
+
+**Requires Python 3.12+**
 
 ### 1. Install Dependencies
+
 ```bash
 py -3.12 -m pip install -r requirements.txt
 ```
 
 ### 2. Configure API Key
+
 Create `.env` file:
 ```
 GEMINI_API_KEY=your_api_key_here
 ```
 
 ### 3. Run Classification
+
 ```bash
+# Classify a folder (auto-detects media types)
 py -3.12 taste_classify.py "C:\Photos\MyFolder"
+
+# Use a specific taste profile
+py -3.12 taste_classify.py "C:\Photos\MyFolder" --profile default-photos
+
+# Classify documents
+py -3.12 taste_classify.py "C:\Docs\Reports" --profile default-documents
+
+# Dry run (test without moving files)
+py -3.12 taste_classify.py "C:\Photos\MyFolder" --dry-run
 ```
 
-That's it! Photos will be sorted into `C:\Photos\MyFolder_sorted/`
+That's it! Files will be sorted into `C:\Photos\MyFolder_sorted/`.
 
 ---
 
-## 📚 Complete Usage
+## Complete Usage
 
-### Basic Classification
+### CLI Classification
+
 ```bash
-# Classify photos only
-py -3.12 taste_classify.py "path/to/photos"
+# Basic classification (auto-detects media type)
+py -3.12 taste_classify.py "path/to/media"
 
-# Classify photos and videos (videos are ON by default)
-py -3.12 taste_classify.py "path/to/photos" --classify-videos
+# With a specific profile
+py -3.12 taste_classify.py "path/to/media" --profile my-custom-profile
 
 # Disable video classification
 py -3.12 taste_classify.py "path/to/photos" --no-classify-videos
 
-# Dry run (test without moving files)
-py -3.12 taste_classify.py "path/to/photos" --dry-run
-
 # Custom output directory
-py -3.12 taste_classify.py "path/to/photos" --output "path/to/output"
+py -3.12 taste_classify.py "path/to/media" --output "path/to/output"
 
 # Use custom configuration
-py -3.12 taste_classify.py "path/to/photos" --config custom_config.yaml
+py -3.12 taste_classify.py "path/to/media" --config custom_config.yaml
+
+# More parallel video workers
+py -3.12 taste_classify.py "path/to/media" --parallel-videos 20
 ```
 
-### Video Classification Options
-```bash
-# Use 20 parallel workers for faster video processing
-py -3.12 taste_classify.py "path/to/photos" --parallel-videos 20
+### API Server
 
-# Videos are classified by default (10 workers)
-# Use --no-classify-videos to just copy them without AI classification
+```bash
+# Start the API server
+py -3.12 serve.py
+
+# With custom host/port
+py -3.12 serve.py --host 127.0.0.1 --port 9000
+
+# Development mode (auto-reload)
+py -3.12 serve.py --reload
+```
+
+Then access the API at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
+
+**API Endpoints:**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/profiles/` | List all profiles |
+| GET | `/api/profiles/{name}` | Get profile details |
+| POST | `/api/profiles/` | Create new profile |
+| PUT | `/api/profiles/{name}` | Update profile |
+| DELETE | `/api/profiles/{name}` | Delete profile |
+| POST | `/api/classify/folder` | Classify a local folder |
+| GET | `/api/classify/{job_id}` | Get job status |
+| GET | `/api/classify/{job_id}/results` | Get results |
+| GET | `/api/results/{job_id}/export` | Export as CSV |
+| POST | `/api/training/feedback` | Submit feedback |
+| GET | `/api/training/stats` | Get training stats |
+
+### MCP Server (Claude Desktop)
+
+Add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "taste-cloner": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "cwd": "/path/to/taste-cloner"
+    }
+  }
+}
+```
+
+**MCP Tools:**
+- `taste_cloner_list_profiles` -- List all taste profiles
+- `taste_cloner_get_profile` -- Get profile details
+- `taste_cloner_create_profile` -- Create a new profile
+- `taste_cloner_classify_folder` -- Classify all files in a folder
+- `taste_cloner_classify_files` -- Classify specific files
+- `taste_cloner_get_results` -- Get previous classification results
+- `taste_cloner_submit_feedback` -- Submit classification corrections
+- `taste_cloner_generate_profile` -- AI-generate a profile from examples
+
+---
+
+## Taste Profiles
+
+Profiles define *what* you're classifying, *how* you want it categorized, and *what criteria* to use.
+
+### Create a Custom Profile
+
+Profiles are stored as JSON in the `profiles/` directory:
+
+```json
+{
+  "name": "linkedin-profiles",
+  "description": "Sort LinkedIn profile PDFs by hire potential",
+  "media_types": ["document"],
+  "categories": [
+    {"name": "Strong", "description": "Excellent candidates to interview"},
+    {"name": "Maybe", "description": "Worth a second look"},
+    {"name": "Pass", "description": "Not a match for this role"}
+  ],
+  "top_priorities": [
+    "Relevant experience in the target domain",
+    "Track record of increasing responsibility",
+    "Technical skills alignment"
+  ],
+  "positive_criteria": {
+    "must_have": ["Relevant industry experience", "Clear career progression"],
+    "highly_valued": ["Leadership experience", "Quantified achievements"]
+  },
+  "negative_criteria": {
+    "deal_breakers": ["No relevant experience", "Frequent job hopping without growth"]
+  },
+  "philosophy": "Focus on demonstrated impact and growth potential over credentials.",
+  "thresholds": {"Strong": 0.70, "Maybe": 0.40}
+}
+```
+
+### Profile Management
+
+```bash
+# Via CLI (uses --profile flag)
+py -3.12 taste_classify.py "path/to/docs" --profile linkedin-profiles
+
+# Via API
+curl -X POST http://localhost:8000/api/profiles/ -H "Content-Type: application/json" -d @profile.json
+
+# Via MCP (Claude Desktop)
+# Just ask: "Create a taste profile for sorting research papers"
+```
+
+### Migrating Existing Preferences
+
+If you have an existing `taste_preferences.json`, the system uses it automatically as a fallback. To explicitly migrate it to the new profile format, use the ProfileManager:
+
+```python
+from src.core.profiles import ProfileManager
+pm = ProfileManager("profiles")
+pm.migrate_from_taste_preferences(Path("taste_preferences_generated.json"), "my-photos")
 ```
 
 ---
 
-## 🎨 Photo Improvement (Gray Zone)
+## Document Classification
 
-**NEW in v2.1** - Automatically detects "gray zone" photos: meaningful family moments with technical issues that can be improved by AI.
+**NEW in v3.0** -- Classify documents alongside photos and videos.
+
+### Supported Formats
+
+| Format | Extension | Features |
+|--------|-----------|----------|
+| PDF | `.pdf` | Native Gemini analysis, text extraction, metadata |
+| Word | `.docx` | Text + metadata extraction |
+| Excel | `.xlsx` | Sheet names, sample data extraction |
+| PowerPoint | `.pptx` | Slide text, notes, metadata |
+| HTML | `.html`, `.htm` | Tag stripping, text extraction |
+| Plain Text | `.txt`, `.md`, `.csv`, `.rtf` | Direct text reading |
+
+### How It Works
+
+1. **Feature Extraction** -- Text, metadata, and embeddings are extracted from each document
+2. **Similarity Grouping** -- Documents with similar content are grouped (like burst detection for photos)
+3. **Classification** -- Gemini evaluates documents against profile criteria
+4. **Routing** -- Documents are sorted into profile-defined categories
+
+### Configuration
+
+```yaml
+document:
+  max_file_size_mb: 50.0
+  max_pages_per_document: 20
+  text_extraction_max_chars: 50000
+  enable_text_embeddings: true
+  similarity_threshold: 0.85
+```
+
+---
+
+## Photo Improvement (Gray Zone)
+
+Automatically detects meaningful family moments with technical issues and uses Gemini AI to enhance them.
 
 ### What Gets Flagged?
 
-Photos with **high contextual value** (rare family groupings, parent-child interactions, emotional moments) **plus** technical issues:
-- Motion blur / focus blur
-- Noise / grain
-- Under/overexposure
-- White balance issues
-- Low resolution
+Photos with **high contextual value** (rare family groupings, interactions, milestones) **plus** technical issues (blur, noise, exposure, etc.).
 
 ### Workflow
 
-1. **During Classification** - Gray zone photos are copied to `ImprovementCandidates/` with metadata saved to `improvement_candidates.csv`
-
-2. **Review** - After classification, you're prompted to review candidates:
-   - **Gradio UI** - Opens interactive review interface
-   - **Manual** - Edit CSV directly (set `approved` column to Y/N)
-
-3. **Improvement** - Process approved candidates:
+1. **During Classification** -- Gray zone photos are copied to `ImprovementCandidates/`
+2. **Review** -- Approve candidates via Gradio UI or CSV editing
+3. **Improvement** -- Process approved candidates:
    ```bash
    py -3.12 improve_photos.py "path/to/sorted_folder"
    ```
 
-### Improve Photos Script
-
-```bash
-# Review in Gradio UI first, then improve
-py -3.12 improve_photos.py "path/to/sorted" --review
-
-# Dry run - see what would happen
-py -3.12 improve_photos.py "path/to/sorted" --dry-run
-
-# Improve all approved candidates
-py -3.12 improve_photos.py "path/to/sorted"
-
-# Use more parallel workers
-py -3.12 improve_photos.py "path/to/sorted" --parallel 10
-```
-
 ### Cost
 
-- **Per image:** ~$0.134 (Gemini 3 Pro Image - best quality)
-- **Budget option:** ~$0.039 (Gemini 3 Flash Image - faster)
-- **Example:** 10 approved photos = ~$1.34 (Pro) or ~$0.39 (Flash)
-- Cost estimate shown before processing with confirmation prompt
-
-### Configuration
-
-```yaml
-photo_improvement:
-  enabled: true                    # Enable gray zone detection
-  contextual_value_threshold: high # "high" or "medium"
-  min_issues_for_candidate: 1      # Minimum technical issues
-  cost_per_image: 0.134            # For estimates
-  parallel_workers: 5              # Concurrent processing
-  model_name: "gemini-3-pro-image-preview"  # Best quality
-  review_after_sort: true          # Prompt to review after classification
-```
-
-### Important Notes
-
-- **Originals preserved** - Original photos are never modified
-- **Both versions saved** - `Improved/` contains `{name}_original.jpg` and `{name}_improved.jpg`
-- **Conservative prompts** - AI is instructed to preserve faces, expressions, and authenticity
-- **Manual approval required** - No photos are improved without explicit approval
+- **Per image:** ~$0.134 (Gemini 3 Pro Image) or ~$0.039 (Gemini 3 Flash Image)
+- Originals are always preserved
 
 ---
 
-## 🔄 Error Tracking & Retry
+## Error Tracking and Retry
 
-**NEW in v2.2** - Robust error handling with automatic retry and tracking for failed classifications.
-
-### How It Works
-
-When API calls fail (timeouts, rate limits, connection errors), the system:
-1. **Automatic Retry** - Retries up to 2 times with exponential backoff (2s, 4s delays)
-2. **Error Tracking** - Failed photos are marked with `is_error_fallback=True` in reports
-3. **Review Fallback** - Photos that fail all retries go to `Review/` with low confidence (0.3)
-4. **Burst Awareness** - When reprocessing, entire bursts are cleared to maintain grouping context
-
-### Error Types
+Automatic retry with exponential backoff for API failures. Failed classifications are tracked with error metadata.
 
 | Error Type | Retriable | Description |
 |------------|-----------|-------------|
-| `api_error` | Yes | General API failures (connection, server errors) |
+| `api_error` | Yes | General API failures |
 | `timeout` | Yes | Request timeout |
 | `rate_limit` | Yes | API rate limiting |
 | `invalid_response` | Yes | Malformed API response |
 | `safety_blocked` | No | Content blocked by safety filters |
-| `load_error` | No | Failed to load/process image |
+| `load_error` | No | Failed to load file |
 
-### Reprocessing Failed Photos
-
-After a classification run, you can identify and reprocess photos that failed due to errors:
+### Reprocessing Failed Items
 
 ```bash
-# See what would be cleared (dry run)
+# See what would be cleared
 py -3.12 clear_failed_for_retry.py "path/to/sorted" --dry-run
 
-# Clear failed photos from sorted folders and cache
+# Clear failed items and re-run
 py -3.12 clear_failed_for_retry.py "path/to/sorted"
-
-# Then re-run classification - only cleared photos will be processed
 py -3.12 taste_classify.py "path/to/source"
-```
-
-The `clear_failed_for_retry.py` script:
-- Reads the latest classification report to find error fallbacks
-- Clears entire bursts when any photo in the burst failed
-- Removes photos from all sorted folders (Share, Storage, Review, Ignore)
-- Clears corresponding cache entries so photos will be re-classified
-
-### Configuration
-
-```yaml
-classification:
-  classification_retries: 2        # Number of retry attempts
-  retry_delay_seconds: 2.0         # Initial delay (doubles on each retry)
-  retry_on_errors:                 # Error types that trigger retry
-    - api_error
-    - timeout
-    - rate_limit
-    - invalid_response
 ```
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-All settings are in `config.yaml`. Key settings:
+All settings are in `config.yaml`. Key sections:
 
 ### Classification Thresholds
 ```yaml
 classification:
-  share_threshold: 0.60       # 60% confidence required for Share
-  review_threshold: 0.35      # 35-59% → Review, <35% → Storage
-  burst_rank_consider: 2      # Only rank 1-2 considered for sharing
-  classify_videos: true       # Enable video classification
-  parallel_video_workers: 10  # Number of parallel video workers
+  share_threshold: 0.60
+  review_threshold: 0.35
+  burst_rank_consider: 2
+  classify_videos: true
+  parallel_video_workers: 10
+```
+
+### Document Processing
+```yaml
+document:
+  max_pages_per_document: 20
+  enable_text_embeddings: true
+  similarity_threshold: 0.85
+```
+
+### Profile Management
+```yaml
+profiles:
+  profiles_dir: "profiles"
+  active_profile: "default-photos"
+  auto_detect_media_type: true
 ```
 
 ### Burst Detection
 ```yaml
 burst_detection:
-  time_window_seconds: 10     # Max time between burst photos
-  embedding_similarity_threshold: 0.92  # Visual similarity threshold
-  min_burst_size: 2           # Minimum photos to form burst
+  time_window_seconds: 10
+  embedding_similarity_threshold: 0.92
 ```
 
-### Quality Scoring
-```yaml
-quality:
-  sharpness_weight: 0.8       # Weight for sharpness
-  brightness_weight: 0.2      # Weight for brightness
-  sharpness_threshold: 200.0  # Laplacian variance threshold
-```
-
-See `config.yaml` for all configurable options.
+See `config.yaml` for all options with inline documentation.
 
 ---
 
-## 🏗️ New Architecture (v2.0)
+## Architecture
 
-The project has been **completely refactored** with a clean, modular architecture:
-
-### Core Infrastructure
-- **`src/core/config.py`** - Type-safe configuration management
-- **`src/core/cache.py`** - Unified caching system (embeddings, quality, API responses)
-- **`src/core/models.py`** - Gemini API client with retry logic
-- **`src/core/file_utils.py`** - File type detection and image utilities
-
-### Feature Extraction
-- **`src/features/quality.py`** - Quality scoring and face detection
-- **`src/features/burst_detector.py`** - Burst detection (temporal + visual)
-- **`src/features/embeddings.py`** - CLIP embedding extraction
-
-### Classification
-- **`src/classification/prompt_builder.py`** - Unified prompt generation
-- **`src/classification/classifier.py`** - Media classification (photos/videos)
-- **`src/classification/routing.py`** - Burst-aware routing with diversity checking
-
-### Photo Improvement
-- **`src/improvement/improver.py`** - Photo improvement using Gemini image generation
-- **`src/improvement/review_ui.py`** - Gradio UI for reviewing candidates
+```
+src/
++-- core/                  # Configuration, caching, Gemini client, profiles
+|   +-- config.py          # Type-safe YAML configuration
+|   +-- cache.py           # Unified caching system
+|   +-- models.py          # Gemini API client
+|   +-- file_utils.py      # File type detection (images, videos, documents)
+|   +-- profiles.py        # Taste profile management system
+|   +-- logging_config.py  # Logging utilities
++-- features/              # Feature extraction
+|   +-- quality.py         # Photo quality scoring
+|   +-- burst_detector.py  # Photo burst detection
+|   +-- embeddings.py      # CLIP visual embeddings
+|   +-- document_features.py  # Document text/metadata extraction
++-- classification/        # AI classification
+|   +-- prompt_builder.py  # Dynamic prompt generation (any media + profile)
+|   +-- classifier.py      # Gemini classification (photos, videos, documents)
+|   +-- routing.py         # Category routing with profile support
++-- pipelines/             # Orchestration
+|   +-- base.py            # Abstract pipeline interface
+|   +-- photo_pipeline.py  # Photo/video pipeline
+|   +-- document_pipeline.py  # Document pipeline
+|   +-- mixed_pipeline.py  # Auto-detect and dispatch
++-- api/                   # REST API (FastAPI)
+|   +-- app.py             # Application factory
+|   +-- models.py          # Pydantic request/response models
+|   +-- routers/           # Endpoint definitions
+|   +-- services/          # Business logic layer
++-- mcp/                   # MCP server (Claude Desktop)
+|   +-- server.py          # Tool definitions
++-- improvement/           # Photo improvement (gray zone)
+    +-- improver.py        # Gemini image enhancement
+    +-- review_ui.py       # Gradio review interface
+```
 
 ### Entry Points
-- **`taste_classify.py`** - Main classification script
-- **`improve_photos.py`** - Photo improvement script
-- **`clear_failed_for_retry.py`** - Clear failed classifications for reprocessing
-- **`taste_trainer_pairwise_v4.py`** - Training UI (Gradio)
-- **`generate_taste_profile.py`** - Generate AI taste profile
+
+| File | Purpose |
+|------|---------|
+| `taste_classify.py` | Main CLI for classification |
+| `serve.py` | FastAPI server |
+| `mcp_server.py` | MCP server for Claude Desktop |
+| `improve_photos.py` | Photo improvement |
+| `taste_trainer_pairwise_v4.py` | Interactive training UI |
+| `generate_taste_profile.py` | AI profile generation |
 
 ---
 
-## 🎓 Training Your Classifier
+## Training Your Classifier
 
 ### Option 1: Interactive Training (Recommended)
 ```bash
 py -3.12 taste_trainer_pairwise_v4.py
 ```
-
-Opens Gradio UI in browser. Compare photos and train your preferences.
+Opens Gradio UI. Compare photos and train your preferences.
 
 ### Option 2: Generate Taste Profile from Examples
 ```bash
 py -3.12 generate_taste_profile.py
 ```
-
 Analyzes your Share/Storage folders and creates `taste_preferences_generated.json`.
 
 ### Option 3: Manual Corrections
 ```bash
 py -3.12 learn_from_reviews.py
 ```
-
 Learns from photos you manually moved to correct folders.
 
-**Note:** The included `taste_preferences.json` and `taste_preferences_generated.json` files serve as templates. Customize them for your own preferences using any of the methods above.
+### Option 4: API Feedback Loop
+Submit corrections via API or MCP, then regenerate profiles from accumulated feedback.
 
 ---
 
-## 📊 How It Works
+## Cost Estimates
 
-### 1. Burst Detection
-Groups similar photos taken in quick succession (within 10 seconds).
-
-### 2. Classification
-Each photo/burst is analyzed by Gemini AI based on your taste preferences.
-
-### 3. Routing
-- **Singletons:** Route based on confidence threshold
-- **Bursts:** Only top 1-2 photos considered for Share, rest go to Storage
-- **Diversity:** Prevents similar photos from both being shared
-
-### 4. Cost Optimization
-- **Caching:** Saves ~90% on re-runs
-- **Batch Processing:** Efficient API usage
-- **Smart Chunking:** Handles large bursts gracefully
-
----
-
-## 💰 Cost Estimates
-
-**Gemini 3 Flash Pricing (Dec 2025):**
+**Gemini 3 Flash Pricing:**
 - **Input:** $0.50 per 1M tokens
 - **Output:** $3.00 per 1M tokens
 
 **Per Item (Classification):**
-- **Photo:** ~$0.0013 per photo
-- **Burst Photo:** ~$0.00043 per photo (shared prompt cost)
+- **Photo:** ~$0.0013
+- **Burst Photo:** ~$0.00043 (shared prompt)
 - **Video:** ~$0.011 per minute
+- **Document:** ~$0.002-0.01 (varies by size)
 
-**Photo Improvement (Gemini Image Generation):**
-- **Per improved photo:** ~$0.134 (Gemini 3 Pro) or ~$0.039 (Gemini 3 Flash)
-- **Example:** 10 improved photos ≈ $1.34 (Pro) or $0.39 (Flash)
+**Photo Improvement:**
+- ~$0.134 per image (Gemini 3 Pro) or ~$0.039 (Flash)
 
-**Example:** 1,000 photos ≈ $1.30 classification (first run), ~$0 (cached re-run)
+**Example:** 1,000 photos = ~$1.30 (first run), ~$0 (cached re-run)
 
 ---
 
-## 📁 Output Structure
+## Output Structure
 
 ```
 MyFolder_sorted/
-├── Share/                    # 📸 Share-worthy photos/videos (25-30% target)
-├── Storage/                  # 💾 Keep but don't share
-├── Review/                   # 🤔 Uncertain, needs manual review
-├── Ignore/                   # 🚫 No children or inappropriate
-├── Videos/                   # 🎥 Videos (if classification disabled)
-├── ImprovementCandidates/    # 🎨 Gray zone photos (high value + technical issues)
-│   └── improvement_candidates.csv  # Metadata & approval status
-├── Improved/                 # ✨ AI-enhanced photos (after processing)
-│   └── improvement_results.csv     # Processing results
-└── Reports/                  # 📊 Classification logs (CSV)
++-- Share/                       # Share-worthy photos/videos
++-- Storage/                     # Keep but don't share
++-- Review/                      # Needs manual review
++-- Ignore/                      # No children or inappropriate
++-- ImprovementCandidates/       # Gray zone photos
+|   +-- improvement_candidates.csv
++-- Improved/                    # AI-enhanced photos
++-- Reports/                     # Classification logs (CSV)
 ```
+
+For document profiles, output folders match the profile's category names (e.g., `Exemplary/`, `Acceptable/`, `Discard/`).
 
 ---
 
-## 🔧 Development
+## Development
 
 ### Run Tests
 ```bash
 # All tests
 pytest tests/ -v
 
-# Specific test file
-pytest tests/test_classification.py -v
-
 # With coverage
 pytest tests/ --cov=src --cov-report=html
 ```
 
-**Current Status:** 130+ passing tests ✅
-
-### Project Structure
-```
-src/
-├── core/              # Configuration, caching, Gemini client
-├── features/          # Quality, bursts, embeddings
-├── classification/    # Prompts, classifier, routing
-└── improvement/       # Photo improvement (gray zone)
-
-tests/                 # Unit + integration tests
-config.yaml            # All configuration in one place
-taste_classify.py      # Main classification entry point
-improve_photos.py      # Photo improvement entry point
+### Install New Dependencies
+```bash
+py -3.12 -m pip install -r requirements.txt
 ```
 
----
+### Project Dependencies
 
-## 📖 Documentation
-
-- **`VIDEO_CLASSIFICATION_GUIDE.md`** - Video-specific documentation
-- **`examples/`** - Sample outputs and taste profiles
-- **`config.yaml`** - All configuration options with inline documentation
-
----
-
-## 🎯 Key Features
-
-✅ **Unified Infrastructure** - Clean, modular codebase
-✅ **Consistent Handling** - Same logic for singletons, bursts, videos
-✅ **Burst-Aware Routing** - Only top photos from bursts shared
-✅ **Diversity Checking** - Prevents duplicate-looking shares
-✅ **Video Classification** - ON by default, 10 parallel workers
-✅ **Cost Optimization** - Smart caching saves ~90% on re-runs
-✅ **Type-Safe Config** - YAML configuration with validation
-✅ **Comprehensive Tests** - Unit and integration tests ensure quality
-✅ **Taste Profile Integration** - Uses both manual and AI-generated preferences
-✅ **Gray Zone Detection** - Identifies valuable photos with technical issues
-✅ **AI Photo Improvement** - Enhance gray zone photos with Gemini image generation
-✅ **Gradio Review UI** - Interactive interface for approving improvement candidates
-✅ **Error Tracking & Retry** - Automatic retry with exponential backoff for API failures
-✅ **Failed Reprocessing** - Easy identification and reprocessing of error fallbacks
+| Category | Packages |
+|----------|----------|
+| AI/ML | google-generativeai, torch, open-clip-torch, sentence-transformers |
+| Images | Pillow, pillow-heif, opencv-python |
+| Documents | pypdf, python-docx, openpyxl, python-pptx, beautifulsoup4 |
+| API | fastapi, uvicorn |
+| MCP | mcp |
+| UI | gradio, tqdm |
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "No module named 'src'"
+Run from the project root directory:
 ```bash
-# Run from project root directory
 cd "path/to/Taste Cloner Photo Sorter"
 py -3.12 taste_classify.py ...
 ```
@@ -434,86 +500,51 @@ GEMINI_API_KEY=your_key_here
 ```
 
 ### "Config file not found"
-Make sure `config.yaml` exists in project root.
+Ensure `config.yaml` exists in the project root.
 
 ### Low Share Rate (<20%)
-Decrease `share_threshold` in `config.yaml`:
 ```yaml
 classification:
   share_threshold: 0.50  # Lower = more photos in Share
 ```
 
-### High Share Rate (>35%)
-Increase `share_threshold`:
-```yaml
-classification:
-  share_threshold: 0.70  # Higher = fewer photos in Share
+### Document extraction issues
+Install the relevant parser:
+```bash
+py -3.12 -m pip install pypdf python-docx openpyxl python-pptx beautifulsoup4
 ```
 
 ---
 
-## 📈 Performance
+## Performance
 
 **Typical Run (1,000 photos):**
-- **Burst Detection:** ~30 seconds
-- **Quality Scoring:** ~1 minute
-- **Embedding Extraction:** ~2 minutes (cached: instant)
-- **Gemini Classification:** ~5-10 minutes
+- Burst Detection: ~30 seconds
+- Embedding Extraction: ~2 minutes (cached: instant)
+- Gemini Classification: ~5-10 minutes
 - **Total:** ~10-15 minutes (first run), ~5 minutes (cached)
 
-**With 10 Videos:**
-- Add ~2-5 minutes for video classification
+**Document Classification (100 documents):**
+- Feature Extraction: ~30 seconds
+- Similarity Grouping: ~10 seconds
+- Gemini Classification: ~2-5 minutes
+- **Total:** ~3-6 minutes
 
 ---
 
-## 🏆 Results
-
-**Automation Rate:** 75-80% of photos correctly classified
-**Share Rate:** Typically 25-30% of photos (configurable)
-**Accuracy:** Based on your training examples and taste profile
-
----
-
-## 🤝 Contributing
-
-This is a personal project, but suggestions welcome!
-
-1. Run tests: `pytest tests/`
-2. Check code: All 65 tests should pass
-3. Update docs if needed
-
----
-
-## 📝 License
-
-Personal project - Use at your own risk
-
----
-
-## 🙏 Credits
+## Credits
 
 **Built with:**
 - Google Gemini 3 Flash (AI classification)
 - OpenCLIP (visual embeddings)
+- sentence-transformers (text embeddings)
+- FastAPI (REST API)
+- MCP SDK (Claude Desktop integration)
 - Gradio (training UI)
-- Claude Code (AI-assisted development was transformative!)
-
-**Key Insight:** For subjective preference tasks, skip traditional ML pipelines and use LLMs directly.
+- Claude Code (AI-assisted development)
 
 ---
 
-## 📞 Support
-
-**Issues?** Check:
-1. Is `GEMINI_API_KEY` set in `.env`?
-2. Is `config.yaml` present?
-3. Are you running from project root?
-4. Do you have all dependencies? (`py -3.12 -m pip install -r requirements.txt`)
-
-For video-specific issues, see `VIDEO_CLASSIFICATION_GUIDE.md`.
-
----
-
-**Version:** 2.2.0 (Error Tracking & Retry)
-**Last Updated:** December 25, 2025
-**Status:** Production Ready ✅
+**Version:** 3.0.0 (Universal Media Classification Platform)
+**Last Updated:** February 2026
+**Status:** Production Ready

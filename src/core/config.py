@@ -197,6 +197,32 @@ class SystemConfig:
 
 
 @dataclass
+class DocumentConfig:
+    """Document processing configuration."""
+    supported_extensions: List[str] = field(default_factory=lambda: [
+        ".pdf", ".docx", ".xlsx", ".pptx", ".html", ".htm", ".txt", ".md", ".csv", ".rtf"
+    ])
+    max_file_size_mb: float = 50.0
+    max_pages_per_document: int = 20
+    text_extraction_max_chars: int = 50000
+    enable_text_embeddings: bool = True
+    text_embedding_model: str = "all-MiniLM-L6-v2"
+    similarity_threshold: float = 0.85
+
+    def __post_init__(self):
+        """Convert to set for fast lookup."""
+        self.supported_extensions = set(ext.lower() for ext in self.supported_extensions)
+
+
+@dataclass
+class ProfileConfig:
+    """Profile management configuration."""
+    profiles_dir: str = "profiles"
+    active_profile: str = "default-photos"
+    auto_detect_media_type: bool = True
+
+
+@dataclass
 class PhotoImprovementConfig:
     """Photo improvement configuration for gray zone photos."""
     enabled: bool = True
@@ -235,6 +261,8 @@ class Config:
     training: TrainingConfig = field(default_factory=TrainingConfig)
     cost: CostConfig = field(default_factory=CostConfig)
     system: SystemConfig = field(default_factory=SystemConfig)
+    document: DocumentConfig = field(default_factory=DocumentConfig)
+    profiles: ProfileConfig = field(default_factory=ProfileConfig)
     photo_improvement: PhotoImprovementConfig = field(default_factory=PhotoImprovementConfig)
 
     @classmethod
@@ -252,6 +280,8 @@ class Config:
             training=TrainingConfig(**data.get("training", {})),
             cost=CostConfig(**data.get("cost", {})),
             system=SystemConfig(**data.get("system", {})),
+            document=DocumentConfig(**data.get("document", {})),
+            profiles=ProfileConfig(**data.get("profiles", {})),
             photo_improvement=PhotoImprovementConfig(**data.get("photo_improvement", {})),
         )
 
@@ -316,6 +346,8 @@ def save_config(config: Config, config_path: Path):
         "training": asdict(config.training),
         "cost": asdict(config.cost),
         "system": asdict(config.system),
+        "document": asdict(config.document),
+        "profiles": asdict(config.profiles),
         "photo_improvement": asdict(config.photo_improvement),
     }
 

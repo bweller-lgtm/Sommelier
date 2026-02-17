@@ -1,4 +1,4 @@
-"""Unified classifier for photos and videos."""
+"""Unified classifier for photos, videos, and documents."""
 import time
 import numpy as np
 from pathlib import Path
@@ -9,12 +9,13 @@ from ..core.models import GeminiClient
 from ..core.config import Config
 from ..core.cache import CacheManager, CacheKey
 from ..core.file_utils import ImageUtils
+from ..core.profiles import TasteProfile
 from .prompt_builder import PromptBuilder
 
 
 class MediaClassifier:
     """
-    Unified classifier for all media types (singletons, bursts, videos).
+    Unified classifier for all media types (singletons, bursts, videos, documents).
 
     Provides consistent classification interface regardless of media type.
     """
@@ -24,7 +25,8 @@ class MediaClassifier:
         config: Config,
         gemini_client: GeminiClient,
         prompt_builder: PromptBuilder,
-        cache_manager: Optional[CacheManager] = None
+        cache_manager: Optional[CacheManager] = None,
+        profile: Optional[TasteProfile] = None
     ):
         """
         Initialize classifier.
@@ -34,12 +36,21 @@ class MediaClassifier:
             gemini_client: Gemini API client.
             prompt_builder: Prompt builder for generating prompts.
             cache_manager: Optional cache manager for caching responses.
+            profile: Optional TasteProfile for dynamic category validation.
         """
         self.config = config
         self.client = gemini_client
         self.prompt_builder = prompt_builder
         self.cache_manager = cache_manager
+        self.profile = profile
         self.max_output_tokens = config.model.max_output_tokens
+
+    @property
+    def _valid_categories(self) -> List[str]:
+        """Get valid classification categories."""
+        if self.profile:
+            return self.profile.category_names + ["Review"]
+        return ["Share", "Storage", "Review", "Ignore"]
 
     def classify_singleton(
         self,
@@ -345,6 +356,191 @@ class MediaClassifier:
 
         return results
 
+    def classify_document(
+        self,
+        doc_path: Path,
+        text_content: str = "",
+        metadata: Optional[Dict] = None,
+        use_cache: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Classify a single document.
+
+        For PDFs, sends the file directly to Gemini (native PDF support).
+        For other formats, sends extracted text + metadata as prompt context.
+
+        Args:
+            doc_path: Path to document file.
+            text_content: Pre-extracted text content from the document.
+            metadata: Optional metadata dict (page count, author, etc.).
+            use_cache: Whether to use cached classification.
+
+        Returns:
+            Classification result dict.
+        """
+        # Check cache
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_file(doc_path)
+            cached = self.cache_manager.get("gemini", cache_key)
+            if cached is not None:
+                return cached
+
+        # Build prompt
+        prompt = self.prompt_builder.build_singleton_prompt(media_type="document")
+
+        # Build context with document info
+        context_parts = [prompt]
+
+        if metadata:
+            meta_str = "\n".join([f"- {k}: {v}" for k, v in metadata.items() if v])
+            context_parts.append(f"\n**Document Metadata:**\n{meta_str}")
+
+        # For PDFs, send the file directly (Gemini reads PDFs natively)
+        ext = doc_path.suffix.lower()
+        if ext == ".pdf":
+            context_parts.append(doc_path)
+        elif text_content:
+            # Truncate text for the prompt
+            truncated = text_content[:30000]
+            if len(text_content) > 30000:
+                truncated += "\n\n[... text truncated ...]"
+            context_parts.append(f"\n**Document Content:**\n{truncated}")
+
+        # Define the API call
+        def call_gemini() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=context_parts,
+                    fallback=self._create_fallback_response("API error"),
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True
+                )
+                return self._validate_document_response(result)
+            except Exception as e:
+                print(f"Warning: Document classification error for {doc_path.name}: {e}")
+                return self._create_fallback_response(f"Error: {e}")
+
+        result = self._execute_with_retry(call_gemini, f"Document {doc_path.name}")
+
+        # Cache result
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_file(doc_path)
+            self.cache_manager.set("gemini", cache_key, result)
+
+        return result
+
+    def classify_document_group(
+        self,
+        docs: List[Path],
+        text_contents: Optional[Dict[Path, str]] = None,
+        use_cache: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Classify a group of similar documents comparatively.
+
+        Args:
+            docs: List of document paths.
+            text_contents: Optional mapping of path to extracted text.
+            use_cache: Whether to use cache.
+
+        Returns:
+            List of classification results (one per document).
+        """
+        if not docs:
+            return []
+
+        if len(docs) == 1:
+            text = (text_contents or {}).get(docs[0], "")
+            return [self.classify_document(docs[0], text_content=text, use_cache=use_cache)]
+
+        # Check cache
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_files(docs)
+            cached = self.cache_manager.get("gemini", cache_key)
+            if cached is not None and len(cached) == len(docs):
+                return cached
+
+        # Build prompt
+        prompt = self.prompt_builder.build_group_prompt(len(docs), media_type="document")
+        content = [prompt]
+
+        for i, doc in enumerate(docs):
+            text = (text_contents or {}).get(doc, "")
+            ext = doc.suffix.lower()
+            if ext == ".pdf":
+                content.append(f"\n**Document {i+1}: {doc.name}**")
+                content.append(doc)
+            else:
+                truncated = text[:15000]
+                if len(text) > 15000:
+                    truncated += "\n[... truncated ...]"
+                content.append(f"\n**Document {i+1}: {doc.name}**\n{truncated}")
+
+        def call_gemini_group() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=content,
+                    fallback=[self._create_fallback_response(f"API error", rank=i+1) for i in range(len(docs))],
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True
+                )
+                if isinstance(result, list) and len(result) == len(docs):
+                    result = [self._validate_document_response(r, default_rank=i+1) for i, r in enumerate(result)]
+                    return {"_group_results": result, "is_error_fallback": False}
+                else:
+                    fallback = [
+                        self._create_fallback_response("Invalid response format", rank=i+1, error_type="invalid_response")
+                        for i in range(len(docs))
+                    ]
+                    return {"_group_results": fallback, "is_error_fallback": True, "error_type": "invalid_response"}
+            except Exception as e:
+                fallback = [self._create_fallback_response(f"Error: {e}", rank=i+1) for i in range(len(docs))]
+                return {"_group_results": fallback, "is_error_fallback": True, "error_type": "api_error"}
+
+        wrapper = self._execute_with_retry(call_gemini_group, f"Document group ({len(docs)} docs)")
+        result = wrapper.get("_group_results", [
+            self._create_fallback_response("Retry wrapper error", rank=i+1) for i in range(len(docs))
+        ])
+
+        # Cache
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_files(docs)
+            self.cache_manager.set("gemini", cache_key, result)
+
+        return result
+
+    def _validate_document_response(self, response: Dict[str, Any], default_rank: Optional[int] = None) -> Dict[str, Any]:
+        """Validate and fix document classification response."""
+        if "classification" not in response:
+            response["classification"] = self.profile.default_category if self.profile else "Review"
+        if "confidence" not in response:
+            response["confidence"] = 0.3
+        if "reasoning" not in response:
+            response["reasoning"] = "No reasoning provided"
+
+        # Validate category against profile
+        valid = self._valid_categories
+        if response["classification"] not in valid:
+            response["classification"] = self.profile.default_category if self.profile else "Review"
+
+        response["confidence"] = max(0.0, min(1.0, float(response.get("confidence", 0.3))))
+
+        if "content_summary" not in response:
+            response["content_summary"] = ""
+        if "key_topics" not in response:
+            response["key_topics"] = []
+
+        if "is_error_fallback" not in response:
+            response["is_error_fallback"] = False
+            response["error_type"] = None
+            response["error_message"] = None
+            response["retry_count"] = 0
+
+        if default_rank is not None and "rank" not in response:
+            response["rank"] = default_rank
+
+        return response
+
     def _create_fallback_response(
         self,
         reason: str,
@@ -462,9 +658,10 @@ class MediaClassifier:
         if "reasoning" not in response:
             response["reasoning"] = "No reasoning provided"
 
-        # Ensure classification is valid
-        if response["classification"] not in ["Share", "Storage", "Review", "Ignore"]:
-            response["classification"] = "Review"
+        # Ensure classification is valid (dynamic categories from profile)
+        valid = self._valid_categories
+        if response["classification"] not in valid:
+            response["classification"] = self.profile.default_category if self.profile else "Review"
 
         # Ensure confidence is in range
         response["confidence"] = max(0.0, min(1.0, float(response.get("confidence", 0.3))))

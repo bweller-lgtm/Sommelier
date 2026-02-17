@@ -1,2 +1,2 @@
-"""LLM Taste Cloner - AI-powered photo classification system."""
-__version__ = "2.0.0"
+"""Taste Cloner - Universal AI-powered media classification platform."""
+__version__ = "3.0.0"

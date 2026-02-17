@@ -17,6 +17,24 @@ pillow-heif>=0.13.0
 opencv-python>=4.8.0
 imagehash>=4.3.0
 
+# Document processing
+pypdf>=4.0.0
+python-docx>=1.0.0
+openpyxl>=3.1.0
+python-pptx>=0.6.0
+beautifulsoup4>=4.12.0
+
+# Text embeddings (for document similarity)
+sentence-transformers>=2.2.0
+
+# API server
+fastapi>=0.110.0
+uvicorn>=0.27.0
+python-multipart>=0.0.6
+
+# MCP server (Claude Desktop integration)
+mcp>=1.0.0
+
 # UI and Progress
 gradio>=4.0.0
 tqdm>=4.65.0

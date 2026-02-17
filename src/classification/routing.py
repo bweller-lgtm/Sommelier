@@ -1,4 +1,4 @@
-"""Unified routing logic with burst-awareness."""
+"""Unified routing logic with burst-awareness and profile support."""
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Any, Optional
@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Any, Optional
 from ..core.config import Config, ClassificationConfig, PhotoImprovementConfig
 from ..core.models import GeminiClient
 from ..core.file_utils import ImageUtils
+from ..core.profiles import TasteProfile
 
 
 class Router:
@@ -16,12 +17,14 @@ class Router:
     - Singleton routing (threshold-based)
     - Burst-aware routing (rank + threshold hybrid)
     - Diversity checking (prevent similar photos in Share)
+    - Document routing (profile-defined categories)
     """
 
     def __init__(
         self,
         config: Config,
-        gemini_client: Optional[GeminiClient] = None
+        gemini_client: Optional[GeminiClient] = None,
+        profile: Optional[TasteProfile] = None
     ):
         """
         Initialize router.
@@ -29,9 +32,11 @@ class Router:
         Args:
             config: Configuration object.
             gemini_client: Optional Gemini client for diversity checking.
+            profile: Optional TasteProfile for profile-defined category routing.
         """
         self.config = config
         self.client = gemini_client
+        self.profile = profile
 
     def should_route_to_improvement(self, classification: Dict[str, Any]) -> bool:
         """
@@ -345,4 +350,37 @@ Respond with JSON:
             Destination folder: "Share", "Storage", "Review", or "Ignore".
         """
         # Videos use same logic as singletons
+        return self.route_singleton(classification)
+
+    def route_document(self, classification: Dict[str, Any]) -> str:
+        """
+        Route a document based on classification using profile-defined categories.
+
+        If a TasteProfile is set, uses profile thresholds and categories.
+        Otherwise falls back to simple threshold-based routing.
+
+        Args:
+            classification: Classification result dict.
+
+        Returns:
+            Destination category name.
+        """
+        category = classification.get("classification", "Review")
+        confidence = classification.get("confidence", 0.0)
+
+        if self.profile:
+            # Validate category is in profile
+            valid_names = self.profile.category_names
+            if category not in valid_names:
+                return self.profile.default_category
+
+            # Check thresholds for the category
+            threshold = self.profile.thresholds.get(category)
+            if threshold is not None and confidence < threshold:
+                # Confidence too low for this category, fall back
+                return self.profile.default_category
+
+            return category
+
+        # Fallback: use photo routing logic
         return self.route_singleton(classification)

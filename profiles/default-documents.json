@@ -1,0 +1,65 @@
+{
+  "name": "default-documents",
+  "description": "Document quality classification - sorts by relevance and quality",
+  "media_types": ["document"],
+  "categories": [
+    {"name": "Exemplary", "description": "Outstanding, high-quality documents", "color": "#4CAF50"},
+    {"name": "Acceptable", "description": "Adequate quality, keep for reference", "color": "#2196F3"},
+    {"name": "Review", "description": "Uncertain quality, needs manual review", "color": "#FF9800"},
+    {"name": "Discard", "description": "Low quality or irrelevant", "color": "#F44336"}
+  ],
+  "default_category": "Review",
+  "top_priorities": [
+    "Content relevance and accuracy",
+    "Writing quality and clarity",
+    "Completeness of information",
+    "Professional formatting",
+    "Actionable insights or value"
+  ],
+  "positive_criteria": {
+    "must_have": [
+      "Clear, readable content",
+      "Relevant to the intended purpose"
+    ],
+    "highly_valued": [
+      "Well-structured with headings and sections",
+      "Accurate and up-to-date information",
+      "Professional tone and formatting",
+      "Actionable content or clear takeaways"
+    ]
+  },
+  "negative_criteria": {
+    "deal_breakers": [
+      "Unreadable or corrupted content",
+      "Completely irrelevant to purpose",
+      "Severely outdated information"
+    ],
+    "negative_factors": [
+      "Poor formatting or structure",
+      "Excessive errors or typos",
+      "Redundant with other documents",
+      "Missing key information"
+    ]
+  },
+  "specific_guidance": [
+    "Evaluate documents based on their intended purpose and audience.",
+    "Consider both content quality and presentation.",
+    "Group similar documents and identify the best version."
+  ],
+  "philosophy": "Keep documents that provide clear value through accurate, well-presented information relevant to their purpose.",
+  "thresholds": {
+    "Exemplary": 0.70,
+    "Acceptable": 0.40
+  },
+  "photo_settings": null,
+  "document_settings": {
+    "extract_text": true,
+    "extract_metadata": true,
+    "enable_similarity_grouping": true,
+    "similarity_threshold": 0.85,
+    "max_pages_to_analyze": 10
+  },
+  "created_at": "2026-02-17T00:00:00",
+  "updated_at": "2026-02-17T00:00:00",
+  "version": 1
+}

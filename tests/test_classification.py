@@ -26,9 +26,9 @@ class TestPromptBuilder:
 
         assert isinstance(prompt, str)
         assert len(prompt) > 0
-        assert "SHARE" in prompt
-        assert "STORAGE" in prompt
-        assert "IGNORE" in prompt
+        assert "share" in prompt.lower()
+        assert "storage" in prompt.lower()
+        assert "ignore" in prompt.lower()
         assert "young children" in prompt.lower()
 
     def test_burst_prompt(self, prompt_builder):

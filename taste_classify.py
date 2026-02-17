@@ -2,8 +2,8 @@
 """
 LLM Taste Cloner - Main Classification Script
 
-Automatically classify and sort family photos/videos using Google Gemini AI.
-Refactored version using new modular infrastructure.
+Automatically classify and sort family photos/videos/documents using Google Gemini AI.
+Supports multiple taste profiles and mixed media types.
 """
 
 import os
@@ -24,6 +24,7 @@ from src.core import (
     CacheManager,
     GeminiClient,
     FileTypeRegistry,
+    ProfileManager,
 )
 from src.features import (
     QualityScorer,
@@ -35,16 +36,18 @@ from src.classification import (
     MediaClassifier,
     Router,
 )
+from src.pipelines import MixedPipeline, PhotoPipeline, DocumentPipeline
 
 
 def parse_arguments():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Classify family photos/videos using Google Gemini AI",
+        description="Classify family photos/videos/documents using Google Gemini AI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   %(prog)s "C:\\Photos\\MyFolder"
+  %(prog)s "C:\\Photos\\MyFolder" --profile default-photos
   %(prog)s "C:\\Photos\\MyFolder" --classify-videos
   %(prog)s "C:\\Photos\\MyFolder" --dry-run
   %(prog)s "C:\\Photos\\MyFolder" --config custom_config.yaml
@@ -54,7 +57,7 @@ Examples:
     parser.add_argument(
         "folder",
         type=str,
-        help="Folder containing photos/videos to classify"
+        help="Folder containing photos/videos/documents to classify"
     )
 
     parser.add_argument(
@@ -62,6 +65,13 @@ Examples:
         type=str,
         default="config.yaml",
         help="Path to configuration file (default: config.yaml)"
+    )
+
+    parser.add_argument(
+        "--profile",
+        type=str,
+        default=None,
+        help="Taste profile name to use (default: from config or auto-detect)"
     )
 
     parser.add_argument(
@@ -103,15 +113,23 @@ Examples:
     return parser.parse_args()
 
 
-def setup_output_directories(output_base: Path, classify_videos: bool = True, photo_improvement_enabled: bool = False) -> dict:
+def setup_output_directories(output_base: Path, classify_videos: bool = True, photo_improvement_enabled: bool = False, profile=None) -> dict:
     """Create output directories for sorted media."""
-    directories = {
-        "Share": output_base / "Share",
-        "Storage": output_base / "Storage",
-        "Review": output_base / "Review",
-        "Ignore": output_base / "Ignore",
-        "Reports": output_base / "Reports",
-    }
+    if profile:
+        # Use profile-defined categories
+        directories = {}
+        for cat in profile.categories:
+            directories[cat.name] = output_base / cat.name
+        directories["Reports"] = output_base / "Reports"
+    else:
+        # Default directories
+        directories = {
+            "Share": output_base / "Share",
+            "Storage": output_base / "Storage",
+            "Review": output_base / "Review",
+            "Ignore": output_base / "Ignore",
+            "Reports": output_base / "Reports",
+        }
 
     # Only create Videos folder when video classification is disabled
     if not classify_videos:
@@ -128,191 +146,25 @@ def setup_output_directories(output_base: Path, classify_videos: bool = True, ph
     return directories
 
 
-def collect_media_files(folder: Path, config) -> dict:
-    """Collect all media files from folder."""
-    print(f"\n📁 Scanning folder: {folder}")
-
-    images = FileTypeRegistry.list_images(folder, recursive=False)
-    videos = FileTypeRegistry.list_videos(folder, recursive=False)
-
-    print(f"   Found {len(images)} images, {len(videos)} videos")
-
-    return {
-        "images": images,
-        "videos": videos
-    }
-
-
-def process_images(
-    images: list,
-    config,
-    cache_manager: CacheManager,
-    gemini_client: GeminiClient,
-    output_dirs: dict,
-    dry_run: bool
-):
-    """Process all images (detect bursts, classify, route)."""
-    if not images:
-        print("\n📸 No images to process")
-        return []
-
-    print(f"\n📸 Processing {len(images)} images...")
-
-    # 1. Extract embeddings for burst detection
-    print("\n🔍 Step 1: Extracting CLIP embeddings...")
-    extractor = EmbeddingExtractor(config.model, config.performance, cache_manager)
-    embeddings = extractor.extract_embeddings_batch(images, use_cache=True, show_progress=True)
-
-    # 2. Detect bursts
-    print("\n🔍 Step 2: Detecting photo bursts...")
-    detector = BurstDetector(config.burst_detection)
-    bursts = detector.detect_bursts(images, embeddings)
-
-    # 3. Initialize classification components
-    prompt_builder = PromptBuilder(config, training_examples={})
-    classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager)
-    router = Router(config, gemini_client)
-
-    # 4. Classify all photos
-    print(f"\n🤖 Step 3: Classifying photos with Gemini...")
-    results = []
-
-    for burst_idx, burst in enumerate(tqdm(bursts, desc="Processing bursts/singletons")):
-        if len(burst) == 1:
-            # Singleton
-            photo = burst[0]
-            classification = classifier.classify_singleton(photo, use_cache=True)
-            destination = router.route_singleton(classification)
-
-            results.append({
-                "path": photo,
-                "burst_size": 1,
-                "burst_index": -1,
-                "classification": classification,
-                "destination": destination
-            })
-
-        else:
-            # Burst
-            # Get burst indices for embeddings
-            burst_indices = [images.index(photo) for photo in burst]
-            burst_embeddings = embeddings[burst_indices]
-
-            classifications = classifier.classify_burst(burst, use_cache=True)
-            destinations = router.route_burst(burst, classifications, burst_embeddings)
-
-            for i, (photo, classification, destination) in enumerate(zip(burst, classifications, destinations)):
-                results.append({
-                    "path": photo,
-                    "burst_size": len(burst),
-                    "burst_index": i,
-                    "classification": classification,
-                    "destination": destination
-                })
-
-    # 5. Move files to destinations
-    print(f"\n📦 Step 4: Moving files to destination folders...")
-    stats = move_files(results, output_dirs, dry_run)
-
-    # 6. Generate report (include improvement fields if enabled)
-    generate_report(results, output_dirs["Reports"], config.photo_improvement.enabled)
-
-    return results
-
-
-def process_videos(
-    videos: list,
-    config,
-    cache_manager: CacheManager,
-    gemini_client: GeminiClient,
-    output_dirs: dict,
-    dry_run: bool,
-    classify_videos: bool
-):
-    """Process all videos."""
-    if not videos:
-        print("\n🎥 No videos to process")
-        return []
-
-    print(f"\n🎥 Processing {len(videos)} videos...")
-
-    results = []
-
-    if not classify_videos:
-        # Just copy videos to Videos folder
-        print("   Video classification disabled, copying to Videos/ folder...")
-        for video in tqdm(videos, desc="Copying videos"):
-            results.append({
-                "path": video,
-                "classification": {"classification": "Videos", "confidence": None},
-                "destination": "Videos"
-            })
-    else:
-        # Classify videos with Gemini
-        print(f"   Classifying videos with {config.classification.parallel_video_workers} parallel workers...")
-
-        prompt_builder = PromptBuilder(config, training_examples={})
-        classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager)
-        router = Router(config, gemini_client)
-
-        for video in tqdm(videos, desc="Classifying videos"):
-            classification = classifier.classify_video(video, use_cache=True)
-            destination = router.route_video(classification)
-
-            results.append({
-                "path": video,
-                "classification": classification,
-                "destination": destination
-            })
-
-    # Move files
-    print(f"\n📦 Moving videos to destination folders...")
-    stats = move_files(results, output_dirs, dry_run)
-
-    return results
-
-
-def move_files(results: list, output_dirs: dict, dry_run: bool) -> dict:
-    """Move files to their destination folders."""
-    stats = defaultdict(int)
-
-    for result in results:
-        source = result["path"]
-        destination = result["destination"]
-
-        dst_dir = output_dirs.get(destination, output_dirs["Review"])
-        dst_path = dst_dir / source.name
-
-        if dry_run:
-            print(f"   [DRY RUN] {source.name} → {destination}/")
-        else:
-            try:
-                shutil.copy2(source, dst_path)
-                stats[destination] += 1
-            except Exception as e:
-                print(f"   ⚠️ Error copying {source.name}: {e}")
-                stats["Error"] += 1
-
-    return stats
-
-
 def generate_report(results: list, report_dir: Path, include_improvement: bool = False):
     """Generate classification report CSV."""
     rows = []
 
     for result in results:
-        classification = result["classification"]
+        classification = result.get("classification", {})
         row = {
             "source": str(result["path"]),
-            "destination": result["destination"],
+            "destination": result.get("destination", "Unknown"),
             "classification": classification.get("classification", "Unknown"),
             "confidence": classification.get("confidence", 0),
-            "burst_size": result.get("burst_size", 1),
-            "burst_index": result.get("burst_index", -1),
+            "burst_size": result.get("burst_size", result.get("group_size", 1)),
+            "burst_index": result.get("burst_index", result.get("group_index", -1)),
             "rank": classification.get("rank", None),
             "reasoning": classification.get("reasoning", ""),
             "contains_children": classification.get("contains_children", None),
             "is_appropriate": classification.get("is_appropriate", None),
+            "content_summary": classification.get("content_summary", ""),
+            "key_topics": ",".join(classification.get("key_topics", [])),
             # Error tracking fields
             "is_error_fallback": classification.get("is_error_fallback", False),
             "error_type": classification.get("error_type", ""),
@@ -333,30 +185,20 @@ def generate_report(results: list, report_dir: Path, include_improvement: bool =
     df = pd.DataFrame(rows)
     report_path = report_dir / f"classification_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     df.to_csv(report_path, index=False)
-    print(f"\n📊 Report saved: {report_path}")
+    print(f"\nReport saved: {report_path}")
 
 
 def save_improvement_candidates_csv(results: list, output_dirs: dict, cost_per_image: float):
-    """
-    Save improvement candidates to a CSV file for human review.
-
-    Args:
-        results: List of classification results.
-        output_dirs: Dictionary of output directories.
-        cost_per_image: Cost per image improvement.
-    """
+    """Save improvement candidates to a CSV file for human review."""
     candidates_dir = output_dirs.get("ImprovementCandidates")
     if candidates_dir is None:
         return 0
 
-    # Filter to only improvement candidates
-    candidates = [r for r in results if r["destination"] == "ImprovementCandidates"]
-
+    candidates = [r for r in results if r.get("destination") == "ImprovementCandidates"]
     if not candidates:
         return 0
 
     csv_path = candidates_dir / "improvement_candidates.csv"
-
     rows = []
     for result in candidates:
         classification = result["classification"]
@@ -367,11 +209,10 @@ def save_improvement_candidates_csv(results: list, output_dirs: dict, cost_per_i
             "contextual_reasoning": classification.get("contextual_value_reasoning", ""),
             "improvement_reasons": ",".join(classification.get("improvement_reasons", [])),
             "estimated_cost": f"${cost_per_image:.3f}",
-            "approved": "",  # Human fills this in
+            "approved": "",
             "status": "pending"
         })
 
-    # Write CSV
     fieldnames = ["filename", "original_path", "contextual_value", "contextual_reasoning",
                   "improvement_reasons", "estimated_cost", "approved", "status"]
 
@@ -380,27 +221,17 @@ def save_improvement_candidates_csv(results: list, output_dirs: dict, cost_per_i
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"\n📋 Improvement candidates CSV saved: {csv_path}")
+    print(f"\nImprovement candidates CSV saved: {csv_path}")
     return len(candidates)
 
 
 def prompt_for_improvement_review(candidates_count: int, output_dirs: dict, total_cost: float) -> bool:
-    """
-    Prompt user to review improvement candidates.
-
-    Args:
-        candidates_count: Number of improvement candidates.
-        output_dirs: Dictionary of output directories.
-        total_cost: Total estimated cost for all candidates.
-
-    Returns:
-        True if user wants to review now, False otherwise.
-    """
+    """Prompt user to review improvement candidates."""
     if candidates_count == 0:
         return False
 
     print("\n" + "="*60)
-    print("🎨 IMPROVEMENT CANDIDATES DETECTED")
+    print("IMPROVEMENT CANDIDATES DETECTED")
     print("="*60)
     print(f"\nFound {candidates_count} photos with high contextual value but technical issues.")
     print(f"Estimated improvement cost: ${total_cost:.2f}")
@@ -417,27 +248,6 @@ def prompt_for_improvement_review(candidates_count: int, output_dirs: dict, tota
         return False
 
 
-def print_summary(image_stats: dict, video_stats: dict):
-    """Print classification summary."""
-    print("\n" + "="*60)
-    print("📊 CLASSIFICATION SUMMARY")
-    print("="*60)
-
-    if image_stats:
-        print("\n📸 Images:")
-        for destination, count in sorted(image_stats.items()):
-            print(f"   {destination:10s}: {count:4d} photos")
-        print(f"   {'TOTAL':10s}: {sum(image_stats.values()):4d} photos")
-
-    if video_stats:
-        print("\n🎥 Videos:")
-        for destination, count in sorted(video_stats.items()):
-            print(f"   {destination:10s}: {count:4d} videos")
-        print(f"   {'TOTAL':10s}: {sum(video_stats.values()):4d} videos")
-
-    print("\n" + "="*60)
-
-
 def main():
     """Main entry point."""
     # Load environment variables
@@ -449,18 +259,18 @@ def main():
     # Validate input folder
     folder = Path(args.folder)
     if not folder.exists():
-        print(f"❌ Error: Folder not found: {folder}")
+        print(f"Error: Folder not found: {folder}")
         sys.exit(1)
 
     # Load configuration
-    print(f"⚙️  Loading configuration from {args.config}...")
+    print(f"Loading configuration from {args.config}...")
     try:
         config = load_config(Path(args.config))
     except FileNotFoundError:
-        print(f"❌ Error: Config file not found: {args.config}")
+        print(f"Error: Config file not found: {args.config}")
         sys.exit(1)
     except Exception as e:
-        print(f"❌ Error loading config: {e}")
+        print(f"Error loading config: {e}")
         sys.exit(1)
 
     # Override config with CLI arguments
@@ -478,19 +288,38 @@ def main():
     if args.cache_dir:
         config.paths.cache_root = Path(args.cache_dir)
 
+    # Load taste profile
+    profile = None
+    profile_name = args.profile or config.profiles.active_profile
+    profile_manager = ProfileManager(config.profiles.profiles_dir)
+
+    if profile_manager.profile_exists(profile_name):
+        profile = profile_manager.load_profile(profile_name)
+        print(f"Using taste profile: {profile.name} ({profile.description})")
+    else:
+        # Auto-detect media type and use appropriate default
+        if config.profiles.auto_detect_media_type:
+            media_type = FileTypeRegistry.detect_media_type(folder)
+            print(f"Auto-detected media type: {media_type}")
+            profile = profile_manager.get_default_profile(media_type)
+            print(f"Using default profile: {profile.name}")
+        else:
+            print(f"Profile '{profile_name}' not found, using legacy taste preferences")
+
     # Determine output directory
     if args.output:
         output_base = Path(args.output)
     else:
         output_base = folder.parent / f"{folder.name}_sorted"
 
-    print(f"📂 Output directory: {output_base}")
+    print(f"Output directory: {output_base}")
 
     # Setup output directories
     output_dirs = setup_output_directories(
         output_base,
         config.classification.classify_videos,
-        config.photo_improvement.enabled
+        config.photo_improvement.enabled,
+        profile=profile
     )
 
     # Initialize cache manager
@@ -507,63 +336,53 @@ def main():
             max_retries=config.system.max_retries,
             retry_delay=config.system.retry_delay_seconds
         )
-        print(f"✅ Gemini client initialized ({config.model.name})")
+        print(f"Gemini client initialized ({config.model.name})")
     except ValueError as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         print("   Make sure GEMINI_API_KEY is set in .env file")
         sys.exit(1)
 
-    # Collect media files
-    media = collect_media_files(folder, config)
+    # Scan folder contents
+    media = FileTypeRegistry.list_all_media(folder)
+    total = len(media["images"]) + len(media["videos"]) + len(media["documents"])
+    print(f"\nScanning folder: {folder}")
+    print(f"   Found {len(media['images'])} images, {len(media['videos'])} videos, {len(media['documents'])} documents")
 
-    # Process images
-    image_results = process_images(
-        media["images"],
-        config,
-        cache_manager,
-        gemini_client,
-        output_dirs,
-        config.system.dry_run
+    if total == 0:
+        print("\nNo media files found to process.")
+        sys.exit(0)
+
+    # Run the appropriate pipeline
+    pipeline = MixedPipeline(
+        config, profile, cache_manager, gemini_client
+    )
+    result = pipeline.run(
+        folder, output_base, config.system.dry_run,
+        classify_videos=config.classification.classify_videos
     )
 
-    # Process videos
-    video_results = process_videos(
-        media["videos"],
-        config,
-        cache_manager,
-        gemini_client,
-        output_dirs,
-        config.system.dry_run,
-        config.classification.classify_videos
-    )
-
-    # Calculate statistics
-    image_stats = defaultdict(int)
-    for result in image_results:
-        image_stats[result["destination"]] += 1
-
-    video_stats = defaultdict(int)
-    for result in video_results:
-        video_stats[result["destination"]] += 1
+    # Generate report
+    if result.results:
+        report_dir = output_dirs.get("Reports", output_base / "Reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        generate_report(result.results, report_dir, config.photo_improvement.enabled)
 
     # Print summary
-    print_summary(image_stats, video_stats)
+    result.print_summary("media files")
 
     if config.system.dry_run:
-        print("\n💡 This was a dry run. No files were moved.")
+        print("\nThis was a dry run. No files were moved.")
         print("   Remove --dry-run to actually move files.")
 
     # Handle improvement candidates
     improvement_count = 0
     if config.photo_improvement.enabled and not config.system.dry_run:
-        # Save improvement candidates CSV
         improvement_count = save_improvement_candidates_csv(
-            image_results,
+            result.results,
             output_dirs,
             config.photo_improvement.cost_per_image
         )
 
-        # Prompt for review if candidates exist and review_after_sort is enabled
         if improvement_count > 0 and config.photo_improvement.review_after_sort:
             total_cost = improvement_count * config.photo_improvement.cost_per_image
             wants_review = prompt_for_improvement_review(improvement_count, output_dirs, total_cost)
@@ -574,59 +393,55 @@ def main():
                     from src.improvement import PhotoImprover
                     from src.core.models import GeminiImageClient
 
-                    print("\n🎨 Launching Gradio review UI...")
+                    print("\nLaunching Gradio review UI...")
                     launch_review_ui(output_dirs["ImprovementCandidates"])
 
-                    # After review, check for approved candidates and process them
-                    print("\n✅ Review complete!")
+                    print("\nReview complete!")
                     improver = PhotoImprover(config)
                     approved = improver.load_candidates(output_dirs["ImprovementCandidates"])
 
                     if approved:
                         approved_cost = len(approved) * config.photo_improvement.cost_per_image
-                        print(f"\n🎨 {len(approved)} photos approved for improvement")
+                        print(f"\n{len(approved)} photos approved for improvement")
                         print(f"   Estimated cost: ${approved_cost:.2f}")
                         print(f"   Model: {config.photo_improvement.model_name}")
 
-                        print("\n🤖 Initializing Gemini image client...")
+                        print("\nInitializing Gemini image client...")
                         try:
                             gemini_image_client = GeminiImageClient(
                                 model_name=config.photo_improvement.model_name,
                                 max_output_tokens=config.photo_improvement.max_output_tokens
                             )
                             improver.client = gemini_image_client
-                            print(f"   ✅ Ready")
+                            print(f"   Ready")
 
-                            # Ensure Improved folder exists
                             output_dirs["Improved"].mkdir(parents=True, exist_ok=True)
 
-                            # Process approved candidates
-                            print(f"\n🚀 Processing {len(approved)} photos...")
-                            results = improver.process_batch(
+                            print(f"\nProcessing {len(approved)} photos...")
+                            imp_results = improver.process_batch(
                                 approved,
                                 output_dirs["ImprovementCandidates"],
                                 output_dirs["Improved"],
                                 show_progress=True
                             )
 
-                            # Save results and print summary
-                            improver.save_results_csv(results, output_dirs["Improved"])
-                            improver.print_summary(results)
-                            print(f"\n📂 Improved photos saved to: {output_dirs['Improved']}")
+                            improver.save_results_csv(imp_results, output_dirs["Improved"])
+                            improver.print_summary(imp_results)
+                            print(f"\nImproved photos saved to: {output_dirs['Improved']}")
 
                         except ImportError as e:
-                            print(f"   ❌ Missing dependency: {e}")
+                            print(f"   Missing dependency: {e}")
                             print("   Run: pip install google-genai")
                         except Exception as e:
-                            print(f"   ❌ Error: {e}")
+                            print(f"   Error: {e}")
                     else:
-                        print("\n⚠️  No photos were approved for improvement.")
+                        print("\nNo photos were approved for improvement.")
 
                 except ImportError:
-                    print("\n⚠️  Gradio review UI not available.")
+                    print("\nGradio review UI not available.")
                     print(f"   Run: python improve_photos.py \"{output_base}\" --review")
 
-    print("\n✅ Classification complete!")
+    print("\nClassification complete!")
 
 
 if __name__ == "__main__":
