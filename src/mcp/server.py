@@ -19,28 +19,38 @@ _profile_manager = None
 
 _SETUP_INSTRUCTIONS = (
     "To use Taste Cloner's AI features (classification, profile generation), "
-    "you need a Google Gemini API key.\n\n"
-    "Setup steps:\n"
-    "1. Get a free API key at https://aistudio.google.com/apikey\n"
-    "2. Add it to your Taste Cloner config. Choose ONE of:\n"
-    "   a) Create a .env file in the Taste Cloner folder with: GEMINI_API_KEY=your-key-here\n"
-    "   b) Add it to Claude Desktop's MCP config (claude_desktop_config.json) under "
-    "taste-cloner > env > GEMINI_API_KEY\n"
-    "3. Restart Claude Desktop\n\n"
+    "you need an API key for at least one AI provider.\n\n"
+    "Supported providers (pick one):\n"
+    "  Gemini  (recommended — cheapest, native video/PDF)\n"
+    "    Get a free key: https://aistudio.google.com/apikey\n"
+    "    Env var: GEMINI_API_KEY\n\n"
+    "  OpenAI  (GPT-4o / GPT-4.1)\n"
+    "    Get a key: https://platform.openai.com/api-keys\n"
+    "    Env var: OPENAI_API_KEY\n\n"
+    "  Anthropic  (Claude)\n"
+    "    Get a key: https://console.anthropic.com/settings/keys\n"
+    "    Env var: ANTHROPIC_API_KEY\n\n"
+    "Add the key to a .env file in the Taste Cloner folder, or to Claude Desktop's "
+    "MCP config (claude_desktop_config.json) under taste-cloner > env.\n"
+    "Then restart Claude Desktop.\n\n"
     "Profile browsing and manual profile creation work without an API key."
 )
 
 
 def _has_api_key() -> bool:
-    """Check if a Gemini API key is configured."""
-    return bool(os.environ.get("GEMINI_API_KEY"))
+    """Check if any AI provider API key is configured."""
+    return bool(
+        os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("ANTHROPIC_API_KEY")
+    )
 
 
 def _require_api_key() -> dict | None:
     """Return a friendly error dict if no API key is set, or None if OK."""
     if not _has_api_key():
         return {
-            "error": "No Gemini API key configured.",
+            "error": "No AI provider API key configured.",
             "setup": _SETUP_INSTRUCTIONS,
         }
     return None
@@ -412,6 +422,9 @@ Taste Cloner is a media classification tool that sorts files (photos, videos, do
 into categories based on "taste profiles" — customizable rules that define what's good, \
 what's bad, and how to sort things.
 
+It supports multiple AI providers — Gemini (recommended, cheapest), OpenAI, and Anthropic. \
+Just set an API key for any one of them and it auto-detects.
+
 It comes with two built-in profiles:
 - **default-photos**: Sorts family photos/videos into Share, Storage, Review, and Ignore
 - **default-documents**: Sorts documents into Exemplary, Acceptable, Review, and Discard
@@ -472,12 +485,22 @@ def _handle_tool(name: str, arguments: dict) -> Any:
 
 
 def _handle_status(pm: ProfileManager) -> Any:
-    """Check setup status: API key, profiles, config."""
+    """Check setup status: API keys, providers, profiles, config."""
+    from ..core.provider_factory import detect_available_providers
+
     profiles = pm.list_profiles()
     has_key = _has_api_key()
+    providers = detect_available_providers()
 
     status = {
-        "gemini_api_key": "configured" if has_key else "MISSING",
+        "providers": {
+            name: ("configured" if avail else "not configured")
+            for name, avail in providers.items()
+        },
+        "active_provider": next(
+            (n for n in ["gemini", "openai", "anthropic"] if providers.get(n)),
+            None,
+        ),
         "profiles_count": len(profiles),
         "profiles": [p.name for p in profiles],
         "config_path": str(Path(os.environ.get("TASTE_CLONER_CONFIG", "config.yaml")).resolve()),
@@ -486,11 +509,11 @@ def _handle_status(pm: ProfileManager) -> Any:
 
     if has_key:
         status["ready"] = True
+        configured = [n for n, a in providers.items() if a]
         status["message"] = (
-            f"Taste Cloner is ready. {len(profiles)} profile(s) available. "
-            "You can classify files, create profiles, or generate new ones."
+            f"Taste Cloner is ready. Provider(s): {', '.join(configured)}. "
+            f"{len(profiles)} profile(s) available."
         )
-        # Only list capabilities that work
         status["available_features"] = [
             "list/view/create profiles",
             "classify files and folders",
@@ -502,7 +525,7 @@ def _handle_status(pm: ProfileManager) -> Any:
         status["ready"] = False
         status["message"] = (
             "Taste Cloner is partially set up. You can browse and create profiles, "
-            "but classification and AI profile generation require a Gemini API key."
+            "but classification and AI profile generation require an API key."
         )
         status["setup"] = _SETUP_INSTRUCTIONS
         status["available_features"] = [
@@ -557,8 +580,6 @@ def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
     if api_err:
         return api_err
 
-    from ..core.models import GeminiClient
-
     config = _get_config()
     profile_name = arguments["profile_name"]
     description = arguments["description"]
@@ -570,11 +591,8 @@ def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
 
     print(f"[taste-cloner] Generating profile '{profile_name}' from description...", file=sys.stderr, flush=True)
 
-    gemini_client = GeminiClient(
-        model_name=config.model.name,
-        max_retries=config.system.max_retries,
-        retry_delay=config.system.retry_delay_seconds,
-    )
+    from ..core.provider_factory import create_ai_client
+    gemini_client = create_ai_client(config)
 
     prompt = f"""\
 You are a taste profile generator for a media classification system.
@@ -656,7 +674,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     print(f"[taste-cloner] classify_folder: {arguments}", file=sys.stderr, flush=True)
 
     from ..core.cache import CacheManager
-    from ..core.models import GeminiClient
+    from ..core.provider_factory import create_ai_client
     from ..classification.prompt_builder import PromptBuilder
     from ..classification.classifier import MediaClassifier
     from ..classification.routing import Router
@@ -674,14 +692,10 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
         ttl_days=config.caching.ttl_days,
         enabled=config.caching.enabled,
     )
-    gemini_client = GeminiClient(
-        model_name=config.model.name,
-        max_retries=config.system.max_retries,
-        retry_delay=config.system.retry_delay_seconds,
-    )
+    ai_client = create_ai_client(config)
     prompt_builder = PromptBuilder(config, profile=profile)
-    classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
-    router = Router(config, gemini_client, profile=profile)
+    classifier = MediaClassifier(config, ai_client, prompt_builder, cache_manager, profile=profile)
+    router = Router(config, ai_client, profile=profile)
 
     # Discover files
     all_files = FileTypeRegistry.list_all_media(folder)
@@ -794,7 +808,7 @@ def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
         return api_err
 
     from ..core.cache import CacheManager
-    from ..core.models import GeminiClient
+    from ..core.provider_factory import create_ai_client
     from ..classification.prompt_builder import PromptBuilder
     from ..classification.classifier import MediaClassifier
     from ..classification.routing import Router
@@ -808,14 +822,10 @@ def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
         ttl_days=config.caching.ttl_days,
         enabled=config.caching.enabled,
     )
-    gemini_client = GeminiClient(
-        model_name=config.model.name,
-        max_retries=config.system.max_retries,
-        retry_delay=config.system.retry_delay_seconds,
-    )
+    ai_client = create_ai_client(config)
     prompt_builder = PromptBuilder(config, profile=profile)
-    classifier = MediaClassifier(config, gemini_client, prompt_builder, cache_manager, profile=profile)
-    router = Router(config, gemini_client, profile=profile)
+    classifier = MediaClassifier(config, ai_client, prompt_builder, cache_manager, profile=profile)
+    router = Router(config, ai_client, profile=profile)
 
     results = []
     for fp in arguments["file_paths"]:
@@ -866,7 +876,7 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     if api_err:
         return api_err
 
-    from ..core.models import GeminiClient
+    from ..core.provider_factory import create_ai_client
     from ..core.file_utils import FileTypeRegistry
 
     config = _get_config()
@@ -885,11 +895,7 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
 
     print(f"[taste-cloner] Generating profile from examples in {good_folder}...", file=sys.stderr, flush=True)
 
-    gemini_client = GeminiClient(
-        model_name=config.model.name,
-        max_retries=config.system.max_retries,
-        retry_delay=config.system.retry_delay_seconds,
-    )
+    gemini_client = create_ai_client(config)
 
     # Collect sample files (up to 10 good, 10 bad)
     good_files = FileTypeRegistry.list_all_media(good_folder)

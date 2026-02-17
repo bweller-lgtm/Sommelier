@@ -2,7 +2,9 @@
 from .config import Config, load_config, save_config, DocumentConfig, ProfileConfig
 from .cache import CacheManager, CacheKey
 from .file_utils import FileTypeRegistry, ImageUtils
+from .ai_client import AIClient, AIResponse
 from .models import GeminiClient, GeminiResponse, initialize_gemini
+from .provider_factory import create_ai_client, detect_available_providers
 from .profiles import TasteProfile, CategoryDefinition, ProfileManager, PhotoProfileSettings, DocumentProfileSettings
 from .logging_config import (
     setup_logging,
@@ -24,9 +26,13 @@ __all__ = [
     "CacheKey",
     "FileTypeRegistry",
     "ImageUtils",
+    "AIClient",
+    "AIResponse",
     "GeminiClient",
     "GeminiResponse",
     "initialize_gemini",
+    "create_ai_client",
+    "detect_available_providers",
     "TasteProfile",
     "CategoryDefinition",
     "ProfileManager",

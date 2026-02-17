@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 
 from ...core.config import Config
 from ...core.cache import CacheManager
-from ...core.models import GeminiClient
+from ...core.provider_factory import create_ai_client
 from ...core.profiles import ProfileManager
 from ...pipelines import MixedPipeline
 
@@ -44,11 +44,7 @@ class ClassificationService:
             enabled=config.caching.enabled,
             max_size_gb=config.caching.max_cache_size_gb,
         )
-        self.gemini_client = GeminiClient(
-            model_name=config.model.name,
-            max_retries=config.system.max_retries,
-            retry_delay=config.system.retry_delay_seconds,
-        )
+        self.gemini_client = create_ai_client(config)
         self.profile_manager = ProfileManager(
             profiles_dir=config.profiles.profiles_dir,
         )

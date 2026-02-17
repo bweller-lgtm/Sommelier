@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any, Optional
 
 from ..core.config import Config, ClassificationConfig, PhotoImprovementConfig
-from ..core.models import GeminiClient
+from ..core.ai_client import AIClient
 from ..core.file_utils import ImageUtils
 from ..core.profiles import TasteProfile
 
@@ -23,7 +23,7 @@ class Router:
     def __init__(
         self,
         config: Config,
-        gemini_client: Optional[GeminiClient] = None,
+        gemini_client: Optional[AIClient] = None,
         profile: Optional[TasteProfile] = None
     ):
         """
@@ -31,7 +31,7 @@ class Router:
 
         Args:
             config: Configuration object.
-            gemini_client: Optional Gemini client for diversity checking.
+            gemini_client: Optional AI client for diversity checking.
             profile: Optional TasteProfile for profile-defined category routing.
         """
         self.config = config

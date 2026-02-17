@@ -1,0 +1,394 @@
+"""Tests for multi-provider AI support."""
+import os
+import json
+import pytest
+from pathlib import Path
+from unittest.mock import patch, MagicMock, PropertyMock
+
+from src.core.ai_client import AIClient, AIResponse
+from src.core.config import Config, ModelConfig
+from src.core.provider_factory import create_ai_client, detect_available_providers
+from src.core.media_prep import ImageEncoder, VideoFrameExtractor, PDFPageRenderer
+
+
+# ── AIResponse tests ───────────────────────────────────────────────────
+
+
+class TestAIResponse:
+    """Tests for the AIResponse class."""
+
+    def test_basic_text(self):
+        resp = AIResponse(text="hello", raw_response=None, provider="test")
+        assert resp.text == "hello"
+        assert resp.provider == "test"
+        assert resp.blocked is False
+
+    def test_parse_json_simple(self):
+        resp = AIResponse(text='{"key": "value"}', raw_response=None)
+        result = resp.parse_json()
+        assert result == {"key": "value"}
+
+    def test_parse_json_markdown_block(self):
+        text = '```json\n{"key": "value"}\n```'
+        resp = AIResponse(text=text, raw_response=None)
+        result = resp.parse_json()
+        assert result == {"key": "value"}
+
+    def test_parse_json_embedded(self):
+        text = 'Here is the result: {"classification": "Share", "confidence": 0.8}'
+        resp = AIResponse(text=text, raw_response=None)
+        result = resp.parse_json()
+        assert result["classification"] == "Share"
+
+    def test_parse_json_fallback(self):
+        resp = AIResponse(text="not json at all", raw_response=None)
+        result = resp.parse_json(fallback={"default": True})
+        assert result == {"default": True}
+
+    def test_parse_json_raises_without_fallback(self):
+        resp = AIResponse(text="not json", raw_response=None)
+        with pytest.raises(ValueError):
+            resp.parse_json()
+
+    def test_provider_field(self):
+        resp = AIResponse(text="x", raw_response=None, provider="openai")
+        assert resp.provider == "openai"
+
+
+# ── AIClient ABC tests ────────────────────────────────────────────────
+
+
+class TestAIClientABC:
+    """Tests for the AIClient abstract base class."""
+
+    def test_cannot_instantiate(self):
+        with pytest.raises(TypeError):
+            AIClient()
+
+    def test_concrete_subclass(self):
+        class DummyClient(AIClient):
+            provider_name = "dummy"
+
+            def generate(self, prompt, generation_config=None, handle_safety_errors=True, rate_limit_delay=0.5):
+                return AIResponse(text="ok", raw_response=None, provider="dummy")
+
+            def generate_json(self, prompt, fallback=None, generation_config=None, **kwargs):
+                return {"result": "ok"}
+
+        client = DummyClient()
+        assert client.provider_name == "dummy"
+        assert client.supports_video() is False
+        assert client.supports_pdf() is False
+
+        resp = client.generate("test")
+        assert resp.text == "ok"
+
+    def test_gemini_client_is_ai_client(self):
+        """GeminiClient should be an instance of AIClient."""
+        from src.core.models import GeminiClient
+        assert issubclass(GeminiClient, AIClient)
+
+
+# ── GeminiResponse backward compatibility ─────────────────────────────
+
+
+class TestGeminiResponseAlias:
+    """GeminiResponse should be an alias for AIResponse."""
+
+    def test_alias_identity(self):
+        from src.core.models import GeminiResponse
+        assert GeminiResponse is AIResponse
+
+    def test_alias_works(self):
+        from src.core.models import GeminiResponse
+        resp = GeminiResponse(text="test", raw_response=None)
+        assert resp.text == "test"
+        assert isinstance(resp, AIResponse)
+
+
+# ── Provider detection tests ──────────────────────────────────────────
+
+
+class TestDetectProviders:
+    """Tests for detect_available_providers."""
+
+    def test_no_keys(self):
+        with patch.dict(os.environ, {}, clear=True):
+            # Remove all provider keys
+            env = {k: v for k, v in os.environ.items()
+                   if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+            with patch.dict(os.environ, env, clear=True):
+                result = detect_available_providers()
+                assert result["gemini"] is False
+                assert result["openai"] is False
+                assert result["anthropic"] is False
+
+    def test_gemini_only(self):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        env["GEMINI_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env, clear=True):
+            result = detect_available_providers()
+            assert result["gemini"] is True
+            assert result["openai"] is False
+
+    def test_all_keys(self):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        env["GEMINI_API_KEY"] = "g-key"
+        env["OPENAI_API_KEY"] = "o-key"
+        env["ANTHROPIC_API_KEY"] = "a-key"
+        with patch.dict(os.environ, env, clear=True):
+            result = detect_available_providers()
+            assert all(result.values())
+
+
+# ── Factory tests ─────────────────────────────────────────────────────
+
+
+class TestCreateAIClient:
+    """Tests for create_ai_client factory."""
+
+    @pytest.fixture
+    def config(self):
+        return Config()
+
+    def test_no_keys_raises(self, config):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ValueError, match="No AI provider configured"):
+                create_ai_client(config)
+
+    def test_explicit_gemini(self, config):
+        env = dict(os.environ)
+        env["GEMINI_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            client = create_ai_client(config, provider="gemini")
+            assert client.provider_name == "gemini"
+            assert isinstance(client, AIClient)
+            assert client.supports_video() is True
+            assert client.supports_pdf() is True
+
+    def test_explicit_openai(self, config):
+        env = dict(os.environ)
+        env["OPENAI_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            # Mock the openai module to avoid import errors if not installed
+            mock_openai = MagicMock()
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                client = create_ai_client(config, provider="openai")
+                assert client.provider_name == "openai"
+                assert client.supports_video() is False
+
+    def test_explicit_anthropic(self, config):
+        env = dict(os.environ)
+        env["ANTHROPIC_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            mock_anthropic = MagicMock()
+            with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
+                client = create_ai_client(config, provider="anthropic")
+                assert client.provider_name == "anthropic"
+                assert client.supports_video() is False
+                assert client.supports_pdf() is True
+
+    def test_auto_detect_prefers_gemini(self, config):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        env["GEMINI_API_KEY"] = "g-key"
+        env["OPENAI_API_KEY"] = "o-key"
+        with patch.dict(os.environ, env, clear=True):
+            client = create_ai_client(config)
+            assert client.provider_name == "gemini"
+
+    def test_auto_detect_falls_to_openai(self, config):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        env["OPENAI_API_KEY"] = "o-key"
+        with patch.dict(os.environ, env, clear=True):
+            mock_openai = MagicMock()
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                client = create_ai_client(config)
+                assert client.provider_name == "openai"
+
+    def test_auto_detect_falls_to_anthropic(self, config):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+        env["ANTHROPIC_API_KEY"] = "a-key"
+        with patch.dict(os.environ, env, clear=True):
+            mock_anthropic = MagicMock()
+            with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
+                client = create_ai_client(config)
+                assert client.provider_name == "anthropic"
+
+    def test_config_provider_override(self):
+        config = Config()
+        config.model.provider = "gemini"
+        env = dict(os.environ)
+        env["GEMINI_API_KEY"] = "g-key"
+        env["OPENAI_API_KEY"] = "o-key"
+        with patch.dict(os.environ, env):
+            client = create_ai_client(config)
+            assert client.provider_name == "gemini"
+
+    def test_unknown_provider_raises(self, config):
+        with pytest.raises(ValueError, match="Unknown provider"):
+            create_ai_client(config, provider="nonexistent")
+
+    def test_uses_config_model_names(self):
+        config = Config()
+        config.model.openai_model = "gpt-4o-mini"
+        env = dict(os.environ)
+        env["OPENAI_API_KEY"] = "test"
+        with patch.dict(os.environ, env):
+            mock_openai = MagicMock()
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                client = create_ai_client(config, provider="openai")
+                assert client.model_name == "gpt-4o-mini"
+
+
+# ── ImageEncoder tests ────────────────────────────────────────────────
+
+
+class TestImageEncoder:
+    """Tests for the ImageEncoder utility."""
+
+    def test_to_base64(self):
+        from PIL import Image
+        img = Image.new("RGB", (100, 100), color="red")
+        b64 = ImageEncoder.to_base64(img)
+        assert isinstance(b64, str)
+        assert len(b64) > 0
+        # Should be valid base64
+        import base64
+        decoded = base64.b64decode(b64)
+        assert len(decoded) > 0
+
+    def test_to_base64_rgba(self):
+        from PIL import Image
+        img = Image.new("RGBA", (200, 200), color=(255, 0, 0, 128))
+        b64 = ImageEncoder.to_base64(img)
+        assert isinstance(b64, str)
+
+    def test_to_base64_respects_max_size(self):
+        from PIL import Image
+        img = Image.new("RGB", (2000, 2000), color="blue")
+        b64 = ImageEncoder.to_base64(img, max_size=512)
+        assert isinstance(b64, str)
+
+    def test_media_type(self):
+        assert ImageEncoder.media_type_for("JPEG") == "image/jpeg"
+        assert ImageEncoder.media_type_for("PNG") == "image/png"
+        assert ImageEncoder.media_type_for("unknown") == "image/jpeg"
+
+
+# ── OpenAI provider message building ──────────────────────────────────
+
+
+class TestOpenAIProviderMessages:
+    """Test OpenAI message building (without actual API calls)."""
+
+    @pytest.fixture
+    def provider(self):
+        env = dict(os.environ)
+        env["OPENAI_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            mock_openai = MagicMock()
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                from src.core.providers.openai_provider import OpenAIProvider
+                return OpenAIProvider(api_key="test-key")
+
+    def test_string_prompt(self, provider):
+        messages = provider._build_messages("hello")
+        assert messages == [{"role": "user", "content": "hello"}]
+
+    def test_list_with_text(self, provider):
+        messages = provider._build_messages(["text1", "text2"])
+        content = messages[0]["content"]
+        assert len(content) == 2
+        assert content[0] == {"type": "text", "text": "text1"}
+        assert content[1] == {"type": "text", "text": "text2"}
+
+    def test_list_with_image(self, provider):
+        from PIL import Image
+        img = Image.new("RGB", (50, 50), "red")
+        messages = provider._build_messages(["caption", img])
+        content = messages[0]["content"]
+        assert len(content) == 2
+        assert content[0]["type"] == "text"
+        assert content[1]["type"] == "image_url"
+        assert content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
+# ── Anthropic provider content building ───────────────────────────────
+
+
+class TestAnthropicProviderContent:
+    """Test Anthropic content building (without actual API calls)."""
+
+    @pytest.fixture
+    def provider(self):
+        env = dict(os.environ)
+        env["ANTHROPIC_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            mock_anthropic = MagicMock()
+            with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
+                from src.core.providers.anthropic_provider import AnthropicProvider
+                return AnthropicProvider(api_key="test-key")
+
+    def test_string_prompt(self, provider):
+        content = provider._build_content("hello")
+        assert content == [{"type": "text", "text": "hello"}]
+
+    def test_list_with_text(self, provider):
+        content = provider._build_content(["text1", "text2"])
+        assert len(content) == 2
+        assert content[0] == {"type": "text", "text": "text1"}
+
+    def test_list_with_image(self, provider):
+        from PIL import Image
+        img = Image.new("RGB", (50, 50), "red")
+        content = provider._build_content(["caption", img])
+        assert len(content) == 2
+        assert content[0]["type"] == "text"
+        assert content[1]["type"] == "image"
+        assert content[1]["source"]["type"] == "base64"
+        assert content[1]["source"]["media_type"] == "image/jpeg"
+
+
+# ── Config backward compatibility ─────────────────────────────────────
+
+
+class TestModelConfigCompat:
+    """ModelConfig should accept new fields without breaking old configs."""
+
+    def test_default_provider_is_none(self):
+        mc = ModelConfig()
+        assert mc.provider is None
+
+    def test_new_fields_have_defaults(self):
+        mc = ModelConfig()
+        assert mc.openai_model == "gpt-4.1"
+        assert mc.anthropic_model == "claude-sonnet-4-20250514"
+        assert mc.video_frame_count == 8
+        assert mc.pdf_render_dpi == 150
+
+    def test_from_yaml_without_new_fields(self):
+        """Old config.yaml without provider fields should still work."""
+        config = Config.from_dict({
+            "model": {"name": "gemini-2.0-flash"},
+        })
+        assert config.model.name == "gemini-2.0-flash"
+        assert config.model.provider is None
+        assert config.model.openai_model == "gpt-4.1"
+
+    def test_from_yaml_with_new_fields(self):
+        config = Config.from_dict({
+            "model": {
+                "name": "gemini-3-flash-preview",
+                "provider": "openai",
+                "openai_model": "gpt-4o",
+            },
+        })
+        assert config.model.provider == "openai"
+        assert config.model.openai_model == "gpt-4o"
