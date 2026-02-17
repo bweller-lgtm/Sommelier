@@ -249,6 +249,84 @@ def create_mcp_server():
                 },
             ),
             Tool(
+                name="taste_cloner_update_profile",
+                description=(
+                    "Update an existing taste profile. You can change the description, "
+                    "categories, priorities, criteria, guidance, or philosophy. "
+                    "Only provide the fields you want to change — others stay the same. "
+                    "Use taste_cloner_get_profile first to see the current values."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name of the profile to update",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "New description for the profile",
+                        },
+                        "categories": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "description": {"type": "string"},
+                                },
+                                "required": ["name", "description"],
+                            },
+                            "description": "New categories (replaces all existing categories)",
+                        },
+                        "top_priorities": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "New ranked priorities",
+                        },
+                        "positive_criteria": {
+                            "type": "object",
+                            "description": "New positive criteria (must_have, highly_valued, bonus_points)",
+                        },
+                        "negative_criteria": {
+                            "type": "object",
+                            "description": "New negative criteria (deal_breakers, negative_factors)",
+                        },
+                        "specific_guidance": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "New guidance rules",
+                        },
+                        "philosophy": {
+                            "type": "string",
+                            "description": "New philosophy statement",
+                        },
+                    },
+                    "required": ["profile_name"],
+                },
+            ),
+            Tool(
+                name="taste_cloner_delete_profile",
+                description=(
+                    "Delete a taste profile. This is permanent and cannot be undone. "
+                    "Use taste_cloner_list_profiles to see available profiles first."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "profile_name": {
+                            "type": "string",
+                            "description": "Name of the profile to delete",
+                        },
+                        "confirm": {
+                            "type": "boolean",
+                            "description": "Must be true to confirm deletion",
+                        },
+                    },
+                    "required": ["profile_name", "confirm"],
+                },
+            ),
+            Tool(
                 name="taste_cloner_quick_profile",
                 description=(
                     "Generate a complete taste profile from a plain English description. "
@@ -368,6 +446,19 @@ def create_mcp_server():
                 },
             ),
             Tool(
+                name="taste_cloner_view_feedback",
+                description=(
+                    "View all submitted classification feedback and statistics. "
+                    "Shows corrections, per-category breakdowns, and total counts. "
+                    "Use this to review feedback before generating a profile from it, "
+                    "or to check what corrections have been made."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            ),
+            Tool(
                 name="taste_cloner_generate_profile",
                 description=(
                     "Generate a taste profile by analyzing example files. "
@@ -470,6 +561,10 @@ def _handle_tool(name: str, arguments: dict) -> Any:
         return _handle_get_profile(pm, arguments)
     elif name == "taste_cloner_create_profile":
         return _handle_create_profile(pm, arguments)
+    elif name == "taste_cloner_update_profile":
+        return _handle_update_profile(pm, arguments)
+    elif name == "taste_cloner_delete_profile":
+        return _handle_delete_profile(pm, arguments)
     elif name == "taste_cloner_quick_profile":
         return _handle_quick_profile(pm, arguments)
     elif name == "taste_cloner_classify_folder":
@@ -478,6 +573,8 @@ def _handle_tool(name: str, arguments: dict) -> Any:
         return _handle_classify_files(pm, arguments)
     elif name == "taste_cloner_submit_feedback":
         return _handle_submit_feedback(arguments)
+    elif name == "taste_cloner_view_feedback":
+        return _handle_view_feedback()
     elif name == "taste_cloner_generate_profile":
         return _handle_generate_profile(pm, arguments)
     else:
@@ -515,11 +612,11 @@ def _handle_status(pm: ProfileManager) -> Any:
             f"{len(profiles)} profile(s) available."
         )
         status["available_features"] = [
-            "list/view/create profiles",
+            "list/view/create/update/delete profiles",
             "classify files and folders",
             "generate profiles from descriptions (AI)",
             "generate profiles from example files (AI)",
-            "submit feedback on classifications",
+            "submit and review classification feedback",
         ]
     else:
         status["ready"] = False
@@ -555,8 +652,23 @@ def _handle_list_profiles(pm: ProfileManager) -> Any:
 
 
 def _handle_get_profile(pm: ProfileManager, arguments: dict) -> Any:
-    profile = pm.load_profile(arguments["profile_name"])
-    return profile.to_dict()
+    profile_name = arguments["profile_name"]
+    if not pm.profile_exists(profile_name):
+        return {
+            "error": f"Profile '{profile_name}' not found.",
+            "hint": "Use taste_cloner_list_profiles to see available profiles.",
+        }
+    profile = pm.load_profile(profile_name)
+    data = profile.to_dict()
+
+    # Add human-readable summary
+    cat_names = [c.name for c in profile.categories]
+    data["summary"] = (
+        f"{profile.description} "
+        f"Sorts {', '.join(profile.media_types)} into {len(cat_names)} categories: "
+        f"{', '.join(cat_names)}."
+    )
+    return data
 
 
 def _handle_create_profile(pm: ProfileManager, arguments: dict) -> Any:
@@ -574,6 +686,61 @@ def _handle_create_profile(pm: ProfileManager, arguments: dict) -> Any:
     return {"status": "created", "profile": profile.to_dict()}
 
 
+def _handle_update_profile(pm: ProfileManager, arguments: dict) -> Any:
+    """Update an existing profile with provided fields."""
+    profile_name = arguments["profile_name"]
+
+    if not pm.profile_exists(profile_name):
+        return {
+            "error": f"Profile '{profile_name}' not found.",
+            "hint": "Use taste_cloner_list_profiles to see available profiles.",
+        }
+
+    # Build kwargs from provided fields (excluding profile_name)
+    updatable = [
+        "description", "categories", "top_priorities",
+        "positive_criteria", "negative_criteria",
+        "specific_guidance", "philosophy",
+    ]
+    kwargs = {k: v for k, v in arguments.items() if k in updatable and v is not None}
+
+    if not kwargs:
+        return {
+            "error": "No fields to update. Provide at least one field to change.",
+            "updatable_fields": updatable,
+        }
+
+    profile = pm.update_profile(profile_name, **kwargs)
+    return {
+        "status": "updated",
+        "message": f"Profile '{profile_name}' updated (v{profile.version}). Changed: {', '.join(kwargs.keys())}.",
+        "profile": profile.to_dict(),
+    }
+
+
+def _handle_delete_profile(pm: ProfileManager, arguments: dict) -> Any:
+    """Delete a taste profile permanently."""
+    profile_name = arguments["profile_name"]
+
+    if not arguments.get("confirm"):
+        return {
+            "error": "Deletion requires confirm=true. This action is permanent.",
+            "hint": f"Call again with confirm=true to delete '{profile_name}'.",
+        }
+
+    if not pm.profile_exists(profile_name):
+        return {
+            "error": f"Profile '{profile_name}' not found.",
+            "hint": "Use taste_cloner_list_profiles to see available profiles.",
+        }
+
+    pm.delete_profile(profile_name)
+    return {
+        "status": "deleted",
+        "message": f"Profile '{profile_name}' has been permanently deleted.",
+    }
+
+
 def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
     """Generate a complete taste profile from a natural language description."""
     api_err = _require_api_key()
@@ -587,7 +754,12 @@ def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
 
     # Check if profile already exists
     if pm.profile_exists(profile_name):
-        return {"error": f"Profile '{profile_name}' already exists. Choose a different name or delete it first."}
+        return {
+            "error": f"Profile '{profile_name}' already exists.",
+            "hint": "Use taste_cloner_delete_profile to remove it first, "
+                    "taste_cloner_update_profile to modify it, "
+                    "or choose a different name.",
+        }
 
     print(f"[taste-cloner] Generating profile '{profile_name}' from description...", file=sys.stderr, flush=True)
 
@@ -828,34 +1000,51 @@ def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
     router = Router(config, ai_client, profile=profile)
 
     results = []
+    stats = {}
+    errors = 0
     for fp in arguments["file_paths"]:
         path = Path(fp)
         if not path.exists():
-            results.append({"file": fp, "error": "File not found"})
+            results.append({"file": fp, "name": Path(fp).name, "error": "File not found"})
+            errors += 1
             continue
 
-        if FileTypeRegistry.is_image(path):
-            classification = classifier.classify_singleton(path)
-            destination = router.route_singleton(classification)
-        elif FileTypeRegistry.is_video(path):
-            classification = classifier.classify_video(path)
-            destination = router.route_video(classification)
-        elif FileTypeRegistry.is_document(path):
-            classification = classifier.classify_document(path)
-            destination = router.route_document(classification)
-        else:
-            results.append({"file": fp, "error": "Unsupported file type"})
-            continue
+        try:
+            if FileTypeRegistry.is_image(path):
+                classification = classifier.classify_singleton(path)
+                destination = router.route_singleton(classification)
+            elif FileTypeRegistry.is_video(path):
+                classification = classifier.classify_video(path)
+                destination = router.route_video(classification)
+            elif FileTypeRegistry.is_document(path):
+                classification = classifier.classify_document(path)
+                destination = router.route_document(classification)
+            else:
+                results.append({"file": fp, "name": path.name, "error": "Unsupported file type"})
+                errors += 1
+                continue
 
-        results.append({
-            "file": fp,
-            "classification": classification.get("classification"),
-            "confidence": classification.get("confidence"),
-            "reasoning": classification.get("reasoning"),
-            "destination": destination,
-        })
+            results.append({
+                "file": fp,
+                "name": path.name,
+                "classification": classification.get("classification"),
+                "confidence": classification.get("confidence"),
+                "reasoning": classification.get("reasoning", ""),
+                "destination": destination,
+            })
+            stats[destination] = stats.get(destination, 0) + 1
+        except Exception as e:
+            results.append({"file": fp, "name": path.name, "error": str(e)})
+            errors += 1
 
-    return results
+    return {
+        "status": "completed",
+        "processed": len(results),
+        "errors": errors,
+        "stats": stats,
+        "results": results,
+        "message": f"Classified {len(results)} file(s). {errors} error(s).",
+    }
 
 
 def _handle_submit_feedback(arguments: dict) -> Any:
@@ -868,6 +1057,38 @@ def _handle_submit_feedback(arguments: dict) -> Any:
         correct_category=arguments["correct_category"],
         reasoning=arguments.get("reasoning", ""),
     )
+
+
+def _handle_view_feedback() -> Any:
+    """View all submitted feedback and aggregate statistics."""
+    from ..api.services.training_service import TrainingService
+    config = _get_config()
+    ts = TrainingService(config.profiles.profiles_dir)
+
+    stats = ts.get_stats()
+    feedback = ts._load_feedback()
+
+    if not feedback:
+        return {
+            "total_feedback": 0,
+            "message": "No feedback submitted yet. Use taste_cloner_submit_feedback to correct misclassifications.",
+            "next_steps": [
+                "Classify some files with taste_cloner_classify_folder",
+                "Submit corrections with taste_cloner_submit_feedback",
+                "Once you have enough feedback, generate a profile with taste_cloner_generate_profile",
+            ],
+        }
+
+    return {
+        "total_feedback": stats["total_feedback"],
+        "by_category": stats["by_category"],
+        "recent_feedback": feedback[-20:],  # last 20 entries
+        "message": f"{stats['total_feedback']} feedback entries across {len(stats['by_category'])} categories.",
+        "next_steps": [
+            "Submit more corrections with taste_cloner_submit_feedback",
+            "Generate a profile from this feedback with taste_cloner_generate_profile",
+        ],
+    }
 
 
 def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
@@ -885,7 +1106,12 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     bad_folder = Path(arguments.get("bad_examples_folder", "")) if arguments.get("bad_examples_folder") else None
 
     if pm.profile_exists(profile_name):
-        return {"error": f"Profile '{profile_name}' already exists. Choose a different name."}
+        return {
+            "error": f"Profile '{profile_name}' already exists.",
+            "hint": "Use taste_cloner_delete_profile to remove it first, "
+                    "taste_cloner_update_profile to modify it, "
+                    "or choose a different name.",
+        }
 
     if not good_folder.is_dir():
         return {"error": f"Good examples folder not found: {good_folder}"}

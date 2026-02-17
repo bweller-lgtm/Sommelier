@@ -189,14 +189,21 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 ```
 
 **MCP Tools:**
-- `taste_cloner_list_profiles` -- List all taste profiles
-- `taste_cloner_get_profile` -- Get profile details
-- `taste_cloner_create_profile` -- Create a new profile
-- `taste_cloner_classify_folder` -- Classify all files in a folder
-- `taste_cloner_classify_files` -- Classify specific files
-- `taste_cloner_get_results` -- Get previous classification results
-- `taste_cloner_submit_feedback` -- Submit classification corrections
-- `taste_cloner_generate_profile` -- AI-generate a profile from examples
+
+| Tool | Description |
+|------|-------------|
+| `taste_cloner_status` | Check setup status (API keys, providers, profiles) |
+| `taste_cloner_list_profiles` | List all taste profiles |
+| `taste_cloner_get_profile` | Get profile details with human-readable summary |
+| `taste_cloner_create_profile` | Create a new profile with full control |
+| `taste_cloner_update_profile` | Update specific fields of an existing profile |
+| `taste_cloner_delete_profile` | Delete a profile (with confirmation) |
+| `taste_cloner_quick_profile` | AI-generate a profile from a plain English description |
+| `taste_cloner_generate_profile` | AI-generate a profile from example files |
+| `taste_cloner_classify_folder` | Classify all files in a folder (supports batching) |
+| `taste_cloner_classify_files` | Classify specific files by path |
+| `taste_cloner_submit_feedback` | Submit classification corrections |
+| `taste_cloner_view_feedback` | Review all feedback and stats |
 
 ---
 
