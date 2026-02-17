@@ -17,6 +17,34 @@ from ..core.profiles import ProfileManager
 _config = None
 _profile_manager = None
 
+_SETUP_INSTRUCTIONS = (
+    "To use Taste Cloner's AI features (classification, profile generation), "
+    "you need a Google Gemini API key.\n\n"
+    "Setup steps:\n"
+    "1. Get a free API key at https://aistudio.google.com/apikey\n"
+    "2. Add it to your Taste Cloner config. Choose ONE of:\n"
+    "   a) Create a .env file in the Taste Cloner folder with: GEMINI_API_KEY=your-key-here\n"
+    "   b) Add it to Claude Desktop's MCP config (claude_desktop_config.json) under "
+    "taste-cloner > env > GEMINI_API_KEY\n"
+    "3. Restart Claude Desktop\n\n"
+    "Profile browsing and manual profile creation work without an API key."
+)
+
+
+def _has_api_key() -> bool:
+    """Check if a Gemini API key is configured."""
+    return bool(os.environ.get("GEMINI_API_KEY"))
+
+
+def _require_api_key() -> dict | None:
+    """Return a friendly error dict if no API key is set, or None if OK."""
+    if not _has_api_key():
+        return {
+            "error": "No Gemini API key configured.",
+            "setup": _SETUP_INSTRUCTIONS,
+        }
+    return None
+
 
 def _get_config():
     global _config
@@ -104,6 +132,18 @@ def create_mcp_server():
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         return [
+            Tool(
+                name="taste_cloner_status",
+                description=(
+                    "Check Taste Cloner setup status: API key, profiles, configuration. "
+                    "Use this FIRST when a user is new or if any tool returns an API key error. "
+                    "Returns what's configured, what's missing, and setup instructions."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            ),
             Tool(
                 name="taste_cloner_list_profiles",
                 description=(
@@ -378,7 +418,8 @@ It comes with two built-in profiles:
 
 I can also create custom profiles for any sorting task.
 
-Please start by listing my available profiles, then help me choose what to do next."""
+Please start by checking my setup status (taste_cloner_status) to see if everything \
+is configured, then list my profiles and help me choose what to do next."""
 
 _PROFILE_WIZARD_PROMPT = """\
 Help me create a new taste profile for Taste Cloner. Walk me through it conversationally.
@@ -408,7 +449,9 @@ def _handle_tool(name: str, arguments: dict) -> Any:
     pm = _get_profile_manager()
     print(f"[taste-cloner] profile manager loaded", file=sys.stderr, flush=True)
 
-    if name == "taste_cloner_list_profiles":
+    if name == "taste_cloner_status":
+        return _handle_status(pm)
+    elif name == "taste_cloner_list_profiles":
         return _handle_list_profiles(pm)
     elif name == "taste_cloner_get_profile":
         return _handle_get_profile(pm, arguments)
@@ -426,6 +469,53 @@ def _handle_tool(name: str, arguments: dict) -> Any:
         return _handle_generate_profile(pm, arguments)
     else:
         return {"error": f"Unknown tool: {name}"}
+
+
+def _handle_status(pm: ProfileManager) -> Any:
+    """Check setup status: API key, profiles, config."""
+    profiles = pm.list_profiles()
+    has_key = _has_api_key()
+
+    status = {
+        "gemini_api_key": "configured" if has_key else "MISSING",
+        "profiles_count": len(profiles),
+        "profiles": [p.name for p in profiles],
+        "config_path": str(Path(os.environ.get("TASTE_CLONER_CONFIG", "config.yaml")).resolve()),
+        "profiles_dir": str(pm.profiles_dir.resolve()),
+    }
+
+    if has_key:
+        status["ready"] = True
+        status["message"] = (
+            f"Taste Cloner is ready. {len(profiles)} profile(s) available. "
+            "You can classify files, create profiles, or generate new ones."
+        )
+        # Only list capabilities that work
+        status["available_features"] = [
+            "list/view/create profiles",
+            "classify files and folders",
+            "generate profiles from descriptions (AI)",
+            "generate profiles from example files (AI)",
+            "submit feedback on classifications",
+        ]
+    else:
+        status["ready"] = False
+        status["message"] = (
+            "Taste Cloner is partially set up. You can browse and create profiles, "
+            "but classification and AI profile generation require a Gemini API key."
+        )
+        status["setup"] = _SETUP_INSTRUCTIONS
+        status["available_features"] = [
+            "list/view profiles",
+            "create profiles manually",
+        ]
+        status["requires_api_key"] = [
+            "classify files and folders",
+            "generate profiles from descriptions",
+            "generate profiles from example files",
+        ]
+
+    return status
 
 
 def _handle_list_profiles(pm: ProfileManager) -> Any:
@@ -463,6 +553,10 @@ def _handle_create_profile(pm: ProfileManager, arguments: dict) -> Any:
 
 def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
     """Generate a complete taste profile from a natural language description."""
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
     from ..core.models import GeminiClient
 
     config = _get_config()
@@ -553,6 +647,10 @@ Rules:
 
 def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     """Classify media files in a folder with batch/pagination support."""
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
     import time as _time
 
     print(f"[taste-cloner] classify_folder: {arguments}", file=sys.stderr, flush=True)
@@ -691,6 +789,10 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
 
 def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
     """Classify specific files by path."""
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
     from ..core.cache import CacheManager
     from ..core.models import GeminiClient
     from ..classification.prompt_builder import PromptBuilder
@@ -760,6 +862,10 @@ def _handle_submit_feedback(arguments: dict) -> Any:
 
 def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     """Generate a taste profile by analyzing example files in folders."""
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
     from ..core.models import GeminiClient
     from ..core.file_utils import FileTypeRegistry
 
