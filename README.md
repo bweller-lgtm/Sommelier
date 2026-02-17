@@ -124,13 +124,15 @@ Profiles are stored as JSON in the `profiles/` directory.
 | Quick Profile | Plain English description | ~10s | Low |
 | Generate from Examples | Good/bad example folders | ~2 min | Medium |
 | **Pairwise Training** | 15-50+ side-by-side comparisons | 15-30 min | **High** |
-| **Corrective Refinement** | Post-classification corrections | Ongoing | **Highest** |
 
 - **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description.
 - **From examples:** Point `sommelier_generate_profile` at a folder of good examples and a folder of bad examples. Sommelier analyzes both and synthesizes criteria.
 - **Pairwise training:** Start a training session on a photo folder. Sommelier presents side-by-side comparisons and burst galleries. After 15-50+ choices, it synthesizes a high-fidelity profile from your decisions. Run entirely through MCP tools in Claude Desktop.
-- **Corrective refinement:** Classify a folder, correct the results you disagree with, then call `sommelier_refine_profile`. Sommelier analyzes the gap between its predictions and your corrections and adjusts the profile. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
 - **By hand:** Write a JSON file directly in `profiles/`.
+
+### Keeping a Profile Sharp
+
+After creating a profile, **corrective refinement** is how you keep it accurate. Classify a folder, correct the results you disagree with, then call `sommelier_refine_profile`. Sommelier analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities to match your actual preferences. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
 
 ### Training and Feedback
 
