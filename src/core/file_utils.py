@@ -22,7 +22,19 @@ class FileTypeRegistry:
     # Supported document extensions
     DOCUMENT_EXTENSIONS = {
         ".pdf", ".docx", ".xlsx", ".pptx",
-        ".html", ".htm", ".txt", ".md", ".csv", ".rtf"
+        ".html", ".htm", ".txt", ".md", ".csv", ".rtf",
+    }
+
+    # Supported code extensions (treated as documents for classification)
+    CODE_EXTENSIONS = {
+        ".py", ".js", ".ts", ".jsx", ".tsx",
+        ".java", ".go", ".rs", ".rb", ".php",
+        ".c", ".cpp", ".h", ".hpp", ".cs",
+        ".swift", ".kt", ".scala", ".lua",
+        ".sh", ".bash", ".zsh", ".ps1",
+        ".sql", ".r", ".m", ".pl",
+        ".yaml", ".yml", ".toml", ".json", ".xml",
+        ".dockerfile", ".tf", ".hcl",
     }
 
     @classmethod
@@ -52,9 +64,15 @@ class FileTypeRegistry:
         return path.suffix.lower() in cls.VIDEO_EXTENSIONS
 
     @classmethod
+    def is_code(cls, path: Path) -> bool:
+        """Check if file is a code/config file."""
+        return path.suffix.lower() in cls.CODE_EXTENSIONS
+
+    @classmethod
     def is_document(cls, path: Path) -> bool:
-        """Check if file is a document."""
-        return path.suffix.lower() in cls.DOCUMENT_EXTENSIONS
+        """Check if file is a document (includes code files)."""
+        ext = path.suffix.lower()
+        return ext in cls.DOCUMENT_EXTENSIONS or ext in cls.CODE_EXTENSIONS
 
     @classmethod
     def is_media(cls, path: Path) -> bool:

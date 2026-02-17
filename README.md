@@ -267,13 +267,13 @@ pm.migrate_from_taste_preferences(Path("taste_preferences_generated.json"), "my-
 
 ---
 
-## Document Classification
+## Document and Code Classification
 
-**NEW in v3.0** -- Classify documents alongside photos and videos.
+Classify documents and source code alongside photos and videos.
 
 ### Supported Formats
 
-| Format | Extension | Features |
+| Format | Extensions | Features |
 |--------|-----------|----------|
 | PDF | `.pdf` | Native Gemini analysis, text extraction, metadata |
 | Word | `.docx` | Text + metadata extraction |
@@ -281,6 +281,9 @@ pm.migrate_from_taste_preferences(Path("taste_preferences_generated.json"), "my-
 | PowerPoint | `.pptx` | Slide text, notes, metadata |
 | HTML | `.html`, `.htm` | Tag stripping, text extraction |
 | Plain Text | `.txt`, `.md`, `.csv`, `.rtf` | Direct text reading |
+| Source Code | `.py`, `.js`, `.ts`, `.java`, `.go`, `.rs`, `.rb`, `.cpp`, `.c`, `.cs`, `.swift`, `.kt`, `.php`, `.lua`, `.scala` + more | Read as text, classified by content |
+| Config/IaC | `.yaml`, `.yml`, `.toml`, `.json`, `.xml`, `.tf`, `.hcl`, `.dockerfile` | Read as text |
+| Shell | `.sh`, `.bash`, `.zsh`, `.ps1`, `.sql` | Read as text |
 
 ### How It Works
 
@@ -299,6 +302,29 @@ document:
   enable_text_embeddings: true
   similarity_threshold: 0.85
 ```
+
+### Codebase Analysis
+
+Use Taste Cloner to extract best practices from a codebase:
+
+**Step 1: Classify code by quality.** Create a profile and point it at your `src/` folder:
+```
+# In Claude Desktop (MCP):
+# "Create a code quality profile that sorts Python files into Exemplary, Solid, and Needs-Work"
+# → taste_cloner_quick_profile
+
+# Then classify:
+# "Classify all files in my project's src directory"
+# → taste_cloner_classify_folder
+```
+
+**Step 2: Generate best practices.** Feed the "Exemplary" bucket back into profile generation:
+```
+# "Generate a profile from my exemplary code examples"
+# → taste_cloner_generate_profile with good_examples_folder pointing to Exemplary/
+```
+
+The generated profile **is** your best practices document -- its `top_priorities`, `positive_criteria`, and `philosophy` fields are synthesized from what the AI found in common across your best code. And that profile is then reusable as a classifier for future code reviews.
 
 ---
 

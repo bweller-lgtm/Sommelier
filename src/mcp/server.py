@@ -1145,11 +1145,10 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     else:
         media_type = "image"
 
-    # Analyze good examples with Gemini
+    # Analyze good examples with AI
     analysis_parts = []
 
     if good_images:
-        # Send up to 5 images to Gemini for analysis
         sample_images = good_images[:5]
         prompt_parts = [
             "Analyze these GOOD example images. What do they have in common? "
@@ -1162,7 +1161,28 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
             "Summarize what makes these examples GOOD. List specific, observable qualities."
         )
         good_analysis = gemini_client.generate(prompt_parts)
-        analysis_parts.append(f"GOOD examples analysis:\n{good_analysis.text}")
+        analysis_parts.append(f"GOOD image examples analysis:\n{good_analysis.text}")
+
+    if good_docs:
+        from ..features.document_features import DocumentFeatureExtractor
+        extractor = DocumentFeatureExtractor(config)
+        doc_texts = []
+        for doc_path in good_docs[:5]:
+            text = extractor.extract_text(doc_path)
+            if text:
+                # Truncate long files for the prompt
+                preview = text[:3000] + ("..." if len(text) > 3000 else "")
+                doc_texts.append(f"--- {doc_path.name} ---\n{preview}")
+        if doc_texts:
+            docs_prompt = (
+                "Analyze these GOOD example documents/files. What do they have in common? "
+                "What qualities, patterns, conventions, or practices make them good? "
+                "Be specific about structure, style, clarity, and any recurring patterns.\n\n"
+                + "\n\n".join(doc_texts)
+                + "\n\nSummarize what makes these examples GOOD. List specific, observable qualities and patterns."
+            )
+            good_doc_analysis = gemini_client.generate(docs_prompt)
+            analysis_parts.append(f"GOOD document examples analysis:\n{good_doc_analysis.text}")
 
     if bad_images:
         sample_bad = bad_images[:5]
@@ -1176,7 +1196,27 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
             "Summarize what makes these examples BAD. List specific, observable qualities."
         )
         bad_analysis = gemini_client.generate(prompt_parts)
-        analysis_parts.append(f"BAD examples analysis:\n{bad_analysis.text}")
+        analysis_parts.append(f"BAD image examples analysis:\n{bad_analysis.text}")
+
+    if bad_docs:
+        from ..features.document_features import DocumentFeatureExtractor
+        extractor = DocumentFeatureExtractor(config)
+        doc_texts = []
+        for doc_path in bad_docs[:5]:
+            text = extractor.extract_text(doc_path)
+            if text:
+                preview = text[:3000] + ("..." if len(text) > 3000 else "")
+                doc_texts.append(f"--- {doc_path.name} ---\n{preview}")
+        if doc_texts:
+            docs_prompt = (
+                "Analyze these BAD example documents/files. What do they have in common? "
+                "What qualities make them bad? Be specific about problems, anti-patterns, "
+                "or missing qualities.\n\n"
+                + "\n\n".join(doc_texts)
+                + "\n\nSummarize what makes these examples BAD. List specific, observable issues."
+            )
+            bad_doc_analysis = gemini_client.generate(docs_prompt)
+            analysis_parts.append(f"BAD document examples analysis:\n{bad_doc_analysis.text}")
 
     if not analysis_parts:
         return {"error": "No analyzable media files found in the example folders."}
@@ -1238,7 +1278,12 @@ you observed in the examples, not generic platitudes. Only output valid JSON."""
 
     return {
         "status": "created",
-        "message": f"Profile '{profile_name}' generated from {len(good_images)} good and {len(bad_images)} bad examples. Categories: {', '.join(c.name for c in profile.categories)}",
+        "message": (
+            f"Profile '{profile_name}' generated from "
+            f"{len(good_images)} good images, {len(good_docs)} good docs, "
+            f"{len(bad_images)} bad images, {len(bad_docs)} bad docs. "
+            f"Categories: {', '.join(c.name for c in profile.categories)}"
+        ),
         "analyzed": {
             "good_images": len(good_images),
             "bad_images": len(bad_images),
