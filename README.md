@@ -4,199 +4,92 @@
 
 Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best code. Screen 500 resumes against criteria you didn't have to write by hand.
 
-Sommelier learns what "good" looks like from your examples, turns that into a reusable taste profile, then applies your judgment at scale. Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go. Connects to **Claude Desktop** via MCP, so it plugs directly into your existing workflows.
+Sommelier learns what "good" looks like from your examples, turns that into a reusable taste profile, then applies your judgment at scale. Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go.
 
-> **Don't know your criteria yet?** Point Sommelier at examples you like and it'll figure it out. The generated profile *is* your documented standards -- and it's executable.
+### You don't need to know your criteria.
 
----
-
-## What People Use It For
-
-**Sort family photos** -- the original use case. Ship with a built-in profile that classifies photos into Share / Storage / Review / Ignore. Run it on a year of camera roll, get the 200 worth sharing, for about a dollar.
-
-**Extract coding standards** -- point it at your `src/` directory with a code quality profile. It classifies every file into quality tiers. Then feed the "Exemplary" bucket back in and Sommelier synthesizes *what makes those files good* into a reusable profile -- error handling patterns, naming conventions, architectural choices. That profile becomes both a style guide and an automated reviewer for future code.
-
-**Screen applications at scale** -- resumes, grant proposals, student papers, vendor submissions. Create a profile from the last 10 candidates you actually hired. Sommelier extracts what they had in common and applies it to the next 500 applicants. Your criteria, not a generic model's.
-
-**Curate any collection** -- research papers, product photos, legal documents, design assets. Anything where you "know it when you see it" but can't write the rules upfront. Sommelier closes the gap between tacit taste and explicit, repeatable judgment.
+Point Sommelier at examples you like and it figures out what they have in common. The generated profile is both a human-readable style guide and an executable classifier -- your documented standards, synthesized from examples. This is what makes it different from a one-shot prompt: your taste compounds over time.
 
 ---
 
 ## How It Works
 
 1. **Classify** -- AI evaluates each file against your profile's criteria and sorts it into categories
-2. **Learn** -- Feed exemplary results back in, and Sommelier synthesizes what makes them good
-3. **Apply** -- The generated profile becomes a reusable classifier for future runs
+2. **Learn** -- Feed the best results back in, and Sommelier synthesizes what makes them good
+3. **Apply** -- The generated profile becomes a reusable classifier for future batches
 
-This is the loop that makes Sommelier different from a one-shot classifier. Your taste improves over time.
-
----
-
-## Quick Start
-
-**Requires Python 3.12+**
-
-### 1. Install Dependencies
-
-```bash
-py -3.12 -m pip install -r requirements.txt
-```
-
-### 2. Configure API Key
-
-Create a `.env` file with **any one** of these:
-```
-GEMINI_API_KEY=your_key_here      # Recommended (cheapest, native video/PDF)
-OPENAI_API_KEY=your_key_here      # GPT-4o / GPT-4.1
-ANTHROPIC_API_KEY=your_key_here   # Claude
-```
-
-The system auto-detects which key is available. If you have multiple keys, it prefers Gemini > OpenAI > Anthropic (or use `--provider` to override).
-
-### 3. Run Classification
-
-```bash
-# Classify a folder (auto-detects media types and provider)
-py -3.12 taste_classify.py "C:\Photos\MyFolder"
-
-# Use a specific taste profile
-py -3.12 taste_classify.py "C:\Photos\MyFolder" --profile default-photos
-
-# Force a specific AI provider
-py -3.12 taste_classify.py "C:\Photos\MyFolder" --provider openai
-
-# Classify documents
-py -3.12 taste_classify.py "C:\Docs\Reports" --profile default-documents
-
-# Dry run (test without moving files)
-py -3.12 taste_classify.py "C:\Photos\MyFolder" --dry-run
-```
-
-That's it! Files will be sorted into `C:\Photos\MyFolder_sorted/`.
+Each cycle sharpens the profile. What starts as "sort my photos" becomes a rich, nuanced document that captures exactly how you think about quality -- then enforces it automatically.
 
 ---
 
-## AI Providers
+## What People Use It For
 
-Sommelier supports three AI providers. Install only the SDK(s) you need.
+### Family Photos
 
-| Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) |
-|---------|--------|---------------------|-------------------|
-| Images | Native | Base64 | Base64 |
-| Videos | Native upload | Frame extraction | Frame extraction |
-| PDFs | Native upload | Page-to-image | Native |
-| Relative cost | Cheapest | Mid | Most expensive |
-| Env var | `GEMINI_API_KEY` | `OPENAI_API_KEY` | `ANTHROPIC_API_KEY` |
+The original use case. Ships with a built-in profile that classifies photos into Share / Storage / Review / Ignore. Run it on a year of camera roll and get the 200 worth sharing for about a dollar.
 
-Gemini is recommended as the default -- it is the cheapest and has native support for video and PDF uploads. OpenAI and Anthropic work by extracting video frames and rendering PDF pages as images, so they work with all media types but at slightly lower fidelity for video.
+Here's a real profile Sommelier generated from a family photo library. Nobody wrote this by hand:
 
-Provider selection (in priority order):
-1. `--provider` CLI flag or `config.yaml > model > provider`
-2. Auto-detect from environment variables (gemini > openai > anthropic)
+**Philosophy:**
+> Photos worth sharing capture genuine moments of connection and joy between baby and loved ones. They should highlight the baby's expressions, engagement with the world, and the loving interactions they share, all presented in a visually clear and appealing manner.
 
-### Configuration
+**Top priorities (ranked):**
+1. Baby's face is visible, well-lit, and in focus
+2. Baby actively engaging with people or objects
+3. Clear and expressive facial expressions (joy, curiosity, mischief)
+4. Positive interactions between baby and parent/caregiver
+5. Well-framed photos that focus on the baby and minimize distractions
+6. Photos that evoke positive emotions -- joy, love, wonder, humor
+7. Good lighting, sharpness, and minimal blur
 
-```yaml
-model:
-  provider: null          # null = auto-detect. Options: gemini, openai, anthropic
-  name: "gemini-3-flash-preview"
-  openai_model: "gpt-4.1"
-  anthropic_model: "claude-sonnet-4-20250514"
-  video_frame_count: 8    # Frames extracted for non-Gemini video
-  pdf_render_dpi: 150     # DPI for OpenAI PDF rendering
-```
+**Must-have criteria:**
+- Baby's face clearly visible and in focus
+- Baby engaged in the activity or with another person
+- Well-lit and sharp (minimal blur)
+- Expressive and genuine emotion conveyed
 
----
+**Highly valued:**
+- Interactions between baby and parent (especially eye contact or physical touch)
+- Baby displaying positive emotions (smiling, laughing, curious)
+- Photos that tell a story or capture a special moment
+- Close-up or medium shots emphasizing the baby's face and expressions
 
-## Complete Usage
+**Deal-breakers:**
+- Baby's face not visible or obscured
+- Blurry or out of focus
+- Poor lighting (too dark or overexposed)
+- Baby displaying negative expression without context
+- Child too small in frame
 
-### CLI Classification
+**Burst photo guidance:**
+> From burst photos, prioritize those with the clearest expressions, best focus on the baby's face, and minimal distractions. Choose the photo that best captures the moment's essence and positive emotional impact.
 
-```bash
-# Basic classification (auto-detects media type and provider)
-py -3.12 taste_classify.py "path/to/media"
+**Specific guidance:**
+- *"When evaluating photos, ask yourself: does this photo capture the baby's personality and current stage of development?"*
+- *"If both parent and baby are in the photo, ensure both have engaged and positive expressions."*
+- *"Reject photos even if technically good if the baby looks unhappy (unless comically so)."*
+- *"Focus on quality over quantity; it's better to have a few excellent photos than many mediocre ones."*
 
-# With a specific profile
-py -3.12 taste_classify.py "path/to/media" --profile my-custom-profile
+That profile is both a human-readable style guide *and* an executable classifier. Every future photo is evaluated against those exact criteria.
 
-# Force a specific AI provider
-py -3.12 taste_classify.py "path/to/media" --provider openai
+### Screening at Scale
 
-# Disable video classification
-py -3.12 taste_classify.py "path/to/photos" --no-classify-videos
+Resumes, grant proposals, student papers, vendor submissions. Create a profile from the last 10 candidates you actually hired. Sommelier extracts what *your* hiring decisions had in common and applies your judgment to the next 500 applicants.
 
-# Custom output directory
-py -3.12 taste_classify.py "path/to/media" --output "path/to/output"
+Classification uses confidence tiers:
+- **High confidence** -- clearly strong or clearly weak candidates are sorted automatically
+- **Medium confidence** -- borderline candidates go to a review pile for human attention
+- **Low confidence** -- flagged for manual review rather than guessing
 
-# Use custom configuration
-py -3.12 taste_classify.py "path/to/media" --config custom_config.yaml
+You set the thresholds per category. A resume screener might use `Strong: 0.70, Maybe: 0.40` -- anything above 70% confidence goes to Strong, 40-70% to Maybe, below 40% to Pass. The review pile shrinks as the profile gets sharper.
 
-# More parallel video workers
-py -3.12 taste_classify.py "path/to/media" --parallel-videos 20
-```
+### Code Standards
 
-### API Server
+Point Sommelier at your `src/` directory with a code quality profile. It classifies every file into tiers (Exemplary / Solid / Needs Work). Feed the Exemplary bucket back into profile generation and Sommelier synthesizes *your* standards -- error handling patterns, naming conventions, architectural choices you actually follow. That profile becomes both a style guide and an automated reviewer for future code.
 
-```bash
-# Start the API server
-py -3.12 serve.py
+### Any Collection
 
-# With custom host/port
-py -3.12 serve.py --host 127.0.0.1 --port 9000
-
-# Development mode (auto-reload)
-py -3.12 serve.py --reload
-```
-
-Then access the API at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
-
-**API Endpoints:**
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/profiles/` | List all profiles |
-| GET | `/api/profiles/{name}` | Get profile details |
-| POST | `/api/profiles/` | Create new profile |
-| PUT | `/api/profiles/{name}` | Update profile |
-| DELETE | `/api/profiles/{name}` | Delete profile |
-| POST | `/api/classify/folder` | Classify a local folder |
-| GET | `/api/classify/{job_id}` | Get job status |
-| GET | `/api/classify/{job_id}/results` | Get results |
-| GET | `/api/results/{job_id}/export` | Export as CSV |
-| POST | `/api/training/feedback` | Submit feedback |
-| GET | `/api/training/stats` | Get training stats |
-
-### MCP Server (Claude Desktop)
-
-Add to your Claude Desktop config (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "sommelier": {
-      "command": "python",
-      "args": ["mcp_server.py"],
-      "cwd": "/path/to/sommelier"
-    }
-  }
-}
-```
-
-**MCP Tools:**
-
-| Tool | Description |
-|------|-------------|
-| `sommelier_status` | Check setup status (API keys, providers, profiles) |
-| `sommelier_list_profiles` | List all taste profiles |
-| `sommelier_get_profile` | Get profile details with human-readable summary |
-| `sommelier_create_profile` | Create a new profile with full control |
-| `sommelier_update_profile` | Update specific fields of an existing profile |
-| `sommelier_delete_profile` | Delete a profile (with confirmation) |
-| `sommelier_quick_profile` | AI-generate a profile from a plain English description |
-| `sommelier_generate_profile` | AI-generate a profile from example files |
-| `sommelier_classify_folder` | Classify all files in a folder (supports batching) |
-| `sommelier_classify_files` | Classify specific files by path |
-| `sommelier_submit_feedback` | Submit classification corrections |
-| `sommelier_view_feedback` | Review all feedback and stats |
+Research papers, product photos, legal documents, design assets. Anything where you "know it when you see it" but can't write the rules upfront. Sommelier closes the gap between your tacit taste and explicit, repeatable judgment.
 
 ---
 
@@ -204,9 +97,7 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 
 Profiles define *what* you're classifying, *how* you want it categorized, and *what criteria* to use.
 
-### Create a Custom Profile
-
-Profiles are stored as JSON in the `profiles/` directory:
+### Example Profile
 
 ```json
 {
@@ -235,119 +126,278 @@ Profiles are stored as JSON in the `profiles/` directory:
 }
 ```
 
-### Profile Management
+Profiles are stored as JSON in the `profiles/` directory.
 
-```bash
-# Via CLI (uses --profile flag)
-py -3.12 taste_classify.py "path/to/docs" --profile linkedin-profiles
+### Ways to Create a Profile
 
-# Via API
-curl -X POST http://localhost:8000/api/profiles/ -H "Content-Type: application/json" -d @profile.json
+| Method | Input | Time | Fidelity |
+|--------|-------|------|----------|
+| Quick Profile | Plain English description | ~10s | Low |
+| Generate from Examples | Good/bad example folders | ~2 min | Medium |
+| **Pairwise Training** | 15-50+ side-by-side comparisons | 15-30 min | **High** |
+| **Corrective Refinement** | Post-classification corrections | Ongoing | **Highest** |
 
-# Via MCP (Claude Desktop)
-# Just ask: "Create a taste profile for sorting research papers"
-```
+- **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description.
+- **From examples:** Point `sommelier_generate_profile` at a folder of good examples and a folder of bad examples. Sommelier analyzes both and synthesizes criteria.
+- **Pairwise training:** Start a training session on a photo folder. Sommelier presents side-by-side comparisons and burst galleries. After 15-50+ choices, it synthesizes a high-fidelity profile from your decisions. Run entirely through MCP tools in Claude Desktop.
+- **Corrective refinement:** Classify a folder, correct the results you disagree with, then call `sommelier_refine_profile`. Sommelier analyzes the gap between its predictions and your corrections and adjusts the profile. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
+- **By hand:** Write a JSON file directly in `profiles/`.
 
-### Migrating Existing Preferences
+### Training and Feedback
 
-If you have an existing `taste_preferences.json`, the system uses it automatically as a fallback. To explicitly migrate it to the new profile format, use the ProfileManager:
+The primary training workflow runs through MCP tools in Claude Desktop:
 
-```python
-from src.core.profiles import ProfileManager
-pm = ProfileManager("profiles")
-pm.migrate_from_taste_preferences(Path("taste_preferences_generated.json"), "my-photos")
-```
+1. **Pairwise training** -- `sommelier_start_training` scans a folder, detects bursts, and begins a session. Use `sommelier_get_comparison` and `sommelier_submit_comparison` to work through side-by-side choices. For burst groups, `sommelier_submit_gallery` lets you pick keepers. When done, `sommelier_synthesize_profile` generates a profile from your decisions.
+
+2. **Corrective refinement** -- After classifying a folder, correct any misclassified files and call `sommelier_refine_profile` with the corrections. The AI analyzes what the profile got wrong and adjusts criteria, thresholds, and priorities to match your actual preferences.
+
+3. **Simple feedback** -- Submit individual corrections via `sommelier_submit_feedback` for lightweight feedback without full refinement.
+
+> **Legacy scripts:** `taste_trainer_pairwise_v4.py` (Gradio UI) and `learn_from_reviews.py` still exist in the repo for standalone use.
 
 ---
 
-## Document and Code Classification
+## Getting Started
 
-Classify documents and source code alongside photos and videos.
+Sommelier runs as an MCP server inside Claude Desktop, or as a standalone CLI / REST API.
 
-### Supported Formats
+### Claude Desktop (Recommended)
 
-| Format | Extensions | Features |
-|--------|-----------|----------|
-| PDF | `.pdf` | Native Gemini analysis, text extraction, metadata |
-| Word | `.docx` | Text + metadata extraction |
-| Excel | `.xlsx` | Sheet names, sample data extraction |
-| PowerPoint | `.pptx` | Slide text, notes, metadata |
-| HTML | `.html`, `.htm` | Tag stripping, text extraction |
-| Plain Text | `.txt`, `.md`, `.csv`, `.rtf` | Direct text reading |
-| Source Code | `.py`, `.js`, `.ts`, `.java`, `.go`, `.rs`, `.rb`, `.cpp`, `.c`, `.cs`, `.swift`, `.kt`, `.php`, `.lua`, `.scala` + more | Read as text, classified by content |
-| Config/IaC | `.yaml`, `.yml`, `.toml`, `.json`, `.xml`, `.tf`, `.hcl`, `.dockerfile` | Read as text |
-| Shell | `.sh`, `.bash`, `.zsh`, `.ps1`, `.sql` | Read as text |
+Connect Sommelier to Claude Desktop and use it conversationally. No command-line needed after setup.
 
-### How It Works
+**Prerequisites:** Python 3.12+, at least one AI provider API key.
 
-1. **Feature Extraction** -- Text, metadata, and embeddings are extracted from each document
-2. **Similarity Grouping** -- Documents with similar content are grouped (like burst detection for photos)
-3. **Classification** -- Gemini evaluates documents against profile criteria
-4. **Routing** -- Documents are sorted into profile-defined categories
+**Step 1.** Clone the repo and install dependencies:
+```bash
+git clone https://github.com/bweller-lgtm/Sommelier.git
+cd Sommelier
+py -3.12 -m pip install -r requirements.txt
+```
 
-### Configuration
+**Step 2.** Create a `.env` file in the project root with at least one key:
+```
+GEMINI_API_KEY=your_key_here      # Recommended (cheapest, native video/PDF)
+OPENAI_API_KEY=your_key_here      # GPT-4o / GPT-4.1
+ANTHROPIC_API_KEY=your_key_here   # Claude
+```
+
+**Step 3.** Add to your Claude Desktop config (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "sommelier": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/path/to/Sommelier",
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
+```
+
+**Step 4.** Restart Claude Desktop. Ask it: *"Check my Sommelier status"* to verify everything is connected.
+
+From there, just talk to it:
+- *"Sort the photos in my Camera Roll folder"*
+- *"Create a profile for screening resumes"*
+- *"Generate a taste profile from my best code examples in src/"*
+
+**MCP Tools:**
+
+| Tool | What it does |
+|------|-------------|
+| `sommelier_status` | Check setup status (API keys, providers, profiles) |
+| `sommelier_list_profiles` | List all taste profiles |
+| `sommelier_get_profile` | Get profile details with human-readable summary |
+| `sommelier_create_profile` | Create a new profile with full control |
+| `sommelier_update_profile` | Update specific fields of an existing profile |
+| `sommelier_delete_profile` | Delete a profile (with confirmation) |
+| `sommelier_quick_profile` | AI-generate a profile from a plain English description |
+| `sommelier_generate_profile` | AI-generate a profile from example files |
+| `sommelier_classify_folder` | Classify all files in a folder |
+| `sommelier_classify_files` | Classify specific files by path |
+| `sommelier_submit_feedback` | Submit classification corrections |
+| `sommelier_view_feedback` | Review all feedback and stats |
+| | **Training & Refinement** |
+| `sommelier_start_training` | Start a pairwise training session on a photo folder |
+| `sommelier_get_comparison` | Get next photo comparison from active session |
+| `sommelier_submit_comparison` | Record pairwise choice with reasoning |
+| `sommelier_submit_gallery` | Record burst gallery keeper selections |
+| `sommelier_training_status` | Get session progress or list all sessions |
+| `sommelier_synthesize_profile` | Generate profile from training data (AI) |
+| `sommelier_refine_profile` | Refine profile from classification corrections (AI) |
+
+<details>
+<summary><strong>CLI</strong></summary>
+
+```bash
+# Classify a folder (auto-detects media types and provider)
+py -3.12 taste_classify.py "C:\Photos\MyFolder"
+
+# Use a specific taste profile
+py -3.12 taste_classify.py "C:\Photos\MyFolder" --profile default-photos
+
+# Force a specific AI provider
+py -3.12 taste_classify.py "C:\Photos\MyFolder" --provider openai
+
+# Dry run (test without moving files)
+py -3.12 taste_classify.py "C:\Photos\MyFolder" --dry-run
+```
+
+Files are sorted into `MyFolder_sorted/` with subfolders matching your profile's categories.
+
+</details>
+
+<details>
+<summary><strong>REST API</strong></summary>
+
+```bash
+py -3.12 serve.py                          # Start on localhost:8000
+py -3.12 serve.py --host 0.0.0.0 --port 9000  # Custom host/port
+py -3.12 serve.py --reload                 # Development mode
+```
+
+Interactive docs at `http://localhost:8000/docs`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/profiles/` | List all profiles |
+| GET | `/api/profiles/{name}` | Get profile details |
+| POST | `/api/profiles/` | Create new profile |
+| PUT | `/api/profiles/{name}` | Update profile |
+| DELETE | `/api/profiles/{name}` | Delete profile |
+| POST | `/api/classify/folder` | Classify a local folder |
+| GET | `/api/classify/{job_id}` | Get job status |
+| GET | `/api/classify/{job_id}/results` | Get results |
+| GET | `/api/results/{job_id}/export` | Export as CSV |
+| POST | `/api/training/feedback` | Submit feedback |
+| GET | `/api/training/stats` | Get training stats |
+
+</details>
+
+---
+
+## AI Providers
+
+Sommelier supports three AI providers. Install only the SDK(s) you need.
+
+| Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) |
+|---------|--------|---------------------|-------------------|
+| Images | Native | Base64 | Base64 |
+| Videos | Native upload | Frame extraction | Frame extraction |
+| PDFs | Native upload | Page-to-image | Native |
+| Relative cost | Cheapest | Mid | Most expensive |
+| Env var | `GEMINI_API_KEY` | `OPENAI_API_KEY` | `ANTHROPIC_API_KEY` |
+
+Gemini is the recommended default -- cheapest and has native video/PDF support. The system auto-detects which key is available (gemini > openai > anthropic), or you can force a provider with `--provider` or in `config.yaml`.
+
+---
+
+## Cost Estimates
+
+Gemini 3 Flash pricing (cheapest provider):
+
+| Item | Cost |
+|------|------|
+| Photo | ~$0.0013 |
+| Burst photo | ~$0.00043 (shared prompt) |
+| Video | ~$0.011 per minute |
+| Document | ~$0.002-0.01 (varies by size) |
+
+**Example:** 1,000 photos = ~$1.30 (first run), ~$0 (cached re-run).
+
+OpenAI and Anthropic cost more per call. See provider pricing pages for current rates.
+
+---
+
+## Configuration
+
+All settings are in `config.yaml`. Key sections:
 
 ```yaml
+model:
+  provider: null          # null = auto-detect. Options: gemini, openai, anthropic
+  name: "gemini-3-flash-preview"
+  openai_model: "gpt-4.1"
+  anthropic_model: "claude-sonnet-4-20250514"
+
+classification:
+  share_threshold: 0.60       # Confidence threshold for top category
+  review_threshold: 0.35      # Below this → lowest category
+  classify_videos: true
+  parallel_video_workers: 10
+
+profiles:
+  profiles_dir: "profiles"
+  active_profile: "default-photos"
+  auto_detect_media_type: true
+
+burst_detection:
+  time_window_seconds: 10
+  embedding_similarity_threshold: 0.92
+
 document:
   max_file_size_mb: 50.0
   max_pages_per_document: 20
-  text_extraction_max_chars: 50000
   enable_text_embeddings: true
   similarity_threshold: 0.85
 ```
 
-### Codebase Analysis
+See `config.yaml` for all options with inline documentation.
 
-Use Sommelier to extract best practices from a codebase:
+---
 
-**Step 1: Classify code by quality.** Create a profile and point it at your `src/` folder:
+## Supported Formats
+
+| Type | Extensions |
+|------|-----------|
+| **Images** | `.jpg` `.jpeg` `.png` `.webp` `.heic` `.tif` `.tiff` `.bmp` |
+| **Videos** | `.mp4` `.mov` `.avi` `.mkv` `.m4v` `.3gp` `.wmv` `.flv` `.webm` |
+| **Documents** | `.pdf` `.docx` `.xlsx` `.pptx` `.html` `.htm` `.txt` `.md` `.csv` `.rtf` |
+| **Source Code** | `.py` `.js` `.ts` `.jsx` `.tsx` `.java` `.go` `.rs` `.rb` `.cpp` `.c` `.cs` `.swift` `.kt` `.php` `.lua` `.scala` + more |
+| **Config / IaC** | `.yaml` `.yml` `.toml` `.json` `.xml` `.tf` `.hcl` `.dockerfile` |
+| **Shell** | `.sh` `.bash` `.zsh` `.ps1` `.sql` |
+
+PDFs and videos are uploaded natively to Gemini. For OpenAI and Anthropic, videos are frame-extracted and PDFs are rendered to images automatically.
+
+---
+
+## Output Structure
+
 ```
-# In Claude Desktop (MCP):
-# "Create a code quality profile that sorts Python files into Exemplary, Solid, and Needs-Work"
-# → sommelier_quick_profile
-
-# Then classify:
-# "Classify all files in my project's src directory"
-# → sommelier_classify_folder
+MyFolder_sorted/
+├── Share/                       # Share-worthy photos/videos
+├── Storage/                     # Keep but don't share
+├── Review/                      # Needs manual review
+├── Ignore/                      # Not relevant
+├── ImprovementCandidates/       # Gray zone photos (if enabled)
+│   └── improvement_candidates.csv
+├── Improved/                    # AI-enhanced photos
+└── Reports/                     # Classification logs (CSV)
 ```
 
-**Step 2: Generate best practices.** Feed the "Exemplary" bucket back into profile generation:
-```
-# "Generate a profile from my exemplary code examples"
-# → sommelier_generate_profile with good_examples_folder pointing to Exemplary/
-```
-
-The generated profile **is** your best practices document -- its `top_priorities`, `positive_criteria`, and `philosophy` fields are synthesized from what the AI found in common across your best code. And that profile is then reusable as a classifier for future code reviews.
+For custom profiles, output folders match the profile's category names (e.g., `Strong/`, `Maybe/`, `Pass/`).
 
 ---
 
 ## Photo Improvement (Gray Zone)
 
-Automatically detects meaningful family moments with technical issues and uses Gemini AI to enhance them.
+Detects meaningful family moments with technical issues (blur, noise, bad exposure) and uses Gemini AI to enhance them.
 
-### What Gets Flagged?
-
-Photos with **high contextual value** (rare family groupings, interactions, milestones) **plus** technical issues (blur, noise, exposure, etc.).
-
-### Workflow
-
-1. **During Classification** -- Gray zone photos are copied to `ImprovementCandidates/`
+1. **During classification** -- Gray zone photos are copied to `ImprovementCandidates/`
 2. **Review** -- Approve candidates via Gradio UI or CSV editing
-3. **Improvement** -- Process approved candidates:
-   ```bash
-   py -3.12 improve_photos.py "path/to/sorted_folder"
-   ```
+3. **Improve** -- `py -3.12 improve_photos.py "path/to/sorted_folder"`
 
-### Cost
-
-- **Per image:** ~$0.134 (Gemini 3 Pro Image) or ~$0.039 (Gemini 3 Flash Image)
-- Originals are always preserved
+Cost: ~$0.134 per image (Gemini 3 Pro) or ~$0.039 (Flash). Originals are always preserved.
 
 ---
 
-## Error Tracking and Retry
+## Error Handling
 
-Automatic retry with exponential backoff for API failures. Failed classifications are tracked with error metadata.
+Automatic retry with exponential backoff for API failures.
 
 | Error Type | Retriable | Description |
 |------------|-----------|-------------|
@@ -358,57 +408,11 @@ Automatic retry with exponential backoff for API failures. Failed classification
 | `safety_blocked` | No | Content blocked by safety filters |
 | `load_error` | No | Failed to load file |
 
-### Reprocessing Failed Items
-
+Reprocess failures:
 ```bash
-# See what would be cleared
-py -3.12 clear_failed_for_retry.py "path/to/sorted" --dry-run
-
-# Clear failed items and re-run
-py -3.12 clear_failed_for_retry.py "path/to/sorted"
-py -3.12 taste_classify.py "path/to/source"
+py -3.12 clear_failed_for_retry.py "path/to/sorted" --dry-run  # Preview
+py -3.12 clear_failed_for_retry.py "path/to/sorted"            # Clear and re-run
 ```
-
----
-
-## Configuration
-
-All settings are in `config.yaml`. Key sections:
-
-### Classification Thresholds
-```yaml
-classification:
-  share_threshold: 0.60
-  review_threshold: 0.35
-  burst_rank_consider: 2
-  classify_videos: true
-  parallel_video_workers: 10
-```
-
-### Document Processing
-```yaml
-document:
-  max_pages_per_document: 20
-  enable_text_embeddings: true
-  similarity_threshold: 0.85
-```
-
-### Profile Management
-```yaml
-profiles:
-  profiles_dir: "profiles"
-  active_profile: "default-photos"
-  auto_detect_media_type: true
-```
-
-### Burst Detection
-```yaml
-burst_detection:
-  time_window_seconds: 10
-  embedding_similarity_threshold: 0.92
-```
-
-See `config.yaml` for all options with inline documentation.
 
 ---
 
@@ -416,216 +420,91 @@ See `config.yaml` for all options with inline documentation.
 
 ```
 src/
-+-- core/                  # Configuration, caching, AI clients, profiles
-|   +-- ai_client.py       # AIClient ABC + AIResponse
-|   +-- provider_factory.py # Auto-detect provider from API keys
-|   +-- media_prep.py      # Video frame extraction, PDF rendering, base64 encoding
-|   +-- providers/         # AI provider implementations
-|   |   +-- gemini.py      # Gemini (native video/PDF)
-|   |   +-- openai_provider.py   # OpenAI (GPT-4o/4.1)
-|   |   +-- anthropic_provider.py # Anthropic (Claude)
-|   +-- config.py          # Type-safe YAML configuration
-|   +-- cache.py           # Unified caching system
-|   +-- models.py          # Gemini API client (extends AIClient)
-|   +-- file_utils.py      # File type detection (images, videos, documents)
-|   +-- profiles.py        # Taste profile management system
-|   +-- logging_config.py  # Logging utilities
-+-- features/              # Feature extraction
-|   +-- quality.py         # Photo quality scoring
-|   +-- burst_detector.py  # Photo burst detection
-|   +-- embeddings.py      # CLIP visual embeddings
-|   +-- document_features.py  # Document text/metadata extraction
-+-- classification/        # AI classification
-|   +-- prompt_builder.py  # Dynamic prompt generation (any media + profile)
-|   +-- classifier.py      # AI classification (photos, videos, documents)
-|   +-- routing.py         # Category routing with profile support
-+-- pipelines/             # Orchestration
-|   +-- base.py            # Abstract pipeline interface
-|   +-- photo_pipeline.py  # Photo/video pipeline
-|   +-- document_pipeline.py  # Document pipeline
-|   +-- mixed_pipeline.py  # Auto-detect and dispatch
-+-- api/                   # REST API (FastAPI)
-|   +-- app.py             # Application factory
-|   +-- models.py          # Pydantic request/response models
-|   +-- routers/           # Endpoint definitions
-|   +-- services/          # Business logic layer
-+-- mcp/                   # MCP server (Claude Desktop)
-|   +-- server.py          # Tool definitions
-+-- improvement/           # Photo improvement (gray zone)
-    +-- improver.py        # Gemini image enhancement
-    +-- review_ui.py       # Gradio review interface
+├── core/                  # Configuration, caching, AI clients, profiles
+│   ├── ai_client.py       # AIClient ABC + AIResponse
+│   ├── provider_factory.py # Auto-detect provider from API keys
+│   ├── media_prep.py      # Video frame extraction, PDF rendering, base64 encoding
+│   ├── providers/         # AI provider implementations
+│   │   ├── gemini.py      # Gemini (native video/PDF)
+│   │   ├── openai_provider.py   # OpenAI (GPT-4o/4.1)
+│   │   └── anthropic_provider.py # Anthropic (Claude)
+│   ├── config.py          # Type-safe YAML configuration
+│   ├── cache.py           # Unified caching system
+│   ├── models.py          # Gemini API client (extends AIClient)
+│   ├── file_utils.py      # File type detection (images, videos, documents, code)
+│   ├── profiles.py        # Taste profile management
+│   └── logging_config.py  # Logging utilities
+├── features/              # Feature extraction
+│   ├── quality.py         # Photo quality scoring
+│   ├── burst_detector.py  # Photo burst detection
+│   ├── embeddings.py      # CLIP visual embeddings
+│   └── document_features.py  # Document text/metadata extraction
+├── classification/        # AI classification
+│   ├── prompt_builder.py  # Dynamic prompt generation (any media + profile)
+│   ├── classifier.py      # AI classification (photos, videos, documents)
+│   └── routing.py         # Category routing with confidence thresholds
+├── pipelines/             # Orchestration
+│   ├── base.py            # Abstract pipeline interface
+│   ├── photo_pipeline.py  # Photo/video pipeline
+│   ├── document_pipeline.py  # Document pipeline
+│   └── mixed_pipeline.py  # Auto-detect and dispatch
+├── api/                   # REST API (FastAPI)
+│   ├── app.py             # Application factory
+│   ├── models.py          # Pydantic request/response models
+│   ├── routers/           # Endpoint definitions
+│   └── services/          # Business logic layer
+├── training/              # Pairwise training & profile synthesis
+│   ├── session.py         # Training session state & persistence
+│   ├── sampler.py         # Smart comparison selection (burst-aware)
+│   └── synthesizer.py     # AI-powered profile synthesis & refinement
+├── mcp/                   # MCP server (Claude Desktop)
+│   └── server.py          # Tool definitions
+└── improvement/           # Photo improvement (gray zone)
+    ├── improver.py        # Gemini image enhancement
+    └── review_ui.py       # Gradio review interface
 ```
 
-### Entry Points
-
-| File | Purpose |
-|------|---------|
-| `taste_classify.py` | Main CLI for classification |
-| `serve.py` | FastAPI server |
+| Entry Point | Purpose |
+|-------------|---------|
 | `mcp_server.py` | MCP server for Claude Desktop |
+| `taste_classify.py` | CLI classification |
+| `serve.py` | REST API server |
 | `improve_photos.py` | Photo improvement |
-| `taste_trainer_pairwise_v4.py` | Interactive training UI |
-| `generate_taste_profile.py` | AI profile generation |
-
----
-
-## Training Your Classifier
-
-### Option 1: Interactive Training (Recommended)
-```bash
-py -3.12 taste_trainer_pairwise_v4.py
-```
-Opens Gradio UI. Compare photos and train your preferences.
-
-### Option 2: Generate Taste Profile from Examples
-```bash
-py -3.12 generate_taste_profile.py
-```
-Analyzes your Share/Storage folders and creates `taste_preferences_generated.json`.
-
-### Option 3: Manual Corrections
-```bash
-py -3.12 learn_from_reviews.py
-```
-Learns from photos you manually moved to correct folders.
-
-### Option 4: API Feedback Loop
-Submit corrections via API or MCP, then regenerate profiles from accumulated feedback.
-
----
-
-## Cost Estimates
-
-Costs vary by provider. Gemini is the cheapest option. The estimates below use Gemini 3 Flash.
-
-**Gemini 3 Flash Pricing:**
-- **Input:** $0.50 per 1M tokens
-- **Output:** $3.00 per 1M tokens
-
-**Per Item (Classification):**
-- **Photo:** ~$0.0013
-- **Burst Photo:** ~$0.00043 (shared prompt)
-- **Video:** ~$0.011 per minute
-- **Document:** ~$0.002-0.01 (varies by size)
-
-**Photo Improvement:**
-- ~$0.134 per image (Gemini 3 Pro) or ~$0.039 (Flash)
-
-**Example:** 1,000 photos = ~$1.30 (first run), ~$0 (cached re-run)
-
----
-
-## Output Structure
-
-```
-MyFolder_sorted/
-+-- Share/                       # Share-worthy photos/videos
-+-- Storage/                     # Keep but don't share
-+-- Review/                      # Needs manual review
-+-- Ignore/                      # No children or inappropriate
-+-- ImprovementCandidates/       # Gray zone photos
-|   +-- improvement_candidates.csv
-+-- Improved/                    # AI-enhanced photos
-+-- Reports/                     # Classification logs (CSV)
-```
-
-For document profiles, output folders match the profile's category names (e.g., `Exemplary/`, `Acceptable/`, `Discard/`).
+| `generate_taste_profile.py` | Standalone profile generation |
 
 ---
 
 ## Development
 
-### Run Tests
 ```bash
-# All tests
+# Run tests
 pytest tests/ -v
 
 # With coverage
 pytest tests/ --cov=src --cov-report=html
-```
 
-### Install New Dependencies
-```bash
+# Install dependencies
 py -3.12 -m pip install -r requirements.txt
 ```
-
-### Project Dependencies
-
-| Category | Packages |
-|----------|----------|
-| AI Providers | google-generativeai (Gemini), openai (OpenAI), anthropic (Anthropic) |
-| ML | torch, open-clip-torch, sentence-transformers |
-| Images | Pillow, pillow-heif, opencv-python |
-| Documents | pypdf, python-docx, openpyxl, python-pptx, beautifulsoup4 |
-| API | fastapi, uvicorn |
-| MCP | mcp |
-| UI | gradio, tqdm |
 
 ---
 
 ## Troubleshooting
 
-### "No module named 'src'"
-Run from the project root directory:
-```bash
-cd "path/to/sommelier"
-py -3.12 taste_classify.py ...
-```
+**"No AI provider configured"** -- Create `.env` with at least one API key (`GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`).
 
-### "No AI provider configured"
-Create `.env` file in project root with at least one key:
-```
-GEMINI_API_KEY=your_key_here      # Recommended
-OPENAI_API_KEY=your_key_here      # Alternative
-ANTHROPIC_API_KEY=your_key_here   # Alternative
-```
+**"No module named 'src'"** -- Run from the project root directory.
 
-### "Config file not found"
-Ensure `config.yaml` exists in the project root.
+**Low share rate (<20%)** -- Lower `classification.share_threshold` in `config.yaml` (e.g., 0.50).
 
-### Low Share Rate (<20%)
-```yaml
-classification:
-  share_threshold: 0.50  # Lower = more photos in Share
-```
-
-### Document extraction issues
-Install the relevant parser:
-```bash
-py -3.12 -m pip install pypdf python-docx openpyxl python-pptx beautifulsoup4
-```
-
----
-
-## Performance
-
-**Typical Run (1,000 photos):**
-- Burst Detection: ~30 seconds
-- Embedding Extraction: ~2 minutes (cached: instant)
-- Gemini Classification: ~5-10 minutes
-- **Total:** ~10-15 minutes (first run), ~5 minutes (cached)
-
-**Document Classification (100 documents):**
-- Feature Extraction: ~30 seconds
-- Similarity Grouping: ~10 seconds
-- Gemini Classification: ~2-5 minutes
-- **Total:** ~3-6 minutes
+**Document extraction issues** -- Install the relevant parser: `py -3.12 -m pip install pypdf python-docx openpyxl python-pptx beautifulsoup4`.
 
 ---
 
 ## Credits
 
-**Built with:**
-- Google Gemini, OpenAI, Anthropic (AI classification)
-- OpenCLIP (visual embeddings)
-- sentence-transformers (text embeddings)
-- FastAPI (REST API)
-- MCP SDK (Claude Desktop integration)
-- Gradio (training UI)
-- Claude Code (AI-assisted development)
+Built with Google Gemini, OpenAI, Anthropic (AI), OpenCLIP (visual embeddings), sentence-transformers (text embeddings), FastAPI (REST API), MCP SDK (Claude Desktop), Gradio (training UI), and Claude Code (development).
 
 ---
 
-**Version:** 3.1.0
-**Last Updated:** February 2026
-**Status:** Production Ready
+**Version:** 3.2.0 | **Last Updated:** February 2026 | **Status:** Production Ready
