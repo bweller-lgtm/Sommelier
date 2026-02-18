@@ -362,9 +362,11 @@ def create_mcp_server():
                 description=(
                     "Classify all media files in a folder using a taste profile. "
                     "Each file is analyzed by AI and assigned to a category. "
+                    "IMPORTANT: For any folder, call with estimate_only=true FIRST to show "
+                    "the user a cost/time estimate and get confirmation before classifying. "
                     "For large folders (50+ files), use batch_size=30 to process in chunks "
                     "— the response includes next_offset so you can continue where you left off. "
-                    "Use dry_run=true first to preview results without moving files."
+                    "Use dry_run=true to classify but not move files."
                 ),
                 inputSchema={
                     "type": "object",
@@ -376,6 +378,11 @@ def create_mcp_server():
                         "profile_name": {
                             "type": "string",
                             "description": "Profile to use (run taster_list_profiles to see options)",
+                        },
+                        "estimate_only": {
+                            "type": "boolean",
+                            "description": "If true, scan folder and return cost/time estimate without classifying. Always do this first and show the user before proceeding.",
+                            "default": False,
                         },
                         "dry_run": {
                             "type": "boolean",
@@ -885,39 +892,67 @@ Rules:
     }
 
 
+def _estimate_folder_cost(images, videos, documents, profile_name) -> dict:
+    """Scan folder and return cost/time estimate without classifying."""
+    from ..pipelines.base import (
+        _TOKENS_PER_IMAGE, _VIDEO_TOKENS_PER_SEC, _VIDEO_BITRATE_BPS,
+        _PROMPT_TOKENS, _OUTPUT_TOKENS, _INPUT_PRICE_PER_M, _OUTPUT_PRICE_PER_M,
+    )
+
+    n_img, n_vid, n_doc = len(images), len(videos), len(documents)
+
+    # Estimate video tokens from file sizes
+    video_tokens = 0
+    total_video_seconds = 0
+    for v in videos:
+        try:
+            duration = max(v.stat().st_size * 8 / _VIDEO_BITRATE_BPS, 1)
+        except OSError:
+            duration = 60
+        total_video_seconds += duration
+        video_tokens += int(duration * _VIDEO_TOKENS_PER_SEC)
+
+    image_tokens = n_img * _TOKENS_PER_IMAGE
+    doc_tokens = n_doc * 2000
+
+    # Estimate API calls (bursts share calls, rough ~60% burst rate)
+    api_calls = max(int(n_img * 0.7) + n_vid + n_doc, 1)
+    prompt_tokens = api_calls * _PROMPT_TOKENS
+    output_tokens = api_calls * _OUTPUT_TOKENS
+
+    total_input = video_tokens + image_tokens + doc_tokens + prompt_tokens
+    input_cost = total_input / 1_000_000 * _INPUT_PRICE_PER_M
+    output_cost = output_tokens / 1_000_000 * _OUTPUT_PRICE_PER_M
+    total_cost = input_cost + output_cost
+
+    # Estimate time: ~0.5s per image API call + ~2s per video (upload + process)
+    est_minutes = (api_calls * 0.5 + n_vid * 60) / 60
+
+    return {
+        "status": "estimate",
+        "profile": profile_name,
+        "files": {"images": n_img, "videos": n_vid, "documents": n_doc, "total": n_img + n_vid + n_doc},
+        "estimated_cost_usd": round(total_cost, 2),
+        "estimated_minutes": round(est_minutes, 0),
+        "estimated_video_minutes": round(total_video_seconds / 60, 1),
+        "message": (
+            f"Found {n_img} images, {n_vid} videos, {n_doc} documents. "
+            f"Estimated cost: ~${total_cost:.2f}. "
+            f"Estimated time: ~{est_minutes:.0f} minutes. "
+            f"Call again without estimate_only to start classification."
+        ),
+    }
+
+
 def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     """Classify media files in a folder with batch/pagination support."""
-    api_err = _require_api_key()
-    if api_err:
-        return api_err
-
-    import time as _time
-
-    print(f"[taster] classify_folder: {arguments}", file=sys.stderr, flush=True)
-
-    from ..core.cache import CacheManager
-    from ..core.provider_factory import create_ai_client
-    from ..classification.prompt_builder import PromptBuilder
-    from ..classification.classifier import MediaClassifier
-    from ..classification.routing import Router
     from ..core.file_utils import FileTypeRegistry
 
-    config = _get_config()
-    profile = pm.load_profile(arguments["profile_name"])
     folder = Path(arguments["folder_path"])
-
     if not folder.is_dir():
         return {"error": f"Folder not found: {folder}"}
 
-    cache_manager = CacheManager(
-        config.paths.cache_root,
-        ttl_days=config.caching.ttl_days,
-        enabled=config.caching.enabled,
-    )
-    ai_client = create_ai_client(config)
-    prompt_builder = PromptBuilder(config, profile=profile)
-    classifier = MediaClassifier(config, ai_client, prompt_builder, cache_manager, profile=profile)
-    router = Router(config, ai_client, profile=profile)
+    print(f"[taster] classify_folder: {arguments}", file=sys.stderr, flush=True)
 
     # Discover files
     all_files = FileTypeRegistry.list_all_media(folder)
@@ -937,6 +972,36 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
             "total_files_in_folder": 0,
             "message": "No media files found in folder.",
         }
+
+    # ── Estimate-only mode ─────────────────────────────────────────
+    if arguments.get("estimate_only", False):
+        return _estimate_folder_cost(images, videos, documents, arguments["profile_name"])
+
+    # ── Full classification ────────────────────────────────────────
+    api_err = _require_api_key()
+    if api_err:
+        return api_err
+
+    import time as _time
+
+    from ..core.cache import CacheManager
+    from ..core.provider_factory import create_ai_client
+    from ..classification.prompt_builder import PromptBuilder
+    from ..classification.classifier import MediaClassifier
+    from ..classification.routing import Router
+
+    config = _get_config()
+    profile = pm.load_profile(arguments["profile_name"])
+
+    cache_manager = CacheManager(
+        config.paths.cache_root,
+        ttl_days=config.caching.ttl_days,
+        enabled=config.caching.enabled,
+    )
+    ai_client = create_ai_client(config)
+    prompt_builder = PromptBuilder(config, profile=profile)
+    classifier = MediaClassifier(config, ai_client, prompt_builder, cache_manager, profile=profile)
+    router = Router(config, ai_client, profile=profile)
 
     # Pagination: offset and batch_size let Claude call this repeatedly
     # for large folders without hitting the 4-minute MCP timeout.
