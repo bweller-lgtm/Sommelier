@@ -67,7 +67,7 @@ Grade 200 student submissions against *your* standards. Create a profile from a 
 
 ### Code Standards
 
-Point Taster at your `src/` directory with a code quality profile. It classifies every file into tiers (Exemplary / Solid / Needs Work) with explanations. Feed the Exemplary bucket back into profile generation and Taster synthesizes *your* standards -- error handling patterns, naming conventions, architectural choices you actually follow. That profile becomes both a style guide and an automated reviewer for future code.
+Start with a code quality profile -- generate one from a quick description or write your own. Taster classifies every file into tiers (Exemplary / Solid / Needs Work) with explanations. Review the results, correct what you disagree with, and refine the profile. Each cycle sharpens it until the profile captures the standards you actually follow -- error handling patterns, naming conventions, architectural choices. That profile becomes both a style guide and an automated reviewer for future code.
 
 ### Any Collection
 
