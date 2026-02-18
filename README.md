@@ -63,7 +63,7 @@ That profile is both a human-readable style guide *and* an executable classifier
 
 ### Grading at Scale
 
-Grade 200 student submissions against *your* standards. Create a profile from a handful of A-grade and C-grade examples. Sommelier extracts what your grading decisions had in common and applies them to the full batch -- including an explanation of why each submission landed where it did, in your voice.
+Grade 200 student submissions against *your* standards. Create a profile from a handful of A-grade and C-grade examples. Sommelier extracts what your grading decisions had in common and applies them to the full batch -- each result includes a brief explanation of why the submission landed where it did, grounded in the profile's criteria.
 
 Classification uses confidence tiers:
 - **High confidence** -- clearly strong or clearly weak submissions are graded automatically
