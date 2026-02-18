@@ -220,7 +220,8 @@ class CacheManager:
         cache_root: Path,
         ttl_days: int = 365,
         enabled: bool = True,
-        max_size_gb: float = 10.0
+        max_size_gb: float = 10.0,
+        skip_types: Optional[set] = None,
     ):
         """
         Initialize cache manager.
@@ -230,11 +231,13 @@ class CacheManager:
             ttl_days: Time-to-live for cache entries in days.
             enabled: Enable/disable caching globally.
             max_size_gb: Maximum cache size in GB (0 = unlimited).
+            skip_types: Cache types to skip (get returns None, set is no-op).
         """
         self.cache_root = Path(cache_root)
         self.enabled = enabled
         self.ttl_days = ttl_days
         self.max_size_gb = max_size_gb
+        self.skip_types = skip_types or set()
 
         # Initialize cache directories
         self.cache_dirs = {
@@ -271,7 +274,7 @@ class CacheManager:
         Returns:
             Cached value or None if not found.
         """
-        if not self.enabled:
+        if not self.enabled or cache_type in self.skip_types:
             return None
 
         if cache_type not in self.caches:
@@ -288,7 +291,7 @@ class CacheManager:
             key: Cache key.
             value: Value to cache.
         """
-        if not self.enabled:
+        if not self.enabled or cache_type in self.skip_types:
             return
 
         if cache_type not in self.caches:
