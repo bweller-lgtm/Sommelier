@@ -66,6 +66,10 @@ class Router:
         if is_appropriate == False:
             return "Review"  # Route to Review for manual inspection
 
+        # If AI explicitly classified as Review, respect it
+        if category == "Review":
+            return "Review"
+
         # Apply thresholds
         if category == "Share" and confidence >= self.config.classification.share_threshold:
             return "Share"
@@ -130,6 +134,11 @@ class Router:
 
             # If inappropriate
             if is_appropriate == False:
+                destinations.append("Review")
+                continue
+
+            # If AI explicitly classified as Review, respect it
+            if category == "Review":
                 destinations.append("Review")
                 continue
 
