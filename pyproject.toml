@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sommelier"
+dynamic = ["version"]
+description = "Teach AI your taste. Apply it to everything."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Brian Weller" },
+]
+keywords = ["ai", "classification", "taste", "profiles", "media"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pyyaml>=6.0.1",
+    "pillow>=10.0.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2",
+    "tqdm>=4.65.0",
+    "rich",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=1.0"]
+openai = ["openai>=1.0"]
+anthropic = ["anthropic>=0.40"]
+ml = [
+    "torch>=2.0",
+    "open-clip-torch>=2.20",
+    "sentence-transformers>=2.2",
+    "numpy>=1.24",
+    "pillow-heif>=0.13",
+    "opencv-python>=4.8",
+    "imagehash>=4.3",
+]
+documents = [
+    "pymupdf>=1.25",
+    "python-docx>=1.0",
+    "openpyxl>=3.1",
+]
+api = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.6",
+]
+mcp = ["mcp[cli]>=1.0"]
+train = ["gradio>=4.0"]
+all = [
+    "sommelier[gemini,openai,anthropic,ml,documents,api,mcp,train]",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+sommelier = "sommelier.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/bweller-lgtm/Sommelier"
+Repository = "https://github.com/bweller-lgtm/Sommelier"
+
+[tool.hatch.version]
+path = "sommelier/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sommelier"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = ["tests"]

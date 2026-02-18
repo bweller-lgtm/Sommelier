@@ -2,8 +2,8 @@
 import pytest
 from pathlib import Path
 
-from src.core import load_config, CacheManager, GeminiClient
-from src.classification import PromptBuilder, MediaClassifier, Router
+from sommelier.core import load_config, CacheManager, GeminiClient
+from sommelier.classification import PromptBuilder, MediaClassifier, Router
 
 
 class TestPromptBuilder:
@@ -128,7 +128,7 @@ class TestRouter:
 
 def test_component_imports():
     """Test that all classification components can be imported."""
-    from src.classification import PromptBuilder, MediaClassifier, Router
+    from sommelier.classification import PromptBuilder, MediaClassifier, Router
 
     assert PromptBuilder is not None
     assert MediaClassifier is not None
@@ -144,7 +144,7 @@ class TestCustomProfileClassification:
     @pytest.fixture
     def resume_profile(self):
         """Create a resume screening taste profile."""
-        from src.core.profiles import TasteProfile, CategoryDefinition
+        from sommelier.core.profiles import TasteProfile, CategoryDefinition
         return TasteProfile(
             name="resume-screener",
             description="Screen resumes for engineering candidates",

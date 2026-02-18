@@ -37,12 +37,8 @@ class OpenAIProvider(AIClient):
         self.video_frame_count = video_frame_count
         self.pdf_render_dpi = pdf_render_dpi
 
-        try:
-            import openai
-        except ImportError:
-            raise ImportError(
-                "openai package not installed. Install with: pip install openai"
-            )
+        from ...compat import require
+        openai = require("openai", "openai")
         self._client = openai.OpenAI(api_key=self.api_key, timeout=self.timeout)
 
     def supports_video(self) -> bool:

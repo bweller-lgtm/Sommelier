@@ -5,10 +5,10 @@ import json
 import time
 from typing import Optional, Dict, Any, List, Union
 from pathlib import Path
-import google.generativeai as genai
 from PIL import Image
 
 from .ai_client import AIClient, AIResponse
+from ..compat import require
 
 
 class GeminiError(Exception):
@@ -83,11 +83,13 @@ class GeminiClient(AIClient):
         self.timeout = timeout
 
         # Configure API
+        genai = require("google.generativeai", "gemini")
+        self._genai = genai
         genai.configure(api_key=self.api_key)
 
-    def _create_model(self, **model_kwargs) -> genai.GenerativeModel:
+    def _create_model(self, **model_kwargs):
         """Create model instance with optional kwargs."""
-        return genai.GenerativeModel(self.model_name, **model_kwargs)
+        return self._genai.GenerativeModel(self.model_name, **model_kwargs)
 
     def _validate_response(self, response: Any) -> GeminiResponse:
         """
@@ -289,11 +291,11 @@ class GeminiClient(AIClient):
                 if FileTypeRegistry.is_video(item):
                     # Upload video to Gemini and wait for processing
                     try:
-                        video_file = genai.upload_file(str(item))
+                        video_file = self._genai.upload_file(str(item))
                         # Wait for video to be ready (ACTIVE state)
                         while video_file.state.name == "PROCESSING":
                             time.sleep(2)
-                            video_file = genai.get_file(video_file.name)
+                            video_file = self._genai.get_file(video_file.name)
                         if video_file.state.name == "FAILED":
                             print(f"⚠️  Warning: Video processing failed for {item}")
                             continue

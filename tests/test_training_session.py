@@ -4,7 +4,7 @@ import json
 import pytest
 from pathlib import Path
 
-from src.training.session import (
+from sommelier.training.session import (
     TrainingSession,
     PairwiseComparison,
     GallerySelection,

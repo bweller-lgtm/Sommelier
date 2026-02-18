@@ -1,8 +1,8 @@
 """Training and feedback endpoints."""
 from fastapi import APIRouter, HTTPException
 
-from src.api.models import FeedbackRequest, TrainingStats
-from src.api.services.training_service import TrainingService
+from sommelier.api.models import FeedbackRequest, TrainingStats
+from sommelier.api.services.training_service import TrainingService
 
 router = APIRouter(prefix="/api/training", tags=["training"])
 

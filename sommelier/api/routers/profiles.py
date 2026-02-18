@@ -1,8 +1,8 @@
 """Profile CRUD endpoints."""
 from fastapi import APIRouter, HTTPException
 
-from src.api.models import ProfileCreate, ProfileUpdate, ProfileSummary, ProfileDetail
-from src.api.services.profile_service import ProfileService
+from sommelier.api.models import ProfileCreate, ProfileUpdate, ProfileSummary, ProfileDetail
+from sommelier.api.services.profile_service import ProfileService
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 

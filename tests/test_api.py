@@ -5,8 +5,8 @@ import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
-from src.api.services.profile_service import ProfileService
-from src.api.services.training_service import TrainingService, FEEDBACK_FILENAME
+from sommelier.api.services.profile_service import ProfileService
+from sommelier.api.services.training_service import TrainingService, FEEDBACK_FILENAME
 
 
 # ── ProfileService ──────────────────────────────────────────────────
@@ -249,10 +249,10 @@ class TestClassificationService:
         return config
 
     def test_start_job_folder_not_found(self, mock_config):
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager") as mock_pm:
-                    from src.api.services.classification_service import ClassificationService
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager") as mock_pm:
+                    from sommelier.api.services.classification_service import ClassificationService
                     svc = ClassificationService(mock_config)
                     with pytest.raises(FileNotFoundError, match="Folder not found"):
                         svc.start_job("/nonexistent/path", "default-photos")
@@ -260,14 +260,14 @@ class TestClassificationService:
     def test_start_job_profile_not_found(self, mock_config, tmp_path):
         folder = tmp_path / "input"
         folder.mkdir()
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager") as mock_pm:
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager") as mock_pm:
                     mock_pm_inst = MagicMock()
                     mock_pm.return_value = mock_pm_inst
                     mock_pm_inst.load_profile.side_effect = FileNotFoundError("not found")
 
-                    from src.api.services.classification_service import ClassificationService
+                    from sommelier.api.services.classification_service import ClassificationService
                     svc = ClassificationService(mock_config)
                     with pytest.raises(FileNotFoundError):
                         svc.start_job(str(folder), "nonexistent-profile")
@@ -277,44 +277,44 @@ class TestClassificationService:
         folder.mkdir()
         (folder / "photo.jpg").write_text("img")
 
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager") as mock_pm:
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager") as mock_pm:
                     mock_pm_inst = MagicMock()
                     mock_pm.return_value = mock_pm_inst
                     mock_profile = MagicMock()
                     mock_pm_inst.load_profile.return_value = mock_profile
 
-                    with patch("src.api.services.classification_service.MixedPipeline"):
-                        from src.api.services.classification_service import ClassificationService
+                    with patch("sommelier.api.services.classification_service.MixedPipeline"):
+                        from sommelier.api.services.classification_service import ClassificationService
                         svc = ClassificationService(mock_config)
                         job_id = svc.start_job(str(folder), "test-profile")
                         assert isinstance(job_id, str)
                         assert len(job_id) == 36  # UUID format
 
     def test_get_job_status_unknown(self, mock_config):
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager"):
-                    from src.api.services.classification_service import ClassificationService
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager"):
+                    from sommelier.api.services.classification_service import ClassificationService
                     svc = ClassificationService(mock_config)
                     with pytest.raises(KeyError, match="Unknown job"):
                         svc.get_job_status("bad-id")
 
     def test_get_job_results_unknown(self, mock_config):
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager"):
-                    from src.api.services.classification_service import ClassificationService
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager"):
+                    from sommelier.api.services.classification_service import ClassificationService
                     svc = ClassificationService(mock_config)
                     with pytest.raises(KeyError, match="Unknown job"):
                         svc.get_job_results("bad-id")
 
     def test_update_job(self, mock_config):
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager"):
-                    from src.api.services.classification_service import ClassificationService
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager"):
+                    from sommelier.api.services.classification_service import ClassificationService
                     svc = ClassificationService(mock_config)
                     # Manually insert a job
                     svc._jobs["test-id"] = {"status": "pending", "progress": 0.0}
@@ -323,10 +323,10 @@ class TestClassificationService:
                     assert svc._jobs["test-id"]["progress"] == 50.0
 
     def test_update_job_nonexistent(self, mock_config):
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager"):
-                    from src.api.services.classification_service import ClassificationService
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager"):
+                    from sommelier.api.services.classification_service import ClassificationService
                     svc = ClassificationService(mock_config)
                     # Should not raise
                     svc._update_job("nonexistent", status="running")
@@ -336,13 +336,13 @@ class TestClassificationService:
         folder.mkdir()
         output = tmp_path / "output"
 
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager"):
-                    from src.api.services.classification_service import (
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager"):
+                    from sommelier.api.services.classification_service import (
                         ClassificationService, STATUS_COMPLETED,
                     )
-                    from src.pipelines.base import ClassificationResult
+                    from sommelier.pipelines.base import ClassificationResult
 
                     svc = ClassificationService(mock_config)
 
@@ -371,7 +371,7 @@ class TestClassificationService:
                         stats={"Share": 1},
                     )
 
-                    with patch("src.api.services.classification_service.MixedPipeline") as mock_pipe:
+                    with patch("sommelier.api.services.classification_service.MixedPipeline") as mock_pipe:
                         mock_pipe.return_value.run.return_value = mock_result
                         mock_profile = MagicMock()
                         svc._run_job(job_id, folder, mock_profile, dry_run=True)
@@ -384,10 +384,10 @@ class TestClassificationService:
         folder = tmp_path / "input"
         folder.mkdir()
 
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager"):
-                    from src.api.services.classification_service import (
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager"):
+                    from sommelier.api.services.classification_service import (
                         ClassificationService, STATUS_FAILED,
                     )
 
@@ -410,7 +410,7 @@ class TestClassificationService:
                         "error": None,
                     }
 
-                    with patch("src.api.services.classification_service.MixedPipeline") as mock_pipe:
+                    with patch("sommelier.api.services.classification_service.MixedPipeline") as mock_pipe:
                         mock_pipe.return_value.run.side_effect = RuntimeError("pipeline crashed")
                         mock_profile = MagicMock()
                         svc._run_job(job_id, folder, mock_profile, dry_run=False)
@@ -422,17 +422,17 @@ class TestClassificationService:
         folder = tmp_path / "input"
         folder.mkdir()
 
-        with patch("src.api.services.classification_service.CacheManager"):
-            with patch("src.api.services.classification_service.create_ai_client"):
-                with patch("src.api.services.classification_service.ProfileManager") as mock_pm:
+        with patch("sommelier.api.services.classification_service.CacheManager"):
+            with patch("sommelier.api.services.classification_service.create_ai_client"):
+                with patch("sommelier.api.services.classification_service.ProfileManager") as mock_pm:
                     mock_pm_inst = MagicMock()
                     mock_pm.return_value = mock_pm_inst
                     mock_pm_inst.load_profile.return_value = MagicMock()
 
-                    with patch("src.api.services.classification_service.MixedPipeline"):
+                    with patch("sommelier.api.services.classification_service.MixedPipeline"):
                         with patch("threading.Thread") as mock_thread:
                             mock_thread.return_value.start = MagicMock()
-                            from src.api.services.classification_service import ClassificationService
+                            from sommelier.api.services.classification_service import ClassificationService
                             svc = ClassificationService(mock_config)
                             job_id = svc.start_job(str(folder), "test-profile")
 

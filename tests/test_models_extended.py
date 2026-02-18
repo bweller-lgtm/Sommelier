@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
-from src.core.ai_client import AIResponse
+from sommelier.core.ai_client import AIResponse
 
 
 # ── AIResponse ──────────────────────────────────────────────────────
@@ -52,28 +52,28 @@ class TestAIResponse:
 class TestGeminiClient:
 
     def test_init_no_api_key(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("GEMINI_API_KEY", None)
             with pytest.raises(ValueError, match="GEMINI_API_KEY not set"):
                 GeminiClient()
 
     def test_init_with_explicit_key(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test-key-123")
             assert client.api_key == "test-key-123"
             assert client.provider_name == "gemini"
 
     def test_supports_video_and_pdf(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             assert client.supports_video() is True
             assert client.supports_pdf() is True
 
     def test_validate_response_no_candidates(self):
-        from src.core.models import GeminiClient, SafetyFilterError
+        from sommelier.core.models import GeminiClient, SafetyFilterError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_response = MagicMock()
@@ -82,7 +82,7 @@ class TestGeminiClient:
                 client._validate_response(mock_response)
 
     def test_validate_response_safety_blocked(self):
-        from src.core.models import GeminiClient, SafetyFilterError
+        from sommelier.core.models import GeminiClient, SafetyFilterError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_response = MagicMock()
@@ -93,7 +93,7 @@ class TestGeminiClient:
                 client._validate_response(mock_response)
 
     def test_validate_response_max_tokens(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_response = MagicMock()
@@ -105,7 +105,7 @@ class TestGeminiClient:
             assert result.text == "some text"
 
     def test_validate_response_normal(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_response = MagicMock()
@@ -119,7 +119,7 @@ class TestGeminiClient:
             assert result.blocked is False
 
     def test_generate_safety_filter_handled(self):
-        from src.core.models import GeminiClient, SafetyFilterError
+        from sommelier.core.models import GeminiClient, SafetyFilterError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test", max_retries=1)
             mock_model = MagicMock()
@@ -133,7 +133,7 @@ class TestGeminiClient:
                     assert result.blocked is True
 
     def test_generate_safety_filter_raised(self):
-        from src.core.models import GeminiClient, SafetyFilterError
+        from sommelier.core.models import GeminiClient, SafetyFilterError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test", max_retries=1)
             mock_model = MagicMock()
@@ -147,7 +147,7 @@ class TestGeminiClient:
                         client.generate("test prompt", handle_safety_errors=False)
 
     def test_generate_json_success(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_model = MagicMock()
@@ -164,7 +164,7 @@ class TestGeminiClient:
                     assert result == {"result": "success"}
 
     def test_generate_json_fallback(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_model = MagicMock()
@@ -181,7 +181,7 @@ class TestGeminiClient:
                     assert result == {"default": True}
 
     def test_generate_rate_limit_retry(self):
-        from src.core.models import GeminiClient, GeminiError
+        from sommelier.core.models import GeminiClient, GeminiError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test", max_retries=2, retry_delay=0.01)
             mock_model = MagicMock()
@@ -193,7 +193,7 @@ class TestGeminiClient:
                         client.generate("test", rate_limit_delay=0)
 
     def test_generate_unknown_error_fails_fast(self):
-        from src.core.models import GeminiClient, GeminiError
+        from sommelier.core.models import GeminiClient, GeminiError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test", max_retries=3)
             mock_model = MagicMock()
@@ -205,7 +205,7 @@ class TestGeminiClient:
                         client.generate("test", rate_limit_delay=0)
 
     def test_generate_timeout_retry(self):
-        from src.core.models import GeminiClient, GeminiError
+        from sommelier.core.models import GeminiClient, GeminiError
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test", max_retries=2, retry_delay=0.01)
             mock_model = MagicMock()
@@ -217,7 +217,7 @@ class TestGeminiClient:
                         client.generate("test", rate_limit_delay=0)
 
     def test_generate_string_prompt(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_model = MagicMock()
@@ -234,23 +234,23 @@ class TestGeminiClient:
                     assert result.text == "response"
 
     def test_load_images_in_prompt_with_image_path(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
             mock_img = MagicMock()
 
-            with patch("src.core.file_utils.ImageUtils.load_and_fix_orientation", return_value=mock_img):
-                with patch("src.core.file_utils.FileTypeRegistry.is_video", return_value=False):
+            with patch("sommelier.core.file_utils.ImageUtils.load_and_fix_orientation", return_value=mock_img):
+                with patch("sommelier.core.file_utils.FileTypeRegistry.is_video", return_value=False):
                     result = client._load_images_in_prompt(["text", Path("photo.jpg")])
                     assert result[0] == "text"
                     assert result[1] == mock_img
 
     def test_load_images_in_prompt_image_load_fails(self):
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         with patch("google.generativeai.configure"):
             client = GeminiClient(api_key="test")
-            with patch("src.core.file_utils.ImageUtils.load_and_fix_orientation", return_value=None):
-                with patch("src.core.file_utils.FileTypeRegistry.is_video", return_value=False):
+            with patch("sommelier.core.file_utils.ImageUtils.load_and_fix_orientation", return_value=None):
+                with patch("sommelier.core.file_utils.FileTypeRegistry.is_video", return_value=False):
                     result = client._load_images_in_prompt([Path("bad.jpg")])
                     assert len(result) == 0
 
@@ -261,14 +261,14 @@ class TestGeminiClient:
 class TestGeminiImageClient:
 
     def test_init_no_api_key(self):
-        from src.core.models import GeminiImageClient
+        from sommelier.core.models import GeminiImageClient
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("GEMINI_API_KEY", None)
             with pytest.raises(ValueError, match="GEMINI_API_KEY not set"):
                 GeminiImageClient()
 
     def test_get_closest_aspect_ratio(self):
-        from src.core.models import GeminiImageClient
+        from sommelier.core.models import GeminiImageClient
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
             try:
                 client = GeminiImageClient(api_key="test")
@@ -284,7 +284,7 @@ class TestGeminiImageClient:
                 pytest.skip("google-genai not installed")
 
     def test_save_image(self, tmp_path):
-        from src.core.models import GeminiImageClient
+        from sommelier.core.models import GeminiImageClient
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
             try:
                 client = GeminiImageClient(api_key="test")
@@ -295,7 +295,7 @@ class TestGeminiImageClient:
                 pytest.skip("google-genai not installed")
 
     def test_save_image_error(self, tmp_path):
-        from src.core.models import GeminiImageClient
+        from sommelier.core.models import GeminiImageClient
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
             try:
                 client = GeminiImageClient(api_key="test")
@@ -312,7 +312,7 @@ class TestGeminiImageClient:
 class TestInitializeGemini:
 
     def test_returns_client(self):
-        from src.core.models import initialize_gemini
+        from sommelier.core.models import initialize_gemini
         with patch("google.generativeai.configure"):
             client = initialize_gemini(api_key="test-key")
             assert client.api_key == "test-key"
@@ -324,11 +324,11 @@ class TestInitializeGemini:
 class TestBackwardCompatibility:
 
     def test_gemini_response_alias(self):
-        from src.core.models import GeminiResponse
+        from sommelier.core.models import GeminiResponse
         assert GeminiResponse is AIResponse
 
     def test_error_classes(self):
-        from src.core.models import GeminiError, SafetyFilterError, TokenLimitError, RateLimitError
+        from sommelier.core.models import GeminiError, SafetyFilterError, TokenLimitError, RateLimitError
         assert issubclass(SafetyFilterError, GeminiError)
         assert issubclass(TokenLimitError, GeminiError)
         assert issubclass(RateLimitError, GeminiError)
