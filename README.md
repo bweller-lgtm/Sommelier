@@ -131,21 +131,14 @@ Sommelier runs as an MCP server inside Claude Desktop, or as a standalone CLI / 
 ### Install
 
 ```bash
-pip install sommelier[gemini]        # Gemini (recommended -- cheapest)
-# or: pip install sommelier[openai]  # OpenAI
-# or: pip install sommelier[all]     # Everything
-```
-
-<details>
-<summary><strong>Install from source</strong></summary>
-
-```bash
 git clone https://github.com/bweller-lgtm/Sommelier.git
 cd Sommelier
-pip install -e ".[gemini]"
+pip install -e ".[gemini]"        # Gemini (recommended -- cheapest)
+# or: pip install -e ".[openai]"  # OpenAI
+# or: pip install -e ".[all]"     # Everything
 ```
 
-</details>
+> **Note:** PyPI distribution coming soon. For now, install from source.
 
 ### First-run setup
 
@@ -160,7 +153,7 @@ Creates your config directory, prompts for API keys, and optionally wires up Cla
 
 ### Claude Desktop (Recommended)
 
-Connect Sommelier to Claude Desktop and use it conversationally. No command-line needed after setup.
+Connect Sommelier to Claude Desktop and use it conversationally. No command-line needed after setup. Sommelier's MCP server is compatible with any MCP host -- the examples below show Claude Desktop, but it works with any app that supports the [Model Context Protocol](https://modelcontextprotocol.io).
 
 If `sommelier init` configured Claude Desktop for you, just restart Claude Desktop. Otherwise, add to your `claude_desktop_config.json`:
 

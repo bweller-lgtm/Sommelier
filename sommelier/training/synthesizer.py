@@ -2,10 +2,15 @@
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
+
+from PIL import Image
 
 from ..core.ai_client import AIClient
+from ..core.file_utils import FileTypeRegistry
+from ..core.media_prep import VideoFrameExtractor, PDFPageRenderer
 from ..core.profiles import ProfileManager, TasteProfile
+from ..features.document_features import DocumentFeatureExtractor
 from .session import TrainingSession
 
 
@@ -232,65 +237,101 @@ Extract ONLY what's clearly stated or strongly implied. Be specific and concrete
 
         return self.ai_client.generate_json(prompt=prompt, fallback=None)
 
+    def _prepare_file_for_analysis(
+        self, path: Path,
+    ) -> Optional[Union[Path, Image.Image, str]]:
+        """Prepare a file for AI analysis.
+
+        Returns a Path (for images/native uploads), PIL Image (for rendered
+        previews), or a text string (for documents/code).  Returns None if
+        the file cannot be prepared.
+        """
+        if FileTypeRegistry.is_image(path):
+            return path
+        elif FileTypeRegistry.is_video(path):
+            frames = VideoFrameExtractor.extract_frames(path, max_frames=1)
+            return frames[0] if frames else None
+        elif path.suffix.lower() == ".pdf":
+            pages = PDFPageRenderer.render_pages(path, max_pages=1)
+            return pages[0] if pages else None
+        else:
+            try:
+                extractor = DocumentFeatureExtractor(max_chars=3000)
+                text = extractor.extract_text(path)
+                if text:
+                    return f"[{path.suffix.upper().lstrip('.')}] {path.name}:\n{text[:2000]}"
+            except Exception:
+                pass
+            return None
+
     def _analyze_share_photos(
         self, share_photos: dict[str, float]
     ) -> Optional[dict]:
-        """Visually analyze Share photos to identify positive patterns."""
+        """Analyze Share files to identify positive patterns."""
         if not share_photos:
             return None
 
-        # Collect existing image files
-        available = []
+        visual_items: list[Union[Path, Image.Image]] = []
+        text_items: list[str] = []
         for path_str in list(share_photos.keys()):
             p = Path(path_str)
-            if p.exists():
-                available.append(p)
-                if len(available) >= self.MAX_VISUAL_SAMPLES:
-                    break
+            if not p.exists():
+                continue
+            item = self._prepare_file_for_analysis(p)
+            if item is None:
+                continue
+            if isinstance(item, str):
+                text_items.append(item)
+            else:
+                visual_items.append(item)
+            if len(visual_items) + len(text_items) >= self.MAX_VISUAL_SAMPLES:
+                break
 
-        if not available:
+        if not visual_items and not text_items:
             return None
 
-        prompt_parts: list = [
-            f"""Analyze these {len(available)} photos that the user CHOSE TO SHARE.
+        total = len(visual_items) + len(text_items)
+        text_context = ""
+        if text_items:
+            text_context = (
+                "\n\n**TEXT-BASED FILES (documents/code) the user CHOSE TO SHARE:**\n"
+                + "\n---\n".join(text_items)
+            )
 
-What visual patterns do you see? What makes these photos share-worthy?
+        prompt_parts: list = [
+            f"""Analyze these {total} files that the user CHOSE TO SHARE.
+
+What patterns do you see? What makes these files share-worthy?
 
 Consider:
-- Subject matter and composition
-- Expressions and emotions
-- Interactions between people
-- Technical quality
-- Framing and perspective
-- Common themes or patterns
+- Subject matter, content quality, and composition
+- For images: expressions, interactions, technical quality, framing
+- For documents/code: clarity, structure, relevance, quality
+- Common themes or patterns across all files
 
 Respond with JSON:
 {{
     "visual_patterns": [
-        "list of common visual characteristics",
-        "e.g., baby and parent both visible and engaged"
+        "list of common visual or content characteristics"
     ],
     "compositional_patterns": [
-        "framing, perspective, distance patterns",
-        "e.g., medium-close shots, subjects well-framed"
+        "structural patterns: framing, organization, layout"
     ],
     "expression_patterns": [
-        "facial expressions and emotional qualities",
-        "e.g., smiling, engaged, making eye contact"
+        "for images: expressions and emotions; for text: tone and voice"
     ],
     "interaction_patterns": [
-        "patterns in how subjects interact",
-        "e.g., parent-child eye contact, shared activity"
+        "patterns in how subjects interact or content connects"
     ],
-    "quality_baseline": "description of minimum technical quality",
-    "summary": "2-3 sentence summary of what makes these photos share-worthy"
+    "quality_baseline": "description of minimum quality standard",
+    "summary": "2-3 sentence summary of what makes these files share-worthy"
 }}
 
-Be specific and concrete. Look for patterns across ALL photos."""
+Be specific and concrete. Look for patterns across ALL files.{text_context}"""
         ]
 
-        for img_path in available:
-            prompt_parts.append(img_path)
+        for item in visual_items:
+            prompt_parts.append(item)
 
         response = self.ai_client.generate(prompt_parts)
         return response.parse_json(fallback=None)
@@ -298,59 +339,69 @@ Be specific and concrete. Look for patterns across ALL photos."""
     def _analyze_storage_photos(
         self, storage_photos: dict[str, float]
     ) -> Optional[dict]:
-        """Visually analyze Storage photos to identify rejection patterns."""
+        """Analyze Storage/rejected files to identify rejection patterns."""
         if not storage_photos:
             return None
 
-        available = []
+        visual_items: list[Union[Path, Image.Image]] = []
+        text_items: list[str] = []
         for path_str in list(storage_photos.keys()):
             p = Path(path_str)
-            if p.exists():
-                available.append(p)
-                if len(available) >= self.MAX_VISUAL_SAMPLES:
-                    break
+            if not p.exists():
+                continue
+            item = self._prepare_file_for_analysis(p)
+            if item is None:
+                continue
+            if isinstance(item, str):
+                text_items.append(item)
+            else:
+                visual_items.append(item)
+            if len(visual_items) + len(text_items) >= self.MAX_VISUAL_SAMPLES:
+                break
 
-        if not available:
+        if not visual_items and not text_items:
             return None
 
-        prompt_parts: list = [
-            f"""Analyze these {len(available)} photos that the user REJECTED (Storage).
+        total = len(visual_items) + len(text_items)
+        text_context = ""
+        if text_items:
+            text_context = (
+                "\n\n**TEXT-BASED FILES (documents/code) the user REJECTED:**\n"
+                + "\n---\n".join(text_items)
+            )
 
-What makes these photos NOT share-worthy? What patterns do you see?
+        prompt_parts: list = [
+            f"""Analyze these {total} files that the user REJECTED (Storage).
+
+What makes these files NOT share-worthy? What patterns do you see?
 
 Consider:
-- Technical issues (blur, lighting, framing)
-- Expression problems
-- Composition issues
-- Subject visibility
-- Emotional quality
+- For images: technical issues, expression problems, composition
+- For documents/code: quality issues, unclear writing, poor structure
+- Common rejection reasons across all files
 
 Respond with JSON:
 {{
     "rejection_patterns": [
-        "list of common reasons for rejection",
-        "e.g., can't see baby's face clearly"
+        "list of common reasons for rejection"
     ],
     "technical_issues": [
-        "technical problems that lead to rejection",
-        "e.g., blurry, poor lighting, bad framing"
+        "technical or quality problems that lead to rejection"
     ],
     "expression_issues": [
-        "facial expression problems",
-        "e.g., eyes closed, vacant expressions, looking away"
+        "for images: expression problems; for text: tone/voice issues"
     ],
     "composition_issues": [
-        "framing and composition problems",
-        "e.g., too zoomed out, unclear subject, awkward angle"
+        "structural, framing, or organization problems"
     ],
-    "summary": "2-3 sentence summary of what makes these photos rejectable"
+    "summary": "2-3 sentence summary of what makes these files rejectable"
 }}
 
-Be specific. Look for patterns across ALL photos."""
+Be specific. Look for patterns across ALL files.{text_context}"""
         ]
 
-        for img_path in available:
-            prompt_parts.append(img_path)
+        for item in visual_items:
+            prompt_parts.append(item)
 
         response = self.ai_client.generate(prompt_parts)
         return response.parse_json(fallback=None)
@@ -373,7 +424,7 @@ Be specific. Look for patterns across ALL photos."""
 Incorporate the new training data to REFINE this profile. Keep what works,
 adjust what the training data contradicts, and add new insights."""
 
-        prompt = f"""Synthesize these analyses into a comprehensive photo sorting taste profile.
+        prompt = f"""Synthesize these analyses into a comprehensive file sorting taste profile.
 
 **REASONING TEXT ANALYSIS:**
 {json.dumps(reasoning_analysis, indent=2) if reasoning_analysis else "Not available"}

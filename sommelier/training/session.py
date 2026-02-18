@@ -52,7 +52,8 @@ class TrainingSession:
     updated_at: str = ""
     bursts: list[list[str]] = field(default_factory=list)  # burst groups
     singletons: list[str] = field(default_factory=list)  # non-burst photos
-    total_photos: int = 0
+    total_files: int = 0
+    media_types: list[str] = field(default_factory=list)
     pairwise: list[PairwiseComparison] = field(default_factory=list)
     gallery: list[GallerySelection] = field(default_factory=list)
     current_comparison: Optional[dict] = None  # tracks what was last served
@@ -72,6 +73,7 @@ class TrainingSession:
         folder_path: str,
         bursts: list[list[str]],
         singletons: list[str],
+        media_types: list[str] | None = None,
     ) -> "TrainingSession":
         """Create a new training session."""
         session_id = uuid.uuid4().hex[:12]
@@ -82,7 +84,8 @@ class TrainingSession:
             folder_path=folder_path,
             bursts=bursts,
             singletons=singletons,
-            total_photos=total,
+            total_files=total,
+            media_types=media_types or ["image"],
         )
 
     def save(self, profiles_dir: Path) -> None:
@@ -118,7 +121,8 @@ class TrainingSession:
                     "session_id": data["session_id"],
                     "profile_name": data["profile_name"],
                     "status": data["status"],
-                    "total_photos": data["total_photos"],
+                    "total_files": data.get("total_files", data.get("total_photos", 0)),
+                    "media_types": data.get("media_types", ["image"]),
                     "total_labeled": (
                         len(data.get("pairwise", []))
                         + len(data.get("gallery", []))
@@ -197,7 +201,8 @@ class TrainingSession:
             "session_id": self.session_id,
             "profile_name": self.profile_name,
             "status": self.status,
-            "total_photos": self.total_photos,
+            "total_files": self.total_files,
+            "media_types": self.media_types,
             "total_bursts": len(self.bursts),
             "total_singletons": len(self.singletons),
             "pairwise_count": len(self.pairwise),
@@ -205,10 +210,10 @@ class TrainingSession:
             "between_burst": between,
             "gallery_count": len(self.gallery),
             "total_labeled": total_labeled,
-            "unique_photos_labeled": len(labeled),
+            "unique_files_labeled": len(labeled),
             "coverage_pct": round(
-                len(labeled) / self.total_photos * 100, 1
-            ) if self.total_photos > 0 else 0,
+                len(labeled) / self.total_files * 100, 1
+            ) if self.total_files > 0 else 0,
             "choices": choices,
             "comparisons_served": self.comparisons_served,
             "ready_to_synthesize": total_labeled >= 15,
@@ -225,7 +230,8 @@ class TrainingSession:
             "updated_at": self.updated_at,
             "bursts": self.bursts,
             "singletons": self.singletons,
-            "total_photos": self.total_photos,
+            "total_files": self.total_files,
+            "media_types": self.media_types,
             "pairwise": [asdict(c) for c in self.pairwise],
             "gallery": [asdict(g) for g in self.gallery],
             "current_comparison": self.current_comparison,
@@ -250,7 +256,8 @@ class TrainingSession:
             updated_at=data.get("updated_at", ""),
             bursts=data.get("bursts", []),
             singletons=data.get("singletons", []),
-            total_photos=data.get("total_photos", 0),
+            total_files=data.get("total_files", data.get("total_photos", 0)),
+            media_types=data.get("media_types", ["image"]),
             pairwise=pairwise,
             gallery=gallery,
             current_comparison=data.get("current_comparison"),

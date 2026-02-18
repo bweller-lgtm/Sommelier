@@ -63,7 +63,7 @@ class TestTrainingSession:
         assert session.session_id
         assert len(session.session_id) == 12
         assert session.profile_name == "test-profile"
-        assert session.total_photos == 6
+        assert session.total_files == 6
         assert session.status == "active"
         assert session.created_at
         assert session.pairwise == []
@@ -147,7 +147,7 @@ class TestTrainingSession:
         assert stats["choices"]["left"] == 1
         assert stats["choices"]["both"] == 1
         assert stats["total_labeled"] == 2
-        assert stats["total_photos"] == 5
+        assert stats["total_files"] == 5
         assert not stats["ready_to_synthesize"]
 
     def test_ready_to_synthesize_at_15(self):
@@ -226,7 +226,7 @@ class TestTrainingSession:
         session.save(tmp_path)
         loaded = TrainingSession.load(session.session_id, tmp_path)
 
-        assert loaded.total_photos == 4
+        assert loaded.total_files == 4
         assert loaded.comparisons_served == 5
         assert loaded.current_comparison["type"] == "pairwise_within"
         assert loaded.pairwise[0].choice == "neither"
