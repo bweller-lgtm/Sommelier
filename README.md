@@ -106,24 +106,24 @@ Profiles are stored as JSON in `profiles/`. Sommelier ships with starter profile
 
 ### Ways to Create a Profile
 
-| Method | Input | Time | Fidelity |
+| Method | Input | Time | Best for |
 |--------|-------|------|----------|
-| Quick Profile | Plain English description | ~10s | Low |
-| Generate from Examples | Good/bad example folders | ~2 min | Medium |
-| **Pairwise Training** | 15-50+ side-by-side comparisons | 15-30 min | **High** |
+| Quick Profile | Plain English description | ~10s | Getting started fast |
+| Generate from Examples | Good/bad example folders | ~2 min | When you have sorted examples |
+| **Pairwise Training** | 15-50+ side-by-side comparisons | 15-30 min | **Highest accuracy** |
 
-- **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description.
+- **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description. Great for a first pass.
 - **From examples:** Point `sommelier_generate_profile` at a folder of good examples and a folder of bad examples. Sommelier analyzes both and synthesizes criteria.
-- **Pairwise training:** Start a training session on a photo folder. Sommelier presents side-by-side comparisons and burst galleries. After 15-50+ choices, it synthesizes a high-fidelity profile from your decisions. Run entirely through MCP tools in Claude Desktop.
+- **Pairwise training:** Launch the Gradio trainer (`python taste_trainer.py`) for the highest-fidelity option. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile that captures exactly how you think about quality.
 - **By hand:** Write a JSON file directly in `profiles/`.
 
 ### Training and Refinement
 
-Profiles improve over time through MCP tools in Claude Desktop:
+Profiles improve over time:
 
-1. **Pairwise training** -- `sommelier_start_training` scans a folder, detects bursts, and begins a session. Use `sommelier_get_comparison` and `sommelier_submit_comparison` to work through side-by-side choices. For burst groups, `sommelier_submit_gallery` lets you pick keepers. When done, `sommelier_synthesize_profile` generates a profile from your decisions.
+1. **Pairwise training** -- Run `python taste_trainer.py` to launch a Gradio UI. Point it at a photo folder, compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile when you have enough labels (15+).
 
-2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `sommelier_refine_profile`. Sommelier analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
+2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `sommelier_refine_profile` in Claude Desktop. Sommelier analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
 
 3. **Simple feedback** -- Submit individual corrections via `sommelier_submit_feedback` for lightweight feedback without full refinement.
 
@@ -184,11 +184,10 @@ Restart Claude Desktop. Ask it: *"Check my Sommelier status"* to verify everythi
 - *"Sort the photos in my Camera Roll folder"*
 - *"Create a profile for grading student essays"*
 - *"Generate a taste profile from my best code examples in src/"*
-- *"Start a training session on my vacation photos"*
 - *"Refine my photo profile -- I disagreed with some of the results"*
 
 <details>
-<summary><strong>All MCP tools</strong> (19 tools)</summary>
+<summary><strong>All MCP tools</strong> (13 tools)</summary>
 
 | Tool | What it does |
 |------|-------------|
@@ -204,14 +203,9 @@ Restart Claude Desktop. Ask it: *"Check my Sommelier status"* to verify everythi
 | `sommelier_classify_files` | Classify specific files by path |
 | `sommelier_submit_feedback` | Submit classification corrections |
 | `sommelier_view_feedback` | Review all feedback and stats |
-| | **Training & Refinement** |
-| `sommelier_start_training` | Start a pairwise training session on a photo folder |
-| `sommelier_get_comparison` | Get next photo comparison from active session |
-| `sommelier_submit_comparison` | Record pairwise choice with reasoning |
-| `sommelier_submit_gallery` | Record burst gallery keeper selections |
-| `sommelier_training_status` | Get session progress or list all sessions |
-| `sommelier_synthesize_profile` | Generate profile from training data (AI) |
 | `sommelier_refine_profile` | Refine profile from classification corrections (AI) |
+
+Pairwise training (side-by-side photo comparison and profile synthesis) is handled by the standalone Gradio trainer: `python taste_trainer.py`.
 
 </details>
 
@@ -411,6 +405,7 @@ src/
 |-------------|---------|
 | `mcp_server.py` | MCP server for Claude Desktop |
 | `taste_classify.py` | CLI classification |
+| `taste_trainer.py` | Gradio pairwise training UI |
 | `serve.py` | REST API server |
 
 </details>
