@@ -24,7 +24,7 @@ os.chdir(Path(__file__).parent)
 
 t0 = time.time()
 print("[sommelier] Importing modules...", file=sys.stderr, flush=True)
-from src.mcp.server import create_mcp_server
+from sommelier.mcp.server import create_mcp_server
 print(f"[sommelier] Imports done in {time.time() - t0:.1f}s", file=sys.stderr, flush=True)
 
 

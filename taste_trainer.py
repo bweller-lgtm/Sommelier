@@ -1,12 +1,12 @@
 """Gradio UI for pairwise taste training.
 
 Thin UI layer that delegates to the existing training backend:
-- src/training/session.py   -- TrainingSession
-- src/training/sampler.py   -- ComparisonSampler
-- src/training/synthesizer.py -- ProfileSynthesizer
-- src/features/burst_detector.py -- BurstDetector
-- src/core/file_utils.py    -- FileTypeRegistry, ImageUtils
-- src/core/provider_factory.py -- create_ai_client
+- sommelier/training/session.py   -- TrainingSession
+- sommelier/training/sampler.py   -- ComparisonSampler
+- sommelier/training/synthesizer.py -- ProfileSynthesizer
+- sommelier/features/burst_detector.py -- BurstDetector
+- sommelier/core/file_utils.py    -- FileTypeRegistry, ImageUtils
+- sommelier/core/provider_factory.py -- create_ai_client
 """
 
 import sys
@@ -18,12 +18,12 @@ load_dotenv()
 
 import gradio as gr
 
-from src.core.config import load_config, BurstDetectionConfig
-from src.core.file_utils import FileTypeRegistry, ImageUtils
-from src.core.profiles import ProfileManager
-from src.features.burst_detector import BurstDetector
-from src.training.session import TrainingSession
-from src.training.sampler import ComparisonSampler
+from sommelier.core.config import load_config, BurstDetectionConfig
+from sommelier.core.file_utils import FileTypeRegistry, ImageUtils
+from sommelier.core.profiles import ProfileManager
+from sommelier.features.burst_detector import BurstDetector
+from sommelier.training.session import TrainingSession
+from sommelier.training.sampler import ComparisonSampler
 
 # ── Defaults ────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ MIN_LABELS = 15
 def _load_config():
     if CONFIG_PATH.exists():
         return load_config(CONFIG_PATH)
-    from src.core.config import Config
+    from sommelier.core.config import Config
     return Config()
 
 
@@ -76,8 +76,8 @@ def _detect_bursts_with_embeddings(
     """Detect bursts using CLIP embeddings + temporal proximity."""
     config = _load_config()
     try:
-        from src.features.embeddings import EmbeddingExtractor
-        from src.core.cache import CacheManager
+        from sommelier.features.embeddings import EmbeddingExtractor
+        from sommelier.core.cache import CacheManager
 
         cache_manager = CacheManager(
             config.paths.cache_root,
@@ -311,8 +311,8 @@ def build_app() -> gr.Blocks:
         config = _load_config()
         pm = ProfileManager(config.profiles.profiles_dir)
 
-        from src.core.provider_factory import create_ai_client
-        from src.training.synthesizer import ProfileSynthesizer
+        from sommelier.core.provider_factory import create_ai_client
+        from sommelier.training.synthesizer import ProfileSynthesizer
 
         ai_client = create_ai_client(config)
         synthesizer = ProfileSynthesizer(ai_client, pm)

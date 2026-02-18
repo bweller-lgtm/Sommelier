@@ -2,7 +2,7 @@
 """Launch the Taste Cloner API server."""
 import argparse
 import uvicorn
-from src.api.app import create_app
+from sommelier.api.app import create_app
 
 
 def main():

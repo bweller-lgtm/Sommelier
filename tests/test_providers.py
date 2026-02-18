@@ -5,10 +5,10 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock, PropertyMock
 
-from src.core.ai_client import AIClient, AIResponse
-from src.core.config import Config, ModelConfig
-from src.core.provider_factory import create_ai_client, detect_available_providers
-from src.core.media_prep import ImageEncoder, VideoFrameExtractor, PDFPageRenderer
+from sommelier.core.ai_client import AIClient, AIResponse
+from sommelier.core.config import Config, ModelConfig
+from sommelier.core.provider_factory import create_ai_client, detect_available_providers
+from sommelier.core.media_prep import ImageEncoder, VideoFrameExtractor, PDFPageRenderer
 
 
 # ── AIResponse tests ───────────────────────────────────────────────────
@@ -85,7 +85,7 @@ class TestAIClientABC:
 
     def test_gemini_client_is_ai_client(self):
         """GeminiClient should be an instance of AIClient."""
-        from src.core.models import GeminiClient
+        from sommelier.core.models import GeminiClient
         assert issubclass(GeminiClient, AIClient)
 
 
@@ -96,11 +96,11 @@ class TestGeminiResponseAlias:
     """GeminiResponse should be an alias for AIResponse."""
 
     def test_alias_identity(self):
-        from src.core.models import GeminiResponse
+        from sommelier.core.models import GeminiResponse
         assert GeminiResponse is AIResponse
 
     def test_alias_works(self):
-        from src.core.models import GeminiResponse
+        from sommelier.core.models import GeminiResponse
         resp = GeminiResponse(text="test", raw_response=None)
         assert resp.text == "test"
         assert isinstance(resp, AIResponse)
@@ -295,7 +295,7 @@ class TestOpenAIProviderMessages:
         with patch.dict(os.environ, env):
             mock_openai = MagicMock()
             with patch.dict("sys.modules", {"openai": mock_openai}):
-                from src.core.providers.openai_provider import OpenAIProvider
+                from sommelier.core.providers.openai_provider import OpenAIProvider
                 return OpenAIProvider(api_key="test-key")
 
     def test_string_prompt(self, provider):
@@ -333,7 +333,7 @@ class TestAnthropicProviderContent:
         with patch.dict(os.environ, env):
             mock_anthropic = MagicMock()
             with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
-                from src.core.providers.anthropic_provider import AnthropicProvider
+                from sommelier.core.providers.anthropic_provider import AnthropicProvider
                 return AnthropicProvider(api_key="test-key")
 
     def test_string_prompt(self, provider):
@@ -444,7 +444,7 @@ class TestAnthropicPathConversion:
         with patch.dict(os.environ, env):
             mock_anthropic = MagicMock()
             with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
-                from src.core.providers.anthropic_provider import AnthropicProvider
+                from sommelier.core.providers.anthropic_provider import AnthropicProvider
                 return AnthropicProvider(api_key="test-key")
 
     def test_pdf_native_support(self, provider, tmp_path):
@@ -476,7 +476,7 @@ class TestOpenAIPathConversion:
         with patch.dict(os.environ, env):
             mock_openai = MagicMock()
             with patch.dict("sys.modules", {"openai": mock_openai}):
-                from src.core.providers.openai_provider import OpenAIProvider
+                from sommelier.core.providers.openai_provider import OpenAIProvider
                 return OpenAIProvider(api_key="test-key")
 
     def test_unknown_file_type(self, provider, tmp_path):

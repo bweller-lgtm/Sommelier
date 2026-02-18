@@ -20,24 +20,24 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 
 # Import refactored infrastructure
-from src.core import (
+from sommelier.core import (
     load_config,
     CacheManager,
     FileTypeRegistry,
     ProfileManager,
     create_ai_client,
 )
-from src.features import (
+from sommelier.features import (
     QualityScorer,
     BurstDetector,
     EmbeddingExtractor,
 )
-from src.classification import (
+from sommelier.classification import (
     PromptBuilder,
     MediaClassifier,
     Router,
 )
-from src.pipelines import MixedPipeline, PhotoPipeline, DocumentPipeline
+from sommelier.pipelines import MixedPipeline, PhotoPipeline, DocumentPipeline
 
 
 def parse_arguments():
@@ -64,8 +64,8 @@ Examples:
     parser.add_argument(
         "--config",
         type=str,
-        default="config.yaml",
-        help="Path to configuration file (default: config.yaml)"
+        default=None,
+        help="Path to configuration file (default: auto-detect)"
     )
 
     parser.add_argument(
@@ -200,9 +200,10 @@ def main():
         sys.exit(1)
 
     # Load configuration
-    print(f"Loading configuration from {args.config}...")
+    config_path = Path(args.config) if args.config else None
+    print(f"Loading configuration...")
     try:
-        config = load_config(Path(args.config))
+        config = load_config(config_path)
     except FileNotFoundError:
         print(f"Error: Config file not found: {args.config}")
         sys.exit(1)

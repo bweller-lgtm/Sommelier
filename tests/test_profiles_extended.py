@@ -3,7 +3,7 @@ import json
 import pytest
 from pathlib import Path
 
-from src.core.profiles import (
+from sommelier.core.profiles import (
     TasteProfile,
     CategoryDefinition,
     PhotoProfileSettings,

@@ -8,8 +8,7 @@
 
 You know quality when you see it -- but writing down *why* is the hard part. Sommelier figures it out for you. Show it examples you like and it reverse-engineers your standards into a reusable profile: a human-readable style guide that doubles as an executable classifier.
 
-Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best files. Grade 200 essays against criteria you never had to write by hand. Every run sharpens the profile. Your taste compounds.
-
+Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best files. Grade 200 essays against criteria you never had to write by hand.
 ---
 
 ## How It Works
@@ -65,16 +64,9 @@ That profile is both a human-readable style guide *and* an executable classifier
 
 Grade 200 student submissions against *your* standards. Create a profile from a handful of A-grade and C-grade examples. Sommelier extracts what your grading decisions had in common and applies them to the full batch -- each result includes a brief explanation of why the submission landed where it did, grounded in the profile's criteria.
 
-Classification uses confidence tiers:
-- **High confidence** -- clearly strong or clearly weak submissions are graded automatically
-- **Medium confidence** -- borderline work goes to a review pile for your attention
-- **Low confidence** -- flagged for manual review rather than guessing
-
-You set the thresholds per category. A grading profile might use `Strong: 0.70, Developing: 0.40` -- anything above 70% confidence goes to Strong, 40-70% to Developing, below 40% to Needs Work. The instructor focuses on the edge cases that require higher judgment, not the obvious calls.
-
 ### Code Standards
 
-Point Sommelier at your `src/` directory with a code quality profile. It classifies every file into tiers (Exemplary / Solid / Needs Work). Feed the Exemplary bucket back into profile generation and Sommelier synthesizes *your* standards -- error handling patterns, naming conventions, architectural choices you actually follow. That profile becomes both a style guide and an automated reviewer for future code.
+Point Sommelier at your `src/` directory with a code quality profile. It classifies every file into tiers (Exemplary / Solid / Needs Work) with explanations. Feed the Exemplary bucket back into profile generation and Sommelier synthesizes *your* standards -- error handling patterns, naming conventions, architectural choices you actually follow. That profile becomes both a style guide and an automated reviewer for future code.
 
 ### Any Collection
 
@@ -114,14 +106,14 @@ Profiles are stored as JSON in `profiles/`. Sommelier ships with starter profile
 
 - **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description. Great for a first pass.
 - **From examples:** Point `sommelier_generate_profile` at a folder of good examples and a folder of bad examples. Sommelier analyzes both and synthesizes criteria.
-- **Pairwise training:** Launch the Gradio trainer (`python taste_trainer.py`) for the highest-fidelity option. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile that captures exactly how you think about quality.
+- **Pairwise training:** Launch the Gradio trainer (`sommelier train <folder>`) for the highest-fidelity option. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile that captures exactly how you think about quality.
 - **By hand:** Write a JSON file directly in `profiles/`.
 
 ### Training and Refinement
 
 Profiles improve over time:
 
-1. **Pairwise training** -- Run `python taste_trainer.py` to launch a Gradio UI. Point it at a photo folder, compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile when you have enough labels (15+).
+1. **Pairwise training** -- Run `sommelier train <folder>` to launch a Gradio UI. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile when you have enough labels (15+).
 
 2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `sommelier_refine_profile` in Claude Desktop. Sommelier analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
 
@@ -133,35 +125,71 @@ Profiles improve over time:
 
 Sommelier runs as an MCP server inside Claude Desktop, or as a standalone CLI / REST API.
 
+**Prerequisites:** Python 3.12+, at least one AI provider API key.
+
+### Install
+
+```bash
+pip install sommelier[gemini]        # Gemini (recommended -- cheapest)
+# or: pip install sommelier[openai]  # OpenAI
+# or: pip install sommelier[all]     # Everything
+```
+
+<details>
+<summary><strong>Install from source</strong></summary>
+
+```bash
+git clone https://github.com/bweller-lgtm/Sommelier.git
+cd Sommelier
+pip install -e ".[gemini]"
+```
+
+</details>
+
+### First-run setup
+
+```bash
+sommelier init
+```
+
+Creates your config directory, prompts for API keys, and optionally wires up Claude Desktop. Config files are stored in a platform-appropriate location:
+- **Windows:** `%APPDATA%\sommelier\`
+- **macOS:** `~/Library/Application Support/sommelier/`
+- **Linux:** `$XDG_CONFIG_HOME/sommelier/` (default `~/.config/sommelier/`)
+
 ### Claude Desktop (Recommended)
 
 Connect Sommelier to Claude Desktop and use it conversationally. No command-line needed after setup.
 
-**Prerequisites:** Python 3.12+, at least one AI provider API key.
+If `sommelier init` configured Claude Desktop for you, just restart Claude Desktop. Otherwise, add to your `claude_desktop_config.json`:
 
-**Quick setup** (handles dependencies, API keys, and Claude Desktop config):
-```bash
-git clone https://github.com/bweller-lgtm/Sommelier.git
-cd Sommelier
-py -3.12 setup_sommelier.py
+```json
+{
+  "mcpServers": {
+    "sommelier": {
+      "command": "sommelier",
+      "args": ["serve"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
 ```
 
 <details>
-<summary><strong>Manual setup</strong></summary>
+<summary><strong>Claude Desktop config locations</strong></summary>
 
-**Step 1.** Install dependencies:
-```bash
-py -3.12 -m pip install -r requirements.txt
-```
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux:** `$XDG_CONFIG_HOME/Claude/claude_desktop_config.json`
 
-**Step 2.** Create a `.env` file in the project root with at least one key:
-```
-GEMINI_API_KEY=your_key_here      # Recommended (cheapest, native video/PDF)
-OPENAI_API_KEY=your_key_here      # GPT-4o / GPT-4.1
-ANTHROPIC_API_KEY=your_key_here   # Claude
-```
+</details>
 
-**Step 3.** Add to your Claude Desktop config (`claude_desktop_config.json`):
+<details>
+<summary><strong>Running from a cloned repo (alternative)</strong></summary>
+
 ```json
 {
   "mcpServers": {
@@ -205,7 +233,7 @@ Restart Claude Desktop. Ask it: *"Check my Sommelier status"* to verify everythi
 | `sommelier_view_feedback` | Review all feedback and stats |
 | `sommelier_refine_profile` | Refine profile from classification corrections (AI) |
 
-Pairwise training (side-by-side photo comparison and profile synthesis) is handled by the standalone Gradio trainer: `python taste_trainer.py`.
+Pairwise training (side-by-side photo comparison and profile synthesis) is handled by the standalone Gradio trainer: `sommelier train <folder>`.
 
 </details>
 
@@ -214,16 +242,19 @@ Pairwise training (side-by-side photo comparison and profile synthesis) is handl
 
 ```bash
 # Classify a folder (auto-detects media types and provider)
-py -3.12 taste_classify.py "C:\Photos\MyFolder"
+sommelier classify ~/Photos/MyFolder
 
 # Use a specific taste profile
-py -3.12 taste_classify.py "C:\Photos\MyFolder" --profile default-photos
+sommelier classify ~/Photos/MyFolder --profile default-photos
 
 # Force a specific AI provider
-py -3.12 taste_classify.py "C:\Photos\MyFolder" --provider openai
+sommelier classify ~/Photos/MyFolder --provider openai
 
 # Dry run (test without moving files)
-py -3.12 taste_classify.py "C:\Photos\MyFolder" --dry-run
+sommelier classify ~/Photos/MyFolder --dry-run
+
+# Check setup status
+sommelier status
 ```
 
 Files are sorted into `MyFolder_sorted/` with subfolders matching your profile's categories.
@@ -234,9 +265,9 @@ Files are sorted into `MyFolder_sorted/` with subfolders matching your profile's
 <summary><strong>REST API</strong></summary>
 
 ```bash
-py -3.12 serve.py                          # Start on localhost:8000
-py -3.12 serve.py --host 0.0.0.0 --port 9000  # Custom host/port
-py -3.12 serve.py --reload                 # Development mode
+python serve.py                          # Start on localhost:8000
+python serve.py --host 0.0.0.0 --port 9000  # Custom host/port
+python serve.py --reload                 # Development mode
 ```
 
 Interactive docs at `http://localhost:8000/docs`.
@@ -377,8 +408,8 @@ Automatic retry with exponential backoff for API failures.
 
 Reprocess failures:
 ```bash
-py -3.12 clear_failed_for_retry.py "path/to/sorted" --dry-run  # Preview
-py -3.12 clear_failed_for_retry.py "path/to/sorted"            # Clear and re-run
+python clear_failed_for_retry.py "path/to/sorted" --dry-run  # Preview
+python clear_failed_for_retry.py "path/to/sorted"            # Clear and re-run
 ```
 
 </details>
@@ -387,7 +418,7 @@ py -3.12 clear_failed_for_retry.py "path/to/sorted"            # Clear and re-ru
 <summary><strong>Architecture</strong></summary>
 
 ```
-src/
+sommelier/
 ├── core/                  # Configuration, caching, AI clients, profiles
 │   ├── ai_client.py       # AIClient ABC + AIResponse
 │   ├── provider_factory.py # Auto-detect provider from API keys
@@ -401,12 +432,13 @@ src/
 └── mcp/                   # MCP server (Claude Desktop)
 ```
 
-| Entry Point | Purpose |
-|-------------|---------|
-| `mcp_server.py` | MCP server for Claude Desktop |
-| `taste_classify.py` | CLI classification |
-| `taste_trainer.py` | Gradio pairwise training UI |
-| `serve.py` | REST API server |
+| Command | Purpose |
+|---------|---------|
+| `sommelier classify <folder>` | Classify files against a profile |
+| `sommelier train <folder>` | Launch Gradio pairwise trainer |
+| `sommelier serve` | Start MCP server for Claude Desktop |
+| `sommelier init` | Interactive first-run setup |
+| `sommelier status` | Show config, profiles, API key status |
 
 </details>
 
@@ -414,9 +446,9 @@ src/
 <summary><strong>Development</strong></summary>
 
 ```bash
+pip install -e ".[gemini,dev]"               # Install for development
 pytest tests/ -v                              # Run tests
-pytest tests/ --cov=src --cov-report=html     # With coverage
-py -3.12 -m pip install -r requirements.txt   # Install dependencies
+pytest tests/ --cov=sommelier --cov-report=html     # With coverage
 ```
 
 </details>
@@ -426,11 +458,11 @@ py -3.12 -m pip install -r requirements.txt   # Install dependencies
 
 **"No AI provider configured"** -- Create `.env` with at least one API key (`GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`).
 
-**"No module named 'src'"** -- Run from the project root directory.
+**"No module named 'sommelier'"** -- Install with `pip install -e .` or run from the project root directory.
 
 **Low share rate (<20%)** -- Lower `classification.share_threshold` in `config.yaml` (e.g., 0.50).
 
-**Document extraction issues** -- Install the relevant parser: `py -3.12 -m pip install pypdf python-docx openpyxl python-pptx beautifulsoup4`.
+**Document extraction issues** -- Install document support: `pip install sommelier[documents]`.
 
 </details>
 
@@ -438,4 +470,4 @@ py -3.12 -m pip install -r requirements.txt   # Install dependencies
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.2.0 | **Last Updated:** February 2026
+**Version:** 3.0.0 | **Last Updated:** February 2026

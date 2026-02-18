@@ -5,10 +5,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 from PIL import Image
 
-from src.core.config import load_config, QualityConfig, BurstDetectionConfig, ModelConfig, PerformanceConfig
-from src.features.quality import QualityScorer, FaceDetector
-from src.features.burst_detector import BurstDetector
-from src.features.document_features import DocumentFeatures, DocumentFeatureExtractor, DocumentGrouper
+from sommelier.core.config import load_config, QualityConfig, BurstDetectionConfig, ModelConfig, PerformanceConfig
+from sommelier.features.quality import QualityScorer, FaceDetector
+from sommelier.features.burst_detector import BurstDetector
+from sommelier.features.document_features import DocumentFeatures, DocumentFeatureExtractor, DocumentGrouper
 
 
 # ── QualityScorer ───────────────────────────────────────────────────
@@ -431,7 +431,7 @@ class TestDocumentGrouper:
 class TestEmbeddingExtractor:
 
     def test_compute_similarity(self):
-        from src.features.embeddings import EmbeddingExtractor
+        from sommelier.features.embeddings import EmbeddingExtractor
         model_config = MagicMock()
         model_config.clip_model = "ViT-B-32"
         model_config.clip_pretrained = "laion2b_s34b_b79k"
@@ -444,14 +444,14 @@ class TestEmbeddingExtractor:
         assert extractor.compute_similarity(a, b) == pytest.approx(1.0)
 
     def test_compute_similarity_orthogonal(self):
-        from src.features.embeddings import EmbeddingExtractor
+        from sommelier.features.embeddings import EmbeddingExtractor
         extractor = EmbeddingExtractor(MagicMock(), MagicMock())
         a = np.array([1.0, 0.0])
         b = np.array([0.0, 1.0])
         assert extractor.compute_similarity(a, b) == pytest.approx(0.0)
 
     def test_compute_similarity_matrix(self):
-        from src.features.embeddings import EmbeddingExtractor
+        from sommelier.features.embeddings import EmbeddingExtractor
         extractor = EmbeddingExtractor(MagicMock(), MagicMock())
         embeddings = np.array([
             [1.0, 0.0],
@@ -465,13 +465,13 @@ class TestEmbeddingExtractor:
         assert matrix[0, 2] == pytest.approx(1.0)
 
     def test_lazy_model_not_loaded(self):
-        from src.features.embeddings import EmbeddingExtractor
+        from sommelier.features.embeddings import EmbeddingExtractor
         extractor = EmbeddingExtractor(MagicMock(), MagicMock())
         assert extractor._model is None
         assert extractor._preprocess is None
 
     def test_extract_embedding_cache_hit(self):
-        from src.features.embeddings import EmbeddingExtractor
+        from sommelier.features.embeddings import EmbeddingExtractor
         mock_cache = MagicMock()
         mock_cache.get.return_value = np.array([0.5, 0.5])
         extractor = EmbeddingExtractor(MagicMock(), MagicMock(), cache_manager=mock_cache)

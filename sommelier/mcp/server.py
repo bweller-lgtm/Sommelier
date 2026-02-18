@@ -371,7 +371,7 @@ def create_mcp_server():
                     "properties": {
                         "folder_path": {
                             "type": "string",
-                            "description": "Full path to the folder (e.g., 'C:\\Users\\me\\Photos\\Unsorted')",
+                            "description": "Full path to the folder (e.g., '/Users/me/Photos/Unsorted' or 'C:\\Users\\me\\Photos\\Unsorted')",
                         },
                         "profile_name": {
                             "type": "string",

@@ -276,23 +276,26 @@ def load_config(config_path: Optional[Path] = None) -> Config:
     """
     Load configuration from YAML file.
 
+    Resolution order:
+        1. Explicit *config_path* (if provided and exists)
+        2. ``./config.yaml`` (project-local, for development)
+        3. User config dir ``config.yaml`` (platform-aware)
+        4. Built-in defaults (no file needed)
+
     Args:
-        config_path: Path to config.yaml file. If None, looks in current directory.
+        config_path: Explicit path to config.yaml file.
 
     Returns:
         Config object with validated settings.
-
-    Raises:
-        FileNotFoundError: If config file doesn't exist.
-        ValueError: If config validation fails.
     """
-    if config_path is None:
-        config_path = Path("config.yaml")
+    from sommelier.dirs import find_config
 
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
+    resolved = find_config(config_path)
 
-    with open(config_path, "r", encoding="utf-8") as f:
+    if resolved is None:
+        return Config()
+
+    with open(resolved, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     return Config.from_dict(data)

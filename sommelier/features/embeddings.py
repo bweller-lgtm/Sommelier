@@ -1,13 +1,15 @@
 """CLIP embedding extraction for images."""
-import torch
-import torch.nn.functional as F
-import open_clip
-import numpy as np
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, TYPE_CHECKING
 from tqdm import tqdm
 from PIL import Image
 
+from ..compat import require
+
+if TYPE_CHECKING:
+    import numpy as np
 from ..core.cache import CacheManager, CacheKey
 from ..core.config import ModelConfig, PerformanceConfig
 from ..core.file_utils import ImageUtils
@@ -46,6 +48,11 @@ class EmbeddingExtractor:
     def _load_model(self):
         """Lazy load CLIP model."""
         if self._model is None:
+            torch = require("torch", "ml")
+            open_clip = require("open_clip", "ml")
+            self._torch = torch
+            self._np = require("numpy", "ml")
+
             print(f"📦 Loading CLIP model: {self.model_config.clip_model}")
 
             self._device = self.performance_config.device
@@ -119,10 +126,10 @@ class EmbeddingExtractor:
             img_tensor = self._preprocess(img).unsqueeze(0).to(self._device)
 
             # Extract embedding
-            with torch.no_grad():
+            with self._torch.no_grad():
                 embedding = self._model.encode_image(img_tensor)
                 # Normalize
-                embedding = F.normalize(embedding, dim=-1)
+                embedding = self._torch.nn.functional.normalize(embedding, dim=-1)
                 # Convert to numpy
                 embedding = embedding.cpu().numpy()[0]
 
@@ -166,7 +173,7 @@ class EmbeddingExtractor:
             batch_embeddings = self._extract_batch(batch_paths, use_cache)
             embeddings.extend(batch_embeddings)
 
-        return np.array(embeddings)
+        return self._np.array(embeddings)
 
     def _extract_batch(
         self,
@@ -220,7 +227,7 @@ class EmbeddingExtractor:
             else:
                 # Failed - use zero vector
                 embedding_dim = 512  # Default for ViT-B-32
-                batch_embeddings.append(np.zeros(embedding_dim))
+                batch_embeddings.append(self._np.zeros(embedding_dim))
 
         return batch_embeddings
 
@@ -255,13 +262,13 @@ class EmbeddingExtractor:
 
         try:
             # Preprocess batch
-            img_tensors = torch.stack([self._preprocess(img) for img in images]).to(self._device)
+            img_tensors = self._torch.stack([self._preprocess(img) for img in images]).to(self._device)
 
             # Extract embeddings
-            with torch.no_grad():
+            with self._torch.no_grad():
                 batch_embeddings = self._model.encode_image(img_tensors)
                 # Normalize
-                batch_embeddings = F.normalize(batch_embeddings, dim=-1)
+                batch_embeddings = self._torch.nn.functional.normalize(batch_embeddings, dim=-1)
                 # Convert to numpy
                 batch_embeddings = batch_embeddings.cpu().numpy()
 
@@ -294,7 +301,8 @@ class EmbeddingExtractor:
         Returns:
             Cosine similarity (0 to 1).
         """
-        return float(np.dot(embedding1, embedding2))
+        import numpy
+        return float(numpy.dot(embedding1, embedding2))
 
     def compute_similarity_matrix(
         self,
@@ -310,4 +318,5 @@ class EmbeddingExtractor:
             Similarity matrix, shape [N, N].
         """
         # embeddings are already normalized, so dot product = cosine similarity
-        return np.dot(embeddings, embeddings.T)
+        import numpy
+        return numpy.dot(embeddings, embeddings.T)

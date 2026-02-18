@@ -36,12 +36,8 @@ class AnthropicProvider(AIClient):
         self.timeout = timeout
         self.video_frame_count = video_frame_count
 
-        try:
-            import anthropic
-        except ImportError:
-            raise ImportError(
-                "anthropic package not installed. Install with: pip install anthropic"
-            )
+        from ...compat import require
+        anthropic = require("anthropic", "anthropic")
         self._client = anthropic.Anthropic(
             api_key=self.api_key,
             timeout=self.timeout,

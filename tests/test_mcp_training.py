@@ -9,7 +9,7 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-from src.core.profiles import ProfileManager
+from sommelier.core.profiles import ProfileManager
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def pm(profiles_dir):
 class TestHandleRefineProfile:
     @patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"})
     def test_refine_profile(self, pm):
-        from src.mcp.server import _handle_refine_profile
+        from sommelier.mcp.server import _handle_refine_profile
 
         # Create a profile to refine
         pm.create_profile(
@@ -54,8 +54,8 @@ class TestHandleRefineProfile:
             "changes_made": ["Added expression-related criteria"],
         }
 
-        with patch("src.core.provider_factory.create_ai_client", return_value=mock_client):
-            with patch("src.mcp.server._get_config"):
+        with patch("sommelier.core.provider_factory.create_ai_client", return_value=mock_client):
+            with patch("sommelier.mcp.server._get_config"):
                 result = _handle_refine_profile(pm, {
                     "profile_name": "refine-test",
                     "corrections": [
@@ -72,7 +72,7 @@ class TestHandleRefineProfile:
         assert result["corrections_applied"] == 1
 
     def test_refine_nonexistent_profile(self, pm):
-        from src.mcp.server import _handle_refine_profile
+        from sommelier.mcp.server import _handle_refine_profile
 
         with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"}):
             result = _handle_refine_profile(pm, {
@@ -82,7 +82,7 @@ class TestHandleRefineProfile:
         assert "error" in result
 
     def test_refine_no_corrections(self, pm):
-        from src.mcp.server import _handle_refine_profile
+        from sommelier.mcp.server import _handle_refine_profile
 
         pm.create_profile(
             name="empty-corrections",

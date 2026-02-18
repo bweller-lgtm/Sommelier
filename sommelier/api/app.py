@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src import __version__
+from sommelier import __version__
 
 
 def create_app() -> FastAPI:
@@ -23,10 +23,10 @@ def create_app() -> FastAPI:
     )
 
     # Mount routers
-    from src.api.routers.profiles import router as profiles_router
-    from src.api.routers.classify import router as classify_router
-    from src.api.routers.results import router as results_router
-    from src.api.routers.training import router as training_router
+    from sommelier.api.routers.profiles import router as profiles_router
+    from sommelier.api.routers.classify import router as classify_router
+    from sommelier.api.routers.results import router as results_router
+    from sommelier.api.routers.training import router as training_router
 
     app.include_router(profiles_router)
     app.include_router(classify_router)
