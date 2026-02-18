@@ -147,6 +147,8 @@ pip install -e ".[gemini]"
 
 </details>
 
+Both `sommelier` and `taster` work as CLI commands -- they're identical. Examples below use `sommelier`, but you can substitute `taster` anywhere.
+
 ### First-run setup
 
 ```bash
@@ -441,6 +443,8 @@ sommelier/
 | `sommelier init` | Interactive first-run setup |
 | `sommelier status` | Show config, profiles, API key status |
 
+`taster` works as a drop-in alias for `sommelier` in all commands above.
+
 </details>
 
 <details>
@@ -463,7 +467,7 @@ pytest tests/ --cov=sommelier --cov-report=html     # With coverage
 
 **Low share rate (<20%)** -- Lower `classification.share_threshold` in `config.yaml` (e.g., 0.50).
 
-**Document extraction issues** -- Install document support: `pip install sommelier[documents]`.
+**Document extraction issues** -- Install document support: `pip install taster[documents]`.
 
 </details>
 
@@ -471,4 +475,4 @@ pytest tests/ --cov=sommelier --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.0.0 | **Last Updated:** February 2026
+**Version:** 3.1.2 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
