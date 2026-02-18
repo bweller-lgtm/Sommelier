@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/Readme_Logo.png" alt="Sommelier" width="200">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Sommelier/master/assets/Readme_Logo.png" alt="Sommelier" width="200">
 </p>
 
 <h1 align="center">Sommelier</h1>
