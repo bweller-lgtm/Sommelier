@@ -4,8 +4,8 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 
-from sommelier.core import load_config, CacheManager
-from sommelier.features import QualityScorer, BurstDetector
+from taster.core import load_config, CacheManager
+from taster.features import QualityScorer, BurstDetector
 
 
 class TestInfrastructureIntegration:
@@ -111,13 +111,13 @@ class TestInfrastructureIntegration:
 def test_imports():
     """Test that all new modules can be imported."""
     # Core
-    from sommelier.core import Config, load_config, CacheManager, CacheKey
-    from sommelier.core import FileTypeRegistry, ImageUtils
-    from sommelier.core import GeminiClient, initialize_gemini
+    from taster.core import Config, load_config, CacheManager, CacheKey
+    from taster.core import FileTypeRegistry, ImageUtils
+    from taster.core import GeminiClient, initialize_gemini
 
     # Features
-    from sommelier.features import QualityScorer, FaceDetector
-    from sommelier.features import BurstDetector, EmbeddingExtractor
+    from taster.features import QualityScorer, FaceDetector
+    from taster.features import BurstDetector, EmbeddingExtractor
 
     # All imports successful
     assert True

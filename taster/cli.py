@@ -1,4 +1,4 @@
-"""Sommelier CLI — ``sommelier <command>``."""
+"""Taster CLI — ``taster <command>``."""
 
 import argparse
 import sys
@@ -6,10 +6,10 @@ from pathlib import Path
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    from sommelier import __version__
+    from taster import __version__
 
     parser = argparse.ArgumentParser(
-        prog="sommelier",
+        prog="taster",
         description="Teach AI your taste. Apply it to everything.",
     )
     parser.add_argument(
@@ -56,9 +56,9 @@ def _cmd_init(args: argparse.Namespace) -> None:
     import platform
     import subprocess
 
-    from sommelier.dirs import ensure_dirs, get_config_dir, get_env_path
+    from taster.dirs import ensure_dirs, get_config_dir, get_env_path
 
-    print("\nSommelier Setup")
+    print("\nTaster Setup")
     print("=" * 40)
 
     # Step 1: Python version
@@ -112,7 +112,7 @@ def _cmd_init(args: argparse.Namespace) -> None:
 
     has_any = any(keys.get(name) for name, _ in providers)
     if not has_any:
-        print("\n  No API keys configured. You'll need at least one to use Sommelier.")
+        print("\n  No API keys configured. You'll need at least one to use Taster.")
     else:
         lines = []
         for env_var, label in providers:
@@ -138,10 +138,10 @@ def _cmd_init(args: argparse.Namespace) -> None:
 
     if cd_config:
         print(f"  Config location: {cd_config}")
-        setup_claude = input("  Add Sommelier to Claude Desktop? [Y/n] ").strip().lower()
+        setup_claude = input("  Add Taster to Claude Desktop? [Y/n] ").strip().lower()
         if setup_claude != "n":
             mcp_entry = {
-                "command": "sommelier",
+                "command": "taster",
                 "args": ["serve"],
                 "env": {
                     "PYTHONIOENCODING": "utf-8",
@@ -156,18 +156,18 @@ def _cmd_init(args: argparse.Namespace) -> None:
             else:
                 config = {}
             servers = config.setdefault("mcpServers", {})
-            if "sommelier" in servers:
-                print(f"  Sommelier already in {cd_config}")
+            if "taster" in servers:
+                print(f"  Taster already in {cd_config}")
                 update = input("  Overwrite? [y/N] ").strip().lower()
                 if update != "y":
                     print("  Kept existing entry.")
                 else:
-                    servers["sommelier"] = mcp_entry
+                    servers["taster"] = mcp_entry
             else:
-                servers["sommelier"] = mcp_entry
+                servers["taster"] = mcp_entry
             cd_config.parent.mkdir(parents=True, exist_ok=True)
             cd_config.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
-            print(f"  Added Sommelier to {cd_config}")
+            print(f"  Added Taster to {cd_config}")
         else:
             print("  Skipped.")
     else:
@@ -176,7 +176,7 @@ def _cmd_init(args: argparse.Namespace) -> None:
     print("\n" + "=" * 40)
     print("Setup complete!")
     print()
-    print('Open Claude Desktop and say: "Check my Sommelier status"')
+    print('Open Claude Desktop and say: "Check my Taster status"')
     print()
 
 
@@ -186,15 +186,15 @@ def _cmd_classify(args: argparse.Namespace) -> None:
 
     load_dotenv()
 
-    from sommelier.core.config import load_config
-    from sommelier.core.cache import CacheManager
-    from sommelier.core.file_utils import FileTypeRegistry
-    from sommelier.core.profiles import ProfileManager
-    from sommelier.core.provider_factory import create_ai_client
-    from sommelier.pipelines import MixedPipeline
+    from taster.core.config import load_config
+    from taster.core.cache import CacheManager
+    from taster.core.file_utils import FileTypeRegistry
+    from taster.core.profiles import ProfileManager
+    from taster.core.provider_factory import create_ai_client
+    from taster.pipelines import MixedPipeline
 
     # Also load user-level .env
-    from sommelier.dirs import get_env_path
+    from taster.dirs import get_env_path
 
     user_env = get_env_path()
     if user_env.exists():
@@ -224,7 +224,7 @@ def _cmd_classify(args: argparse.Namespace) -> None:
         config.paths.cache_root = Path(args.cache_dir)
 
     # Load profile
-    from sommelier.dirs import find_profiles_dir
+    from taster.dirs import find_profiles_dir
 
     profiles_dir = find_profiles_dir()
     profile_name = args.profile or config.profiles.active_profile
@@ -313,13 +313,13 @@ def _cmd_classify(args: argparse.Namespace) -> None:
 
 def _cmd_train(args: argparse.Namespace) -> None:
     """Launch Gradio pairwise trainer."""
-    from sommelier.compat import require
+    from taster.compat import require
 
     require("gradio", "train")
 
     # Delegate to existing trainer
     sys.argv = ["taste_trainer.py", args.folder]
-    from sommelier.dirs import get_env_path
+    from taster.dirs import get_env_path
     from dotenv import load_dotenv
 
     load_dotenv()
@@ -328,12 +328,12 @@ def _cmd_train(args: argparse.Namespace) -> None:
         load_dotenv(user_env)
 
     # Import and run the trainer UI
-    from sommelier.core.config import load_config, BurstDetectionConfig
-    from sommelier.core.file_utils import FileTypeRegistry, ImageUtils
-    from sommelier.core.profiles import ProfileManager
-    from sommelier.features.burst_detector import BurstDetector
-    from sommelier.training.session import TrainingSession
-    from sommelier.training.sampler import ComparisonSampler
+    from taster.core.config import load_config, BurstDetectionConfig
+    from taster.core.file_utils import FileTypeRegistry, ImageUtils
+    from taster.core.profiles import ProfileManager
+    from taster.features.burst_detector import BurstDetector
+    from taster.training.session import TrainingSession
+    from taster.training.sampler import ComparisonSampler
 
     print(f"Launching Gradio trainer for: {args.folder}")
     print("This will open a browser window for pairwise training.")
@@ -356,14 +356,14 @@ def _cmd_serve(args: argparse.Namespace) -> None:
     import asyncio
     import os
 
-    from sommelier.compat import require
+    from taster.compat import require
 
     require("mcp", "mcp")
 
     from dotenv import load_dotenv
 
     load_dotenv()
-    from sommelier.dirs import get_env_path
+    from taster.dirs import get_env_path
 
     user_env = get_env_path()
     if user_env.exists():
@@ -378,7 +378,7 @@ def _cmd_serve(args: argparse.Namespace) -> None:
                 except Exception:
                     pass
 
-    from sommelier.mcp.server import create_mcp_server
+    from taster.mcp.server import create_mcp_server
 
     server = create_mcp_server()
     init_options = server.create_initialization_options()
@@ -400,14 +400,14 @@ def _cmd_status(args: argparse.Namespace) -> None:
 
     load_dotenv()
 
-    from sommelier import __version__
-    from sommelier.dirs import get_config_dir, find_config, find_profiles_dir, get_env_path
+    from taster import __version__
+    from taster.dirs import get_config_dir, find_config, find_profiles_dir, get_env_path
 
     user_env = get_env_path()
     if user_env.exists():
         load_dotenv(user_env)
 
-    print(f"Sommelier v{__version__}")
+    print(f"Taster v{__version__}")
     print()
 
     # Config location

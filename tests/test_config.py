@@ -3,7 +3,7 @@ import pytest
 import tempfile
 from pathlib import Path
 import yaml
-from sommelier.core.config import (
+from taster.core.config import (
     Config,
     ModelConfig,
     ClassificationConfig,

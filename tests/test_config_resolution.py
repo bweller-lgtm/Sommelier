@@ -5,8 +5,8 @@ import yaml
 from pathlib import Path
 from unittest.mock import patch
 
-from sommelier.core.config import load_config, Config
-from sommelier.core.profiles import ProfileManager
+from taster.core.config import load_config, Config
+from taster.core.profiles import ProfileManager
 
 
 class TestLoadConfigResolution:
@@ -14,7 +14,7 @@ class TestLoadConfigResolution:
 
     def test_returns_defaults_when_no_config_anywhere(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        with patch("sommelier.dirs.get_config_dir", return_value=tmp_path / "empty"):
+        with patch("taster.dirs.get_config_dir", return_value=tmp_path / "empty"):
             config = load_config()
         assert isinstance(config, Config)
         assert config.model.name == "gemini-3-flash-preview"
@@ -43,7 +43,7 @@ class TestLoadConfigResolution:
         user_cfg = tmp_path / "user" / "config.yaml"
         user_cfg.parent.mkdir()
         user_cfg.write_text(yaml.dump({"model": {"name": "user"}}))
-        with patch("sommelier.dirs.get_config_dir", return_value=tmp_path / "user"):
+        with patch("taster.dirs.get_config_dir", return_value=tmp_path / "user"):
             config = load_config()
         assert config.model.name == "local"
 
@@ -52,14 +52,14 @@ class TestLoadConfigResolution:
         user_cfg = tmp_path / "user_config" / "config.yaml"
         user_cfg.parent.mkdir()
         user_cfg.write_text(yaml.dump({"model": {"name": "user-model"}}))
-        with patch("sommelier.dirs.get_config_dir", return_value=tmp_path / "user_config"):
+        with patch("taster.dirs.get_config_dir", return_value=tmp_path / "user_config"):
             config = load_config()
         assert config.model.name == "user-model"
 
     def test_defaults_are_valid_config(self):
         """Defaults (no file) produce a fully usable Config."""
         with (
-            patch("sommelier.dirs.find_config", return_value=None),
+            patch("taster.dirs.find_config", return_value=None),
         ):
             config = load_config()
         assert isinstance(config, Config)

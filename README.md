@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Sommelier/master/assets/Readme_Logo.png" alt="Sommelier" width="200">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/Readme_Logo.png" alt="Taster" width="200">
 </p>
 
-<h1 align="center">Sommelier</h1>
+<h1 align="center">Taster</h1>
 
 <p align="center"><strong>Teach AI your taste. Apply it to everything.</strong></p>
 
-You know quality when you see it -- but writing down *why* is the hard part. Sommelier figures it out for you. Show it examples you like and it reverse-engineers your standards into a reusable profile: a human-readable style guide that doubles as an executable classifier.
+You know quality when you see it -- but writing down *why* is the hard part. Taster figures it out for you. Show it examples you like and it reverse-engineers your standards into a reusable profile: a human-readable style guide that doubles as an executable classifier.
 
 Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best files. Grade 200 essays against criteria you never had to write by hand.
 
@@ -15,7 +15,7 @@ Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from 
 ## How It Works
 
 1. **Classify** -- AI evaluates each file against your profile's criteria and sorts it into categories
-2. **Learn** -- Feed the best results back in, and Sommelier synthesizes what makes them good
+2. **Learn** -- Feed the best results back in, and Taster synthesizes what makes them good
 3. **Apply** -- The generated profile becomes a reusable classifier for future batches
 
 Each cycle sharpens the profile. What starts as "sort my photos" becomes a rich, nuanced document that captures exactly how you think about quality -- then enforces it automatically.
@@ -63,15 +63,15 @@ That profile is both a human-readable style guide *and* an executable classifier
 
 ### Grading at Scale
 
-Grade 200 student submissions against *your* standards. Create a profile from a handful of A-grade and C-grade examples. Sommelier extracts what your grading decisions had in common and applies them to the full batch -- each result includes a brief explanation of why the submission landed where it did, grounded in the profile's criteria.
+Grade 200 student submissions against *your* standards. Create a profile from a handful of A-grade and C-grade examples. Taster extracts what your grading decisions had in common and applies them to the full batch -- each result includes a brief explanation of why the submission landed where it did, grounded in the profile's criteria.
 
 ### Code Standards
 
-Point Sommelier at your `src/` directory with a code quality profile. It classifies every file into tiers (Exemplary / Solid / Needs Work) with explanations. Feed the Exemplary bucket back into profile generation and Sommelier synthesizes *your* standards -- error handling patterns, naming conventions, architectural choices you actually follow. That profile becomes both a style guide and an automated reviewer for future code.
+Point Taster at your `src/` directory with a code quality profile. It classifies every file into tiers (Exemplary / Solid / Needs Work) with explanations. Feed the Exemplary bucket back into profile generation and Taster synthesizes *your* standards -- error handling patterns, naming conventions, architectural choices you actually follow. That profile becomes both a style guide and an automated reviewer for future code.
 
 ### Any Collection
 
-Research papers, product photos, legal documents, design assets. Anything where you "know it when you see it" but can't write the rules upfront. Sommelier closes the gap between your tacit taste and explicit, repeatable judgment.
+Research papers, product photos, legal documents, design assets. Anything where you "know it when you see it" but can't write the rules upfront. Taster closes the gap between your tacit taste and explicit, repeatable judgment.
 
 ---
 
@@ -95,7 +95,7 @@ Profiles define *what* you're classifying, *how* you want it categorized, and *w
 }
 ```
 
-Profiles are stored as JSON in `profiles/`. Sommelier ships with starter profiles for common use cases -- family photos, code review, student essays, and product photography. See the full schema in `profiles/default-photos.json`.
+Profiles are stored as JSON in `profiles/`. Taster ships with starter profiles for common use cases -- family photos, code review, student essays, and product photography. See the full schema in `profiles/default-photos.json`.
 
 ### Ways to Create a Profile
 
@@ -106,25 +106,25 @@ Profiles are stored as JSON in `profiles/`. Sommelier ships with starter profile
 | **Pairwise Training** | 15-50+ side-by-side comparisons | 15-30 min | **Highest accuracy** |
 
 - **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description. Great for a first pass.
-- **From examples:** Point `sommelier_generate_profile` at a folder of good examples and a folder of bad examples. Sommelier analyzes both and synthesizes criteria.
-- **Pairwise training:** Launch the Gradio trainer (`sommelier train <folder>`) for the highest-fidelity option. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile that captures exactly how you think about quality.
+- **From examples:** Point `taster_generate_profile` at a folder of good examples and a folder of bad examples. Taster analyzes both and synthesizes criteria.
+- **Pairwise training:** Launch the Gradio trainer (`taster train <folder>`) for the highest-fidelity option. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile that captures exactly how you think about quality.
 - **By hand:** Write a JSON file directly in `profiles/`.
 
 ### Training and Refinement
 
 Profiles improve over time:
 
-1. **Pairwise training** -- Run `sommelier train <folder>` to launch a Gradio UI. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile when you have enough labels (15+).
+1. **Pairwise training** -- Run `taster train <folder>` to launch a Gradio UI. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile when you have enough labels (15+).
 
-2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `sommelier_refine_profile` in Claude Desktop. Sommelier analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
+2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `taster_refine_profile` in Claude Desktop. Taster analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
 
-3. **Simple feedback** -- Submit individual corrections via `sommelier_submit_feedback` for lightweight feedback without full refinement.
+3. **Simple feedback** -- Submit individual corrections via `taster_submit_feedback` for lightweight feedback without full refinement.
 
 ---
 
 ## Getting Started
 
-Sommelier runs as an MCP server inside Claude Desktop, or as a standalone CLI / REST API.
+Taster runs as an MCP server inside Claude Desktop, or as a standalone CLI / REST API.
 
 **Prerequisites:** Python 3.12+, at least one AI provider API key.
 
@@ -147,30 +147,28 @@ pip install -e ".[gemini]"
 
 </details>
 
-Both `sommelier` and `taster` work as CLI commands -- they're identical. Examples below use `sommelier`, but you can substitute `taster` anywhere.
-
 ### First-run setup
 
 ```bash
-sommelier init
+taster init
 ```
 
 Creates your config directory, prompts for API keys, and optionally wires up Claude Desktop. Config files are stored in a platform-appropriate location:
-- **Windows:** `%APPDATA%\sommelier\`
-- **macOS:** `~/Library/Application Support/sommelier/`
-- **Linux:** `$XDG_CONFIG_HOME/sommelier/` (default `~/.config/sommelier/`)
+- **Windows:** `%APPDATA%\taster\`
+- **macOS:** `~/Library/Application Support/taster/`
+- **Linux:** `$XDG_CONFIG_HOME/taster/` (default `~/.config/taster/`)
 
 ### Claude Desktop (Recommended)
 
-Connect Sommelier to Claude Desktop and use it conversationally. No command-line needed after setup. Sommelier's MCP server is compatible with any MCP host -- the examples below show Claude Desktop, but it works with any app that supports the [Model Context Protocol](https://modelcontextprotocol.io).
+Connect Taster to Claude Desktop and use it conversationally. No command-line needed after setup. Taster's MCP server is compatible with any MCP host -- the examples below show Claude Desktop, but it works with any app that supports the [Model Context Protocol](https://modelcontextprotocol.io).
 
-If `sommelier init` configured Claude Desktop for you, just restart Claude Desktop. Otherwise, add to your `claude_desktop_config.json`:
+If `taster init` configured Claude Desktop for you, just restart Claude Desktop. Otherwise, add to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "sommelier": {
-      "command": "sommelier",
+    "taster": {
+      "command": "taster",
       "args": ["serve"],
       "env": {
         "PYTHONIOENCODING": "utf-8",
@@ -196,7 +194,7 @@ If `sommelier init` configured Claude Desktop for you, just restart Claude Deskt
 ```json
 {
   "mcpServers": {
-    "sommelier": {
+    "taster": {
       "command": "python",
       "args": ["mcp_server.py"],
       "env": {
@@ -211,7 +209,7 @@ If `sommelier init` configured Claude Desktop for you, just restart Claude Deskt
 
 </details>
 
-Restart Claude Desktop. Ask it: *"Check my Sommelier status"* to verify everything is connected. Then just talk to it:
+Restart Claude Desktop. Ask it: *"Check my Taster status"* to verify everything is connected. Then just talk to it:
 - *"Sort the photos in my Camera Roll folder"*
 - *"Create a profile for grading student essays"*
 - *"Generate a taste profile from my best code examples in src/"*
@@ -222,21 +220,21 @@ Restart Claude Desktop. Ask it: *"Check my Sommelier status"* to verify everythi
 
 | Tool | What it does |
 |------|-------------|
-| `sommelier_status` | Check setup status (API keys, providers, profiles) |
-| `sommelier_list_profiles` | List all taste profiles |
-| `sommelier_get_profile` | Get profile details with human-readable summary |
-| `sommelier_create_profile` | Create a new profile with full control |
-| `sommelier_update_profile` | Update specific fields of an existing profile |
-| `sommelier_delete_profile` | Delete a profile (with confirmation) |
-| `sommelier_quick_profile` | AI-generate a profile from a plain English description |
-| `sommelier_generate_profile` | AI-generate a profile from example files |
-| `sommelier_classify_folder` | Classify all files in a folder |
-| `sommelier_classify_files` | Classify specific files by path |
-| `sommelier_submit_feedback` | Submit classification corrections |
-| `sommelier_view_feedback` | Review all feedback and stats |
-| `sommelier_refine_profile` | Refine profile from classification corrections (AI) |
+| `taster_status` | Check setup status (API keys, providers, profiles) |
+| `taster_list_profiles` | List all taste profiles |
+| `taster_get_profile` | Get profile details with human-readable summary |
+| `taster_create_profile` | Create a new profile with full control |
+| `taster_update_profile` | Update specific fields of an existing profile |
+| `taster_delete_profile` | Delete a profile (with confirmation) |
+| `taster_quick_profile` | AI-generate a profile from a plain English description |
+| `taster_generate_profile` | AI-generate a profile from example files |
+| `taster_classify_folder` | Classify all files in a folder |
+| `taster_classify_files` | Classify specific files by path |
+| `taster_submit_feedback` | Submit classification corrections |
+| `taster_view_feedback` | Review all feedback and stats |
+| `taster_refine_profile` | Refine profile from classification corrections (AI) |
 
-Pairwise training (side-by-side photo comparison and profile synthesis) is handled by the standalone Gradio trainer: `sommelier train <folder>`.
+Pairwise training (side-by-side photo comparison and profile synthesis) is handled by the standalone Gradio trainer: `taster train <folder>`.
 
 </details>
 
@@ -245,19 +243,19 @@ Pairwise training (side-by-side photo comparison and profile synthesis) is handl
 
 ```bash
 # Classify a folder (auto-detects media types and provider)
-sommelier classify ~/Photos/MyFolder
+taster classify ~/Photos/MyFolder
 
 # Use a specific taste profile
-sommelier classify ~/Photos/MyFolder --profile default-photos
+taster classify ~/Photos/MyFolder --profile default-photos
 
 # Force a specific AI provider
-sommelier classify ~/Photos/MyFolder --provider openai
+taster classify ~/Photos/MyFolder --provider openai
 
 # Dry run (test without moving files)
-sommelier classify ~/Photos/MyFolder --dry-run
+taster classify ~/Photos/MyFolder --dry-run
 
 # Check setup status
-sommelier status
+taster status
 ```
 
 Files are sorted into `MyFolder_sorted/` with subfolders matching your profile's categories.
@@ -295,7 +293,7 @@ Interactive docs at `http://localhost:8000/docs`.
 
 ## AI Providers
 
-Sommelier supports three AI providers. Install only the SDK(s) you need.
+Taster supports three AI providers. Install only the SDK(s) you need.
 
 | Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) |
 |---------|--------|---------------------|-------------------|
@@ -421,7 +419,7 @@ python clear_failed_for_retry.py "path/to/sorted"            # Clear and re-run
 <summary><strong>Architecture</strong></summary>
 
 ```
-sommelier/
+taster/
 ├── core/                  # Configuration, caching, AI clients, profiles
 │   ├── ai_client.py       # AIClient ABC + AIResponse
 │   ├── provider_factory.py # Auto-detect provider from API keys
@@ -437,13 +435,11 @@ sommelier/
 
 | Command | Purpose |
 |---------|---------|
-| `sommelier classify <folder>` | Classify files against a profile |
-| `sommelier train <folder>` | Launch Gradio pairwise trainer |
-| `sommelier serve` | Start MCP server for Claude Desktop |
-| `sommelier init` | Interactive first-run setup |
-| `sommelier status` | Show config, profiles, API key status |
-
-`taster` works as a drop-in alias for `sommelier` in all commands above.
+| `taster classify <folder>` | Classify files against a profile |
+| `taster train <folder>` | Launch Gradio pairwise trainer |
+| `taster serve` | Start MCP server for Claude Desktop |
+| `taster init` | Interactive first-run setup |
+| `taster status` | Show config, profiles, API key status |
 
 </details>
 
@@ -453,7 +449,7 @@ sommelier/
 ```bash
 pip install -e ".[gemini,dev]"               # Install for development
 pytest tests/ -v                              # Run tests
-pytest tests/ --cov=sommelier --cov-report=html     # With coverage
+pytest tests/ --cov=taster --cov-report=html     # With coverage
 ```
 
 </details>
@@ -463,7 +459,7 @@ pytest tests/ --cov=sommelier --cov-report=html     # With coverage
 
 **"No AI provider configured"** -- Create `.env` with at least one API key (`GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`).
 
-**"No module named 'sommelier'"** -- Install with `pip install -e .` or run from the project root directory.
+**"No module named 'taster'"** -- Install with `pip install -e .` or run from the project root directory.
 
 **Low share rate (<20%)** -- Lower `classification.share_threshold` in `config.yaml` (e.g., 0.50).
 
@@ -475,4 +471,4 @@ pytest tests/ --cov=sommelier --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.1.2 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.2.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026

@@ -1,11 +1,11 @@
-"""Tests for sommelier.cli — CLI entry point."""
+"""Tests for taster.cli — CLI entry point."""
 
 import pytest
 import sys
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 
-from sommelier.cli import _build_parser, main
+from taster.cli import _build_parser, main
 
 
 class TestParser:
@@ -16,10 +16,10 @@ class TestParser:
             main(["--help"])
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        assert "sommelier" in captured.out
+        assert "taster" in captured.out
 
     def test_version_flag(self, capsys):
-        from sommelier import __version__
+        from taster import __version__
         with pytest.raises(SystemExit) as exc_info:
             main(["--version"])
         assert exc_info.value.code == 0
@@ -135,7 +135,7 @@ class TestStatusCommand:
         with patch.dict("os.environ", {}, clear=False):
             main(["status"])
         captured = capsys.readouterr()
-        assert "Sommelier v" in captured.out
+        assert "Taster v" in captured.out
         assert "Config directory" in captured.out
 
 
@@ -143,12 +143,12 @@ class TestInitCommand:
     """Test init command (mocked I/O)."""
 
     def test_init_creates_dirs(self, tmp_path):
-        config_dir = tmp_path / "sommelier"
+        config_dir = tmp_path / "taster"
         with (
             patch("builtins.input", side_effect=["", "", "", "n"]),
-            patch("sommelier.dirs.get_config_dir", return_value=config_dir),
-            patch("sommelier.dirs.get_profiles_dir", return_value=config_dir / "profiles"),
-            patch("sommelier.dirs.get_env_path", return_value=config_dir / ".env"),
-            patch("sommelier.dirs.ensure_dirs", return_value=config_dir),
+            patch("taster.dirs.get_config_dir", return_value=config_dir),
+            patch("taster.dirs.get_profiles_dir", return_value=config_dir / "profiles"),
+            patch("taster.dirs.get_env_path", return_value=config_dir / ".env"),
+            patch("taster.dirs.ensure_dirs", return_value=config_dir),
         ):
             main(["init"])

@@ -1,10 +1,10 @@
-"""Tests for sommelier.compat — optional dependency helpers."""
+"""Tests for taster.compat — optional dependency helpers."""
 
 import pytest
 from types import ModuleType
 from unittest.mock import patch
 
-from sommelier.compat import require
+from taster.compat import require
 
 
 class TestRequire:
@@ -14,7 +14,7 @@ class TestRequire:
         assert hasattr(mod, "dumps")
 
     def test_raises_import_error_when_missing(self):
-        with pytest.raises(ImportError, match="pip install sommelier\\[fakeextra\\]"):
+        with pytest.raises(ImportError, match="pip install taster\\[fakeextra\\]"):
             require("nonexistent_package_xyz_123", "fakeextra")
 
     def test_error_message_includes_package_name(self):
@@ -22,7 +22,7 @@ class TestRequire:
             require("nonexistent_pkg", "test")
 
     def test_error_message_includes_extra_name(self):
-        with pytest.raises(ImportError, match="sommelier\\[gemini\\]"):
+        with pytest.raises(ImportError, match="taster\\[gemini\\]"):
             require("nonexistent_gemini_pkg", "gemini")
 
     def test_idempotent_calls(self):
@@ -55,9 +55,9 @@ class TestRequire:
 
     def test_missing_package_different_extras(self):
         """Different extra names produce different error messages."""
-        with pytest.raises(ImportError, match="sommelier\\[ml\\]"):
+        with pytest.raises(ImportError, match="taster\\[ml\\]"):
             require("fake_ml_pkg", "ml")
-        with pytest.raises(ImportError, match="sommelier\\[api\\]"):
+        with pytest.raises(ImportError, match="taster\\[api\\]"):
             require("fake_api_pkg", "api")
 
     def test_error_is_import_error_subclass(self):

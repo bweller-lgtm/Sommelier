@@ -4,8 +4,8 @@ import time
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from sommelier.core import load_config, CacheManager
-from sommelier.classification import PromptBuilder, MediaClassifier
+from taster.core import load_config, CacheManager
+from taster.classification import PromptBuilder, MediaClassifier
 
 
 class TestFallbackResponse:

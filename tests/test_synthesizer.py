@@ -4,9 +4,9 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from sommelier.core.profiles import ProfileManager
-from sommelier.training.session import TrainingSession
-from sommelier.training.synthesizer import ProfileSynthesizer
+from taster.core.profiles import ProfileManager
+from taster.training.session import TrainingSession
+from taster.training.synthesizer import ProfileSynthesizer
 
 
 @pytest.fixture

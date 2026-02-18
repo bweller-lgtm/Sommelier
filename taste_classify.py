@@ -20,24 +20,24 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 
 # Import refactored infrastructure
-from sommelier.core import (
+from taster.core import (
     load_config,
     CacheManager,
     FileTypeRegistry,
     ProfileManager,
     create_ai_client,
 )
-from sommelier.features import (
+from taster.features import (
     QualityScorer,
     BurstDetector,
     EmbeddingExtractor,
 )
-from sommelier.classification import (
+from taster.classification import (
     PromptBuilder,
     MediaClassifier,
     Router,
 )
-from sommelier.pipelines import MixedPipeline, PhotoPipeline, DocumentPipeline
+from taster.pipelines import MixedPipeline, PhotoPipeline, DocumentPipeline
 
 
 def parse_arguments():

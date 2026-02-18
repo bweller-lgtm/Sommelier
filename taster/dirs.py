@@ -1,9 +1,9 @@
 """Platform-aware user configuration directories.
 
-Resolves the user config directory for Sommelier:
-  - Windows:  %APPDATA%\\sommelier
-  - macOS:    ~/Library/Application Support/sommelier
-  - Linux:    $XDG_CONFIG_HOME/sommelier  (default ~/.config/sommelier)
+Resolves the user config directory for Taster:
+  - Windows:  %APPDATA%\\taster
+  - macOS:    ~/Library/Application Support/taster
+  - Linux:    $XDG_CONFIG_HOME/taster  (default ~/.config/taster)
 """
 
 import platform
@@ -22,7 +22,7 @@ def get_config_dir() -> Path:
         import os
         xdg = os.environ.get("XDG_CONFIG_HOME")
         base = Path(xdg) if xdg else Path.home() / ".config"
-    return base / "sommelier"
+    return base / "taster"
 
 
 def get_profiles_dir() -> Path:

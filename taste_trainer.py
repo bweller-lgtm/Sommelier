@@ -1,14 +1,14 @@
 """Gradio UI for pairwise taste training.
 
 Thin UI layer that delegates to the existing training backend:
-- sommelier/training/session.py   -- TrainingSession
-- sommelier/training/sampler.py   -- ComparisonSampler
-- sommelier/training/synthesizer.py -- ProfileSynthesizer
-- sommelier/features/burst_detector.py -- BurstDetector
-- sommelier/core/file_utils.py    -- FileTypeRegistry, ImageUtils
-- sommelier/core/media_prep.py    -- VideoFrameExtractor, PDFPageRenderer
-- sommelier/features/document_features.py -- DocumentFeatureExtractor, DocumentGrouper
-- sommelier/core/provider_factory.py -- create_ai_client
+- taster/training/session.py   -- TrainingSession
+- taster/training/sampler.py   -- ComparisonSampler
+- taster/training/synthesizer.py -- ProfileSynthesizer
+- taster/features/burst_detector.py -- BurstDetector
+- taster/core/file_utils.py    -- FileTypeRegistry, ImageUtils
+- taster/core/media_prep.py    -- VideoFrameExtractor, PDFPageRenderer
+- taster/features/document_features.py -- DocumentFeatureExtractor, DocumentGrouper
+- taster/core/provider_factory.py -- create_ai_client
 """
 
 import sys
@@ -22,14 +22,14 @@ load_dotenv()
 import gradio as gr
 from PIL import Image
 
-from sommelier.core.config import load_config, BurstDetectionConfig
-from sommelier.core.file_utils import FileTypeRegistry, ImageUtils
-from sommelier.core.media_prep import VideoFrameExtractor, PDFPageRenderer
-from sommelier.core.profiles import ProfileManager
-from sommelier.features.burst_detector import BurstDetector
-from sommelier.features.document_features import DocumentFeatureExtractor, DocumentGrouper
-from sommelier.training.session import TrainingSession
-from sommelier.training.sampler import ComparisonSampler
+from taster.core.config import load_config, BurstDetectionConfig
+from taster.core.file_utils import FileTypeRegistry, ImageUtils
+from taster.core.media_prep import VideoFrameExtractor, PDFPageRenderer
+from taster.core.profiles import ProfileManager
+from taster.features.burst_detector import BurstDetector
+from taster.features.document_features import DocumentFeatureExtractor, DocumentGrouper
+from taster.training.session import TrainingSession
+from taster.training.sampler import ComparisonSampler
 
 # ── Defaults ────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ MIN_LABELS = 15
 def _load_config():
     if CONFIG_PATH.exists():
         return load_config(CONFIG_PATH)
-    from sommelier.core.config import Config
+    from taster.core.config import Config
     return Config()
 
 
@@ -191,8 +191,8 @@ def _detect_bursts_with_embeddings(
     """Detect bursts using CLIP embeddings + temporal proximity."""
     config = _load_config()
     try:
-        from sommelier.features.embeddings import EmbeddingExtractor
-        from sommelier.core.cache import CacheManager
+        from taster.features.embeddings import EmbeddingExtractor
+        from taster.core.cache import CacheManager
 
         cache_manager = CacheManager(
             config.paths.cache_root,
@@ -447,8 +447,8 @@ def build_app() -> gr.Blocks:
         config = _load_config()
         pm = ProfileManager(config.profiles.profiles_dir)
 
-        from sommelier.core.provider_factory import create_ai_client
-        from sommelier.training.synthesizer import ProfileSynthesizer
+        from taster.core.provider_factory import create_ai_client
+        from taster.training.synthesizer import ProfileSynthesizer
 
         ai_client = create_ai_client(config)
         synthesizer = ProfileSynthesizer(ai_client, pm)
@@ -471,8 +471,8 @@ def build_app() -> gr.Blocks:
 
     # ── Build UI ────────────────────────────────────────────────────
 
-    with gr.Blocks(title="Sommelier Taste Trainer") as app:
-        gr.Markdown("# Sommelier Taste Trainer")
+    with gr.Blocks(title="Taster Taste Trainer") as app:
+        gr.Markdown("# Taster Taste Trainer")
         gr.Markdown("Train a taste profile by comparing files side-by-side.")
 
         # ── Setup panel ─────────────────────────────────────────────

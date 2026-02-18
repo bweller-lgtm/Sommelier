@@ -4,9 +4,9 @@ import numpy as np
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from sommelier.core.config import load_config
-from sommelier.core.profiles import TasteProfile, CategoryDefinition
-from sommelier.classification.routing import Router
+from taster.core.config import load_config
+from taster.core.profiles import TasteProfile, CategoryDefinition
+from taster.classification.routing import Router
 
 
 @pytest.fixture
@@ -252,7 +252,7 @@ class TestDiversityCheck:
         r = Router(config, gemini_client=mock_client)
         with MagicMock() as mock_utils:
             from unittest.mock import patch
-            with patch("sommelier.classification.routing.ImageUtils") as mock_iu:
+            with patch("taster.classification.routing.ImageUtils") as mock_iu:
                 mock_iu.load_and_fix_orientation.return_value = MagicMock()
                 is_diverse, conf, reason = r.check_diversity(
                     Path("a.jpg"), Path("b.jpg"), gemini_check=True
@@ -263,7 +263,7 @@ class TestDiversityCheck:
         mock_client = MagicMock()
         r = Router(config, gemini_client=mock_client)
         from unittest.mock import patch
-        with patch("sommelier.classification.routing.ImageUtils") as mock_iu:
+        with patch("taster.classification.routing.ImageUtils") as mock_iu:
             mock_iu.load_and_fix_orientation.return_value = None
             is_diverse, _, _ = r.check_diversity(
                 Path("a.jpg"), Path("b.jpg"), gemini_check=True

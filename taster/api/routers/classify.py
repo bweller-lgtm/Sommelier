@@ -1,9 +1,9 @@
 """Classification endpoints."""
 from fastapi import APIRouter, HTTPException
 
-from sommelier.api.models import ClassifyFolderRequest, JobStatusResponse
-from sommelier.api.services.classification_service import ClassificationService
-from sommelier.core.config import load_config
+from taster.api.models import ClassifyFolderRequest, JobStatusResponse
+from taster.api.services.classification_service import ClassificationService
+from taster.core.config import load_config
 
 router = APIRouter(prefix="/api/classify", tags=["classify"])
 

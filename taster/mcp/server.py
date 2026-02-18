@@ -1,4 +1,4 @@
-"""MCP server exposing Sommelier tools for Claude Desktop integration."""
+"""MCP server exposing Taster tools for Claude Desktop integration."""
 import json
 import os
 import sys
@@ -18,7 +18,7 @@ _config = None
 _profile_manager = None
 
 _SETUP_INSTRUCTIONS = (
-    "To use Sommelier's AI features (classification, profile generation), "
+    "To use Taster's AI features (classification, profile generation), "
     "you need an API key for at least one AI provider.\n\n"
     "Supported providers (pick one):\n"
     "  Gemini  (recommended — cheapest, native video/PDF)\n"
@@ -30,8 +30,8 @@ _SETUP_INSTRUCTIONS = (
     "  Anthropic  (Claude)\n"
     "    Get a key: https://console.anthropic.com/settings/keys\n"
     "    Env var: ANTHROPIC_API_KEY\n\n"
-    "Add the key to a .env file in the Sommelier folder, or to Claude Desktop's "
-    "MCP config (claude_desktop_config.json) under sommelier > env.\n"
+    "Add the key to a .env file in the Taster folder, or to Claude Desktop's "
+    "MCP config (claude_desktop_config.json) under taster > env.\n"
     "Then restart Claude Desktop.\n\n"
     "Profile browsing and manual profile creation work without an API key."
 )
@@ -59,7 +59,7 @@ def _require_api_key() -> dict | None:
 def _get_config():
     global _config
     if _config is None:
-        config_path = Path(os.environ.get("SOMMELIER_CONFIG", "config.yaml"))
+        config_path = Path(os.environ.get("TASTER_CONFIG", "config.yaml"))
         if config_path.exists():
             _config = load_config(config_path)
         else:
@@ -76,32 +76,32 @@ def _get_profile_manager():
 
 
 def create_mcp_server():
-    """Create and configure the MCP server with all Sommelier tools."""
+    """Create and configure the MCP server with all Taster tools."""
     from mcp.server import Server
     from mcp.types import Tool, TextContent, Prompt, PromptMessage, PromptArgument
 
     # Pre-initialize config and profile manager during startup
-    print("[sommelier] Pre-loading config and profiles...", file=sys.stderr, flush=True)
+    print("[taster] Pre-loading config and profiles...", file=sys.stderr, flush=True)
     _get_config()
     _get_profile_manager()
-    print("[sommelier] Ready.", file=sys.stderr, flush=True)
+    print("[taster] Ready.", file=sys.stderr, flush=True)
 
-    server = Server("sommelier")
+    server = Server("taster")
 
     # ── MCP Prompts ─────────────────────────────────────────────────────
-    # These give Claude Desktop context about what Sommelier is and how
+    # These give Claude Desktop context about what Taster is and how
     # to guide users through common workflows.
 
     @server.list_prompts()
     async def list_prompts() -> list[Prompt]:
         return [
             Prompt(
-                name="sommelier_getting_started",
-                description="Introduction to Sommelier and how to use it. Start here if you're new.",
+                name="taster_getting_started",
+                description="Introduction to Taster and how to use it. Start here if you're new.",
                 arguments=[],
             ),
             Prompt(
-                name="sommelier_create_profile_wizard",
+                name="taster_create_profile_wizard",
                 description="Step-by-step guide to create a new taste profile through conversation.",
                 arguments=[
                     PromptArgument(
@@ -115,7 +115,7 @@ def create_mcp_server():
 
     @server.get_prompt()
     async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> list[PromptMessage]:
-        if name == "sommelier_getting_started":
+        if name == "taster_getting_started":
             return [PromptMessage(
                 role="user",
                 content=TextContent(
@@ -123,7 +123,7 @@ def create_mcp_server():
                     text=_GETTING_STARTED_PROMPT,
                 ),
             )]
-        elif name == "sommelier_create_profile_wizard":
+        elif name == "taster_create_profile_wizard":
             use_case = (arguments or {}).get("use_case", "")
             prompt = _PROFILE_WIZARD_PROMPT
             if use_case:
@@ -143,9 +143,9 @@ def create_mcp_server():
     async def list_tools() -> list[Tool]:
         return [
             Tool(
-                name="sommelier_status",
+                name="taster_status",
                 description=(
-                    "Check Sommelier setup status: API key, profiles, configuration. "
+                    "Check Taster setup status: API key, profiles, configuration. "
                     "Use this FIRST when a user is new or if any tool returns an API key error. "
                     "Returns what's configured, what's missing, and setup instructions."
                 ),
@@ -155,12 +155,12 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_list_profiles",
+                name="taster_list_profiles",
                 description=(
                     "List all taste profiles available for classifying media. "
                     "Each profile defines categories (like Share/Storage/Ignore for photos) "
                     "and criteria for sorting files. Use this first to see what's available, "
-                    "then use sommelier_classify_folder to sort files with a profile."
+                    "then use taster_classify_folder to sort files with a profile."
                 ),
                 inputSchema={
                     "type": "object",
@@ -168,7 +168,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_get_profile",
+                name="taster_get_profile",
                 description=(
                     "Get the full details of a taste profile, including its categories, "
                     "priorities, criteria, and philosophy. Use this to understand how a "
@@ -186,12 +186,12 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_create_profile",
+                name="taster_create_profile",
                 description=(
                     "Create a new taste profile with custom categories and criteria. "
                     "This is the structured version — you provide specific categories, "
                     "priorities, and criteria. For a simpler approach, use "
-                    "sommelier_quick_profile which generates a profile from a "
+                    "taster_quick_profile which generates a profile from a "
                     "plain English description."
                 ),
                 inputSchema={
@@ -249,12 +249,12 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_update_profile",
+                name="taster_update_profile",
                 description=(
                     "Update an existing taste profile. You can change the description, "
                     "categories, priorities, criteria, guidance, or philosophy. "
                     "Only provide the fields you want to change — others stay the same. "
-                    "Use sommelier_get_profile first to see the current values."
+                    "Use taster_get_profile first to see the current values."
                 ),
                 inputSchema={
                     "type": "object",
@@ -306,10 +306,10 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_delete_profile",
+                name="taster_delete_profile",
                 description=(
                     "Delete a taste profile. This is permanent and cannot be undone. "
-                    "Use sommelier_list_profiles to see available profiles first."
+                    "Use taster_list_profiles to see available profiles first."
                 ),
                 inputSchema={
                     "type": "object",
@@ -327,7 +327,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_quick_profile",
+                name="taster_quick_profile",
                 description=(
                     "Generate a complete taste profile from a plain English description. "
                     "Just describe what you want to sort and how — the AI will create "
@@ -358,7 +358,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_classify_folder",
+                name="taster_classify_folder",
                 description=(
                     "Classify all media files in a folder using a taste profile. "
                     "Each file is analyzed by AI and assigned to a category. "
@@ -375,7 +375,7 @@ def create_mcp_server():
                         },
                         "profile_name": {
                             "type": "string",
-                            "description": "Profile to use (run sommelier_list_profiles to see options)",
+                            "description": "Profile to use (run taster_list_profiles to see options)",
                         },
                         "dry_run": {
                             "type": "boolean",
@@ -397,7 +397,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_classify_files",
+                name="taster_classify_files",
                 description=(
                     "Classify specific files (by path) using a taste profile. "
                     "Use this when you want to classify individual files rather than "
@@ -420,7 +420,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_submit_feedback",
+                name="taster_submit_feedback",
                 description=(
                     "Correct a classification result. If a file was sorted into the wrong "
                     "category, submit the correction here. This feedback is stored and can "
@@ -446,7 +446,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_view_feedback",
+                name="taster_view_feedback",
                 description=(
                     "View all submitted classification feedback and statistics. "
                     "Shows corrections, per-category breakdowns, and total counts. "
@@ -459,7 +459,7 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_generate_profile",
+                name="taster_generate_profile",
                 description=(
                     "Generate a taste profile by analyzing example files. "
                     "Point it at a folder of 'good' examples (and optionally 'bad' examples) "
@@ -486,10 +486,10 @@ def create_mcp_server():
                 },
             ),
             Tool(
-                name="sommelier_refine_profile",
+                name="taster_refine_profile",
                 description=(
                     "Apply post-classification corrections to refine an existing profile. "
-                    "Unlike sommelier_submit_feedback (which just stores corrections), "
+                    "Unlike taster_submit_feedback (which just stores corrections), "
                     "this tool ACTS on corrections — it analyzes patterns in "
                     "misclassifications and updates the profile criteria accordingly. "
                     "This is the HIGHEST fidelity method for improving profiles."
@@ -536,13 +536,13 @@ def create_mcp_server():
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         import sys
-        print(f"[sommelier] call_tool invoked: {name}", file=sys.stderr, flush=True)
+        print(f"[taster] call_tool invoked: {name}", file=sys.stderr, flush=True)
         try:
             result = _handle_tool(name, arguments)
-            print(f"[sommelier] call_tool success: {name}", file=sys.stderr, flush=True)
+            print(f"[taster] call_tool success: {name}", file=sys.stderr, flush=True)
             return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
         except Exception as e:
-            print(f"[sommelier] call_tool error: {name}: {e}", file=sys.stderr, flush=True)
+            print(f"[taster] call_tool error: {name}: {e}", file=sys.stderr, flush=True)
             import traceback
             traceback.print_exc(file=sys.stderr)
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
@@ -553,9 +553,9 @@ def create_mcp_server():
 # ── Prompt templates ────────────────────────────────────────────────────
 
 _GETTING_STARTED_PROMPT = """\
-I have Sommelier connected. Help me understand what it can do and how to get started.
+I have Taster connected. Help me understand what it can do and how to get started.
 
-Sommelier is a media classification tool that sorts files (photos, videos, documents) \
+Taster is a media classification tool that sorts files (photos, videos, documents) \
 into categories based on "taste profiles" — customizable rules that define what's good, \
 what's bad, and how to sort things.
 
@@ -568,11 +568,11 @@ It comes with two built-in profiles:
 
 I can also create custom profiles for any sorting task.
 
-Please start by checking my setup status (sommelier_status) to see if everything \
+Please start by checking my setup status (taster_status) to see if everything \
 is configured, then list my profiles and help me choose what to do next."""
 
 _PROFILE_WIZARD_PROMPT = """\
-Help me create a new taste profile for Sommelier. Walk me through it conversationally.
+Help me create a new taste profile for Taster. Walk me through it conversationally.
 
 A taste profile needs:
 1. **Name** — a short identifier (lowercase-with-hyphens)
@@ -583,7 +583,7 @@ A taste profile needs:
 6. **Overall philosophy** — the guiding principle
 
 Ask me about each one conversationally. Once you have enough information, use the \
-sommelier_quick_profile tool to generate the profile, or sommelier_create_profile \
+taster_quick_profile tool to generate the profile, or taster_create_profile \
 if you want full control over every field.
 
 Important: Don't ask all questions at once. Start with what I'm sorting and why, \
@@ -595,35 +595,35 @@ then build from there."""
 def _handle_tool(name: str, arguments: dict) -> Any:
     """Dispatch tool calls to appropriate handlers."""
     import sys
-    print(f"[sommelier] _handle_tool start: {name}", file=sys.stderr, flush=True)
+    print(f"[taster] _handle_tool start: {name}", file=sys.stderr, flush=True)
     pm = _get_profile_manager()
-    print(f"[sommelier] profile manager loaded", file=sys.stderr, flush=True)
+    print(f"[taster] profile manager loaded", file=sys.stderr, flush=True)
 
-    if name == "sommelier_status":
+    if name == "taster_status":
         return _handle_status(pm)
-    elif name == "sommelier_list_profiles":
+    elif name == "taster_list_profiles":
         return _handle_list_profiles(pm)
-    elif name == "sommelier_get_profile":
+    elif name == "taster_get_profile":
         return _handle_get_profile(pm, arguments)
-    elif name == "sommelier_create_profile":
+    elif name == "taster_create_profile":
         return _handle_create_profile(pm, arguments)
-    elif name == "sommelier_update_profile":
+    elif name == "taster_update_profile":
         return _handle_update_profile(pm, arguments)
-    elif name == "sommelier_delete_profile":
+    elif name == "taster_delete_profile":
         return _handle_delete_profile(pm, arguments)
-    elif name == "sommelier_quick_profile":
+    elif name == "taster_quick_profile":
         return _handle_quick_profile(pm, arguments)
-    elif name == "sommelier_classify_folder":
+    elif name == "taster_classify_folder":
         return _handle_classify_folder(pm, arguments)
-    elif name == "sommelier_classify_files":
+    elif name == "taster_classify_files":
         return _handle_classify_files(pm, arguments)
-    elif name == "sommelier_submit_feedback":
+    elif name == "taster_submit_feedback":
         return _handle_submit_feedback(arguments)
-    elif name == "sommelier_view_feedback":
+    elif name == "taster_view_feedback":
         return _handle_view_feedback()
-    elif name == "sommelier_generate_profile":
+    elif name == "taster_generate_profile":
         return _handle_generate_profile(pm, arguments)
-    elif name == "sommelier_refine_profile":
+    elif name == "taster_refine_profile":
         return _handle_refine_profile(pm, arguments)
     else:
         return {"error": f"Unknown tool: {name}"}
@@ -648,7 +648,7 @@ def _handle_status(pm: ProfileManager) -> Any:
         ),
         "profiles_count": len(profiles),
         "profiles": [p.name for p in profiles],
-        "config_path": str(Path(os.environ.get("SOMMELIER_CONFIG", "config.yaml")).resolve()),
+        "config_path": str(Path(os.environ.get("TASTER_CONFIG", "config.yaml")).resolve()),
         "profiles_dir": str(pm.profiles_dir.resolve()),
     }
 
@@ -656,7 +656,7 @@ def _handle_status(pm: ProfileManager) -> Any:
         status["ready"] = True
         configured = [n for n, a in providers.items() if a]
         status["message"] = (
-            f"Sommelier is ready. Provider(s): {', '.join(configured)}. "
+            f"Taster is ready. Provider(s): {', '.join(configured)}. "
             f"{len(profiles)} profile(s) available."
         )
         status["available_features"] = [
@@ -670,7 +670,7 @@ def _handle_status(pm: ProfileManager) -> Any:
     else:
         status["ready"] = False
         status["message"] = (
-            "Sommelier is partially set up. You can browse and create profiles, "
+            "Taster is partially set up. You can browse and create profiles, "
             "but classification and AI profile generation require an API key."
         )
         status["setup"] = _SETUP_INSTRUCTIONS
@@ -706,7 +706,7 @@ def _handle_get_profile(pm: ProfileManager, arguments: dict) -> Any:
     if not pm.profile_exists(profile_name):
         return {
             "error": f"Profile '{profile_name}' not found.",
-            "hint": "Use sommelier_list_profiles to see available profiles.",
+            "hint": "Use taster_list_profiles to see available profiles.",
         }
     profile = pm.load_profile(profile_name)
     data = profile.to_dict()
@@ -743,7 +743,7 @@ def _handle_update_profile(pm: ProfileManager, arguments: dict) -> Any:
     if not pm.profile_exists(profile_name):
         return {
             "error": f"Profile '{profile_name}' not found.",
-            "hint": "Use sommelier_list_profiles to see available profiles.",
+            "hint": "Use taster_list_profiles to see available profiles.",
         }
 
     # Build kwargs from provided fields (excluding profile_name)
@@ -781,7 +781,7 @@ def _handle_delete_profile(pm: ProfileManager, arguments: dict) -> Any:
     if not pm.profile_exists(profile_name):
         return {
             "error": f"Profile '{profile_name}' not found.",
-            "hint": "Use sommelier_list_profiles to see available profiles.",
+            "hint": "Use taster_list_profiles to see available profiles.",
         }
 
     pm.delete_profile(profile_name)
@@ -806,12 +806,12 @@ def _handle_quick_profile(pm: ProfileManager, arguments: dict) -> Any:
     if pm.profile_exists(profile_name):
         return {
             "error": f"Profile '{profile_name}' already exists.",
-            "hint": "Use sommelier_delete_profile to remove it first, "
-                    "sommelier_update_profile to modify it, "
+            "hint": "Use taster_delete_profile to remove it first, "
+                    "taster_update_profile to modify it, "
                     "or choose a different name.",
         }
 
-    print(f"[sommelier] Generating profile '{profile_name}' from description...", file=sys.stderr, flush=True)
+    print(f"[taster] Generating profile '{profile_name}' from description...", file=sys.stderr, flush=True)
 
     from ..core.provider_factory import create_ai_client
     gemini_client = create_ai_client(config)
@@ -860,7 +860,7 @@ Rules:
     )
 
     if result is None:
-        return {"error": "Failed to generate profile. Please try again or use sommelier_create_profile for manual creation."}
+        return {"error": "Failed to generate profile. Please try again or use taster_create_profile for manual creation."}
 
     # Create the profile
     profile = pm.create_profile(
@@ -876,7 +876,7 @@ Rules:
         philosophy=result.get("philosophy", ""),
     )
 
-    print(f"[sommelier] Profile '{profile_name}' generated with {len(profile.categories)} categories", file=sys.stderr, flush=True)
+    print(f"[taster] Profile '{profile_name}' generated with {len(profile.categories)} categories", file=sys.stderr, flush=True)
 
     return {
         "status": "created",
@@ -893,7 +893,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
 
     import time as _time
 
-    print(f"[sommelier] classify_folder: {arguments}", file=sys.stderr, flush=True)
+    print(f"[taster] classify_folder: {arguments}", file=sys.stderr, flush=True)
 
     from ..core.cache import CacheManager
     from ..core.provider_factory import create_ai_client
@@ -944,7 +944,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     batch_size = int(arguments.get("batch_size", 0)) or total
     batch = all_media[offset:offset + batch_size]
 
-    print(f"[sommelier] Found {total} total files. Processing batch: offset={offset}, size={len(batch)}", file=sys.stderr, flush=True)
+    print(f"[taster] Found {total} total files. Processing batch: offset={offset}, size={len(batch)}", file=sys.stderr, flush=True)
 
     dry_run = arguments.get("dry_run", True)
     results = []
@@ -957,7 +957,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
         elapsed = _time.time() - start_time
         if elapsed > TIME_LIMIT:
             remaining = len(batch) - i
-            print(f"[sommelier] Time limit reached ({elapsed:.0f}s). {remaining} files remaining.", file=sys.stderr, flush=True)
+            print(f"[taster] Time limit reached ({elapsed:.0f}s). {remaining} files remaining.", file=sys.stderr, flush=True)
             return {
                 "status": "partial",
                 "dry_run": dry_run,
@@ -974,7 +974,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
 
         try:
             pct = ((offset + i + 1) / total) * 100
-            print(f"[sommelier] [{offset+i+1}/{total}] ({pct:.0f}%) {file_path.name}", file=sys.stderr, flush=True)
+            print(f"[taster] [{offset+i+1}/{total}] ({pct:.0f}%) {file_path.name}", file=sys.stderr, flush=True)
 
             if media_type == "image":
                 classification = classifier.classify_singleton(file_path)
@@ -997,7 +997,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
             })
             stats[destination] = stats.get(destination, 0) + 1
         except Exception as e:
-            print(f"[sommelier] ERROR classifying {file_path.name}: {e}", file=sys.stderr, flush=True)
+            print(f"[taster] ERROR classifying {file_path.name}: {e}", file=sys.stderr, flush=True)
             results.append({"file": str(file_path), "name": file_path.name, "error": str(e)})
             errors += 1
 
@@ -1005,7 +1005,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     next_offset = offset + len(batch)
     has_more = next_offset < total
 
-    print(f"[sommelier] Batch complete in {elapsed:.0f}s. {len(results)} classified, {errors} errors. Stats: {stats}", file=sys.stderr, flush=True)
+    print(f"[taster] Batch complete in {elapsed:.0f}s. {len(results)} classified, {errors} errors. Stats: {stats}", file=sys.stderr, flush=True)
 
     # Build summary with percentages and top results
     processed_count = len(results)
@@ -1139,11 +1139,11 @@ def _handle_view_feedback() -> Any:
     if not feedback:
         return {
             "total_feedback": 0,
-            "message": "No feedback submitted yet. Use sommelier_submit_feedback to correct misclassifications.",
+            "message": "No feedback submitted yet. Use taster_submit_feedback to correct misclassifications.",
             "next_steps": [
-                "Classify some files with sommelier_classify_folder",
-                "Submit corrections with sommelier_submit_feedback",
-                "Once you have enough feedback, generate a profile with sommelier_generate_profile",
+                "Classify some files with taster_classify_folder",
+                "Submit corrections with taster_submit_feedback",
+                "Once you have enough feedback, generate a profile with taster_generate_profile",
             ],
         }
 
@@ -1153,8 +1153,8 @@ def _handle_view_feedback() -> Any:
         "recent_feedback": feedback[-20:],  # last 20 entries
         "message": f"{stats['total_feedback']} feedback entries across {len(stats['by_category'])} categories.",
         "next_steps": [
-            "Submit more corrections with sommelier_submit_feedback",
-            "Generate a profile from this feedback with sommelier_generate_profile",
+            "Submit more corrections with taster_submit_feedback",
+            "Generate a profile from this feedback with taster_generate_profile",
         ],
     }
 
@@ -1176,8 +1176,8 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     if pm.profile_exists(profile_name):
         return {
             "error": f"Profile '{profile_name}' already exists.",
-            "hint": "Use sommelier_delete_profile to remove it first, "
-                    "sommelier_update_profile to modify it, "
+            "hint": "Use taster_delete_profile to remove it first, "
+                    "taster_update_profile to modify it, "
                     "or choose a different name.",
         }
 
@@ -1187,7 +1187,7 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     if bad_folder and not bad_folder.is_dir():
         return {"error": f"Bad examples folder not found: {bad_folder}"}
 
-    print(f"[sommelier] Generating profile from examples in {good_folder}...", file=sys.stderr, flush=True)
+    print(f"[taster] Generating profile from examples in {good_folder}...", file=sys.stderr, flush=True)
 
     gemini_client = create_ai_client(config)
 
@@ -1378,7 +1378,7 @@ def _handle_refine_profile(pm: ProfileManager, arguments: dict) -> Any:
     if not pm.profile_exists(profile_name):
         return {
             "error": f"Profile '{profile_name}' not found.",
-            "hint": "Use sommelier_list_profiles to see available profiles.",
+            "hint": "Use taster_list_profiles to see available profiles.",
         }
 
     if not corrections:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch the Sommelier MCP server for Claude Desktop integration."""
+"""Launch the Taster MCP server for Claude Desktop integration."""
 import asyncio
 import os
 import sys
@@ -23,9 +23,9 @@ if sys.platform == "win32":
 os.chdir(Path(__file__).parent)
 
 t0 = time.time()
-print("[sommelier] Importing modules...", file=sys.stderr, flush=True)
-from sommelier.mcp.server import create_mcp_server
-print(f"[sommelier] Imports done in {time.time() - t0:.1f}s", file=sys.stderr, flush=True)
+print("[taster] Importing modules...", file=sys.stderr, flush=True)
+from taster.mcp.server import create_mcp_server
+print(f"[taster] Imports done in {time.time() - t0:.1f}s", file=sys.stderr, flush=True)
 
 
 def main():

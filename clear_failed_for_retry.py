@@ -20,7 +20,7 @@ from pathlib import Path
 from collections import defaultdict
 import pandas as pd
 
-from sommelier.core.cache import CacheManager, CacheKey
+from taster.core.cache import CacheManager, CacheKey
 
 
 def parse_arguments():

@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 from pathlib import Path
-from sommelier.core.cache import CacheKey, CacheManager, PickleCache, JSONCache, NumpyCache
+from taster.core.cache import CacheKey, CacheManager, PickleCache, JSONCache, NumpyCache
 
 
 class TestCacheKey:

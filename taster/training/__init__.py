@@ -1,4 +1,4 @@
-"""Pairwise training and corrective refinement for Sommelier."""
+"""Pairwise training and corrective refinement for Taster."""
 
 from .session import TrainingSession, PairwiseComparison, GallerySelection
 from .sampler import ComparisonSampler
