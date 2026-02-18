@@ -1,6 +1,10 @@
-# Sommelier
+<p align="center">
+  <img src="assets/Readme_Logo.png" alt="Sommelier" width="200">
+</p>
 
-**Teach AI your taste. Apply it to everything.**
+<h1 align="center">Sommelier</h1>
+
+<p align="center"><strong>Teach AI your taste. Apply it to everything.</strong></p>
 
 You know quality when you see it -- but writing down *why* is the hard part. Sommelier figures it out for you. Show it examples you like and it reverse-engineers your standards into a reusable profile: a human-readable style guide that doubles as an executable classifier.
 
