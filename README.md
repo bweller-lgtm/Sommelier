@@ -9,6 +9,7 @@
 You know quality when you see it -- but writing down *why* is the hard part. Sommelier figures it out for you. Show it examples you like and it reverse-engineers your standards into a reusable profile: a human-readable style guide that doubles as an executable classifier.
 
 Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best files. Grade 200 essays against criteria you never had to write by hand.
+
 ---
 
 ## How It Works
