@@ -109,7 +109,7 @@ class MediaClassifier:
                 )
                 return self._validate_singleton_response(result)
             except Exception as e:
-                print(f"⚠️  Classification error for {photo_path.name}: {e}")
+                print(f"Classification error for {photo_path.name}: {e}")
                 return self._create_fallback_response(f"Error: {e}")
 
         # Call with retry
@@ -198,7 +198,7 @@ class MediaClassifier:
                     return {"_burst_results": result, "is_error_fallback": False}
                 else:
                     # Invalid response format
-                    print(f"⚠️  Invalid burst response format, using fallback")
+                    print(f"Invalid burst response format, using fallback")
                     fallback_results = [
                         self._create_fallback_response(f"Invalid response format", rank=i+1, error_type="invalid_response")
                         for i in range(len(burst_photos))
@@ -206,7 +206,7 @@ class MediaClassifier:
                     return {"_burst_results": fallback_results, "is_error_fallback": True, "error_type": "invalid_response"}
 
             except Exception as e:
-                print(f"⚠️  Burst classification error: {e}")
+                print(f"Burst classification error: {e}")
                 fallback_results = [
                     self._create_fallback_response(f"Error: {e}", rank=i+1)
                     for i in range(len(burst_photos))
@@ -263,7 +263,7 @@ class MediaClassifier:
         Returns:
             List of classification results.
         """
-        print(f"   📦 Burst has {len(burst_photos)} photos, splitting into chunks of {chunk_size}")
+        print(f"   Burst has {len(burst_photos)} photos, splitting into chunks of {chunk_size}")
 
         all_results = []
 
@@ -326,7 +326,7 @@ class MediaClassifier:
                 )
                 return self._validate_video_response(result)
             except Exception as e:
-                print(f"⚠️  Video classification error for {video_path.name}: {e}")
+                print(f"Video classification error for {video_path.name}: {e}")
                 return self._create_fallback_response(f"Error: {e}", is_video=True)
 
         # Call with retry
@@ -628,7 +628,7 @@ class MediaClassifier:
                     last_result = result
                     if attempt < max_retries:
                         delay = retry_delay * (2 ** attempt)  # Exponential backoff
-                        print(f"   ⚠️  {error_context} error (attempt {attempt + 1}/{max_retries + 1}), retrying in {delay:.1f}s...")
+                        print(f"   {error_context} error (attempt {attempt + 1}/{max_retries + 1}), retrying in {delay:.1f}s...")
                         time.sleep(delay)
                         continue
 
@@ -641,7 +641,7 @@ class MediaClassifier:
                 last_result = self._create_fallback_response(f"Error: {e}", error_type="api_error")
                 if attempt < max_retries:
                     delay = retry_delay * (2 ** attempt)
-                    print(f"   ⚠️  {error_context} exception (attempt {attempt + 1}/{max_retries + 1}): {e}, retrying in {delay:.1f}s...")
+                    print(f"   {error_context} exception (attempt {attempt + 1}/{max_retries + 1}): {e}, retrying in {delay:.1f}s...")
                     time.sleep(delay)
                     continue
 

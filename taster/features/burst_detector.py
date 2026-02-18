@@ -57,7 +57,7 @@ class BurstDetector:
             # Return all photos as singletons
             return [[p] for p in photos]
 
-        print(f"\n🔍 Detecting bursts (temporal + visual)...")
+        print(f"\nDetecting bursts (temporal + visual)...")
         print(f"   Time window: {self.config.time_window_seconds}s")
         print(f"   Similarity threshold: {self.config.embedding_similarity_threshold}")
 
@@ -324,7 +324,7 @@ class BurstDetector:
 
     def _print_statistics(self, bursts: List[List[Path]], singletons: List[Path]):
         """Print burst detection statistics."""
-        print(f"\n✅ Burst detection complete:")
+        print(f"\nBurst detection complete:")
         print(f"   Bursts: {len(bursts)}")
         if bursts:
             sizes = [len(b) for b in bursts]

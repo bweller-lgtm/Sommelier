@@ -211,7 +211,7 @@ class Router:
 
             # If too similar, not diverse
             if similarity >= self.config.classification.diversity_similarity_threshold:
-                print(f"   🔄 Diversity check: {photo_path.name} too similar to {candidate_path.name} (sim={similarity:.3f})")
+                print(f"   Diversity check: {photo_path.name} too similar to {candidate_path.name} (sim={similarity:.3f})")
                 return False
 
         # Diverse from all candidates
@@ -287,7 +287,7 @@ Respond with JSON:
             return (is_diverse, confidence, reasoning)
 
         except Exception as e:
-            print(f"⚠️  Diversity check error: {e}")
+            print(f"Diversity check error: {e}")
             return (True, 0.5, f"Error: {e}")
 
     def route_video(self, classification: Dict[str, Any]) -> str:

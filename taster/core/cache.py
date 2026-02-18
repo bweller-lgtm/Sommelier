@@ -388,7 +388,7 @@ class CacheManager:
             return stats
 
         # Exceeded limit - need to cleanup
-        print(f"⚠️  Cache size ({current_size_gb:.2f} GB) exceeds limit ({self.max_size_gb} GB)")
+        print(f"Cache size ({current_size_gb:.2f} GB) exceeds limit ({self.max_size_gb} GB)")
         print(f"   Removing oldest entries...")
 
         # Collect all cache files with their modification times

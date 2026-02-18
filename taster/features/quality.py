@@ -110,7 +110,7 @@ class QualityScorer:
             return float(score)
 
         except Exception as e:
-            print(f"⚠️  Warning: Failed to compute quality for {image_path}: {e}")
+            print(f"Warning: Failed to compute quality for {image_path}: {e}")
             return 0.0
 
     def compute_scores_batch(
@@ -154,7 +154,7 @@ class QualityScorer:
             return {path: score for path, score in results}
 
         except Exception as e:
-            print(f"⚠️  Multiprocessing failed ({e}), falling back to serial...")
+            print(f"Multiprocessing failed ({e}), falling back to serial...")
             results = {}
             for path in tqdm(image_paths, desc="Computing quality scores (serial)"):
                 results[path] = self.compute_score(path, use_cache=use_cache)
@@ -227,7 +227,7 @@ class FaceDetector:
                 cv2.data.haarcascades + 'haarcascade_smile.xml'
             )
         except Exception as e:
-            print(f"⚠️  Warning: Failed to load face detection cascades: {e}")
+            print(f"Warning: Failed to load face detection cascades: {e}")
             self.face_cascade = None
 
     def detect_faces(self, image_path: Path, use_cache: bool = True) -> Dict[str, float]:
@@ -353,7 +353,7 @@ class FaceDetector:
             return features
 
         except Exception as e:
-            print(f"⚠️  Warning: Failed to detect faces in {image_path}: {e}")
+            print(f"Warning: Failed to detect faces in {image_path}: {e}")
             return default_features
 
     def detect_faces_batch(
@@ -397,7 +397,7 @@ class FaceDetector:
             return {path: features for path, features in results}
 
         except Exception as e:
-            print(f"⚠️  Multiprocessing failed ({e}), falling back to serial...")
+            print(f"Multiprocessing failed ({e}), falling back to serial...")
             results = {}
             for path in tqdm(image_paths, desc="Detecting faces (serial)"):
                 results[path] = self.detect_faces(path, use_cache=use_cache)

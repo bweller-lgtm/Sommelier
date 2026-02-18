@@ -121,9 +121,9 @@ class GeminiClient(AIClient):
             raise SafetyFilterError("Content blocked by safety filters")
         elif candidate.finish_reason == 2:
             # Max tokens - not necessarily an error, but log it
-            print(f"⚠️  Warning: Response reached max tokens")
+            print(f"Warning: Response reached max tokens")
         elif candidate.finish_reason not in [1, 2]:
-            print(f"⚠️  Warning: Unusual finish reason: {candidate.finish_reason}")
+            print(f"Warning: Unusual finish reason: {candidate.finish_reason}")
 
         # Extract text - handle truncated responses gracefully
         try:
@@ -198,7 +198,7 @@ class GeminiClient(AIClient):
             except SafetyFilterError as e:
                 if handle_safety_errors:
                     # Return fallback response
-                    print(f"⚠️  Safety filter triggered: {e}")
+                    print(f"Safety filter triggered: {e}")
                     return AIResponse(
                         text='{"classification": "Review", "confidence": 0.3, "reasoning": "Blocked by safety filters"}',
                         raw_response=None,
@@ -216,21 +216,21 @@ class GeminiClient(AIClient):
                 # Check if timeout error
                 if "timeout" in error_str or "timed out" in error_str:
                     delay = self.retry_delay * (2 ** attempt)
-                    print(f"⚠️  Request timeout ({self.timeout}s), retrying in {delay}s...")
+                    print(f"Request timeout ({self.timeout}s), retrying in {delay}s...")
                     time.sleep(delay)
                     continue
 
                 # Check if rate limit error
                 if "rate" in error_str or "quota" in error_str:
                     delay = self.retry_delay * (2 ** attempt)
-                    print(f"⚠️  Rate limit hit, retrying in {delay}s...")
+                    print(f"Rate limit hit, retrying in {delay}s...")
                     time.sleep(delay)
                     continue
 
                 # Check if temporary error
                 if "unavailable" in error_str or "connection" in error_str:
                     delay = self.retry_delay * (2 ** attempt)
-                    print(f"⚠️  Temporary error, retrying in {delay}s...")
+                    print(f"Temporary error, retrying in {delay}s...")
                     time.sleep(delay)
                     continue
 
@@ -269,7 +269,7 @@ class GeminiClient(AIClient):
             return response.parse_json(fallback=fallback)
         except ValueError as e:
             if fallback is not None:
-                print(f"⚠️  JSON parsing failed, using fallback: {e}")
+                print(f"JSON parsing failed, using fallback: {e}")
                 return fallback
             raise
 
@@ -297,11 +297,11 @@ class GeminiClient(AIClient):
                             time.sleep(2)
                             video_file = self._genai.get_file(video_file.name)
                         if video_file.state.name == "FAILED":
-                            print(f"⚠️  Warning: Video processing failed for {item}")
+                            print(f"Warning: Video processing failed for {item}")
                             continue
                         result.append(video_file)
                     except Exception as e:
-                        print(f"⚠️  Warning: Error uploading video {item}: {e}")
+                        print(f"Warning: Error uploading video {item}: {e}")
                 else:
                     # Load image
                     try:
@@ -309,9 +309,9 @@ class GeminiClient(AIClient):
                         if img is not None:
                             result.append(img)
                         else:
-                            print(f"⚠️  Warning: Could not load image {item}")
+                            print(f"Warning: Could not load image {item}")
                     except Exception as e:
-                        print(f"⚠️  Warning: Error loading image {item}: {e}")
+                        print(f"Warning: Error loading image {item}: {e}")
             else:
                 result.append(item)
         return result
@@ -444,7 +444,7 @@ class GeminiImageClient:
         # Load source image at high resolution (up to 2048px for quality)
         source_image = ImageUtils.load_and_fix_orientation(image_path, max_size=2048)
         if source_image is None:
-            print(f"⚠️  Could not load image: {image_path}")
+            print(f"Could not load image: {image_path}")
             return None
 
         # Get the aspect ratio to preserve
@@ -482,7 +482,7 @@ class GeminiImageClient:
                                 return part.inline_data.data
 
                 # No image found in response
-                print(f"⚠️  No image generated in response")
+                print(f"No image generated in response")
                 return None
 
             except Exception as e:
@@ -492,29 +492,29 @@ class GeminiImageClient:
                 # Check if rate limit error
                 if "rate" in error_str or "quota" in error_str:
                     delay = self.retry_delay * (2 ** attempt)
-                    print(f"⚠️  Rate limit hit, retrying in {delay}s...")
+                    print(f"Rate limit hit, retrying in {delay}s...")
                     time.sleep(delay)
                     continue
 
                 # Check if temporary error
                 if "unavailable" in error_str or "connection" in error_str:
                     delay = self.retry_delay * (2 ** attempt)
-                    print(f"⚠️  Temporary error, retrying in {delay}s...")
+                    print(f"Temporary error, retrying in {delay}s...")
                     time.sleep(delay)
                     continue
 
                 # Check for model not available
                 if "model" in error_str and ("not found" in error_str or "unavailable" in error_str):
-                    print(f"⚠️  Model {self.model_name} not available: {e}")
+                    print(f"Model {self.model_name} not available: {e}")
                     print("   Check https://ai.google.dev/gemini-api/docs/pricing for current models")
                     return None
 
                 # Unknown error
-                print(f"⚠️  Image generation error: {e}")
+                print(f"Image generation error: {e}")
                 return None
 
         # All retries failed
-        print(f"⚠️  Image generation failed after {self.max_retries} retries: {last_error}")
+        print(f"Image generation failed after {self.max_retries} retries: {last_error}")
         return None
 
     def save_image(self, image_bytes: bytes, output_path: Path) -> bool:
@@ -533,5 +533,5 @@ class GeminiImageClient:
                 f.write(image_bytes)
             return True
         except Exception as e:
-            print(f"⚠️  Error saving image: {e}")
+            print(f"Error saving image: {e}")
             return False

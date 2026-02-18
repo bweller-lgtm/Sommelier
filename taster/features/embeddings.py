@@ -53,11 +53,11 @@ class EmbeddingExtractor:
             self._torch = torch
             self._np = require("numpy", "ml")
 
-            print(f"📦 Loading CLIP model: {self.model_config.clip_model}")
+            print(f"Loading CLIP model: {self.model_config.clip_model}")
 
             self._device = self.performance_config.device
             if self._device == "cuda" and not torch.cuda.is_available():
-                print("⚠️  CUDA not available, falling back to CPU")
+                print("CUDA not available, falling back to CPU")
                 self._device = "cpu"
 
             self._model, _, self._preprocess = open_clip.create_model_and_transforms(
@@ -67,7 +67,7 @@ class EmbeddingExtractor:
             )
             self._model.eval()
 
-            print(f"✅ Model loaded on {self._device}")
+            print(f"Model loaded on {self._device}")
 
     def extract_embedding(
         self,
@@ -136,7 +136,7 @@ class EmbeddingExtractor:
             return embedding
 
         except Exception as e:
-            print(f"⚠️  Warning: Failed to extract embedding for {image_path}: {e}")
+            print(f"Warning: Failed to extract embedding for {image_path}: {e}")
             return None
 
     def extract_embeddings_batch(
@@ -277,7 +277,7 @@ class EmbeddingExtractor:
                 embeddings[path] = embedding
 
         except Exception as e:
-            print(f"⚠️  Batch embedding extraction failed: {e}")
+            print(f"Batch embedding extraction failed: {e}")
             # Fall back to individual extraction
             for path in valid_paths:
                 embedding = self._extract_embedding_nocache(path)
