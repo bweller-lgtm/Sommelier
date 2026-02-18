@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sommelier"
+name = "taster"
 dynamic = ["version"]
 description = "Teach AI your taste. Apply it to everything."
 readme = "README.md"
@@ -58,7 +58,7 @@ api = [
 mcp = ["mcp[cli]>=1.0"]
 train = ["gradio>=4.0"]
 all = [
-    "sommelier[gemini,openai,anthropic,ml,documents,api,mcp,train]",
+    "taster[gemini,openai,anthropic,ml,documents,api,mcp,train]",
 ]
 dev = [
     "pytest>=7.4",
