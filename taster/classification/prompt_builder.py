@@ -258,6 +258,16 @@ class PromptBuilder:
         lines = []
         for name, desc in categories.items():
             lines.append(f"**{name}** = {desc}")
+
+        # Add explicit Review guidance if Review is a valid category
+        if "Review" in categories:
+            lines.append("")
+            lines.append("**When to use Review:** Use Review for borderline cases where you're "
+                         "genuinely torn between Share and Storage. If a photo has some share-worthy "
+                         "qualities but also notable flaws, or if the moment is nice but you're not "
+                         "confident it meets the Share bar, classify as Review. "
+                         "Roughly 10-20% of photos with children should land in Review.")
+
         return "\n".join(lines)
 
     # ---- Public prompt builders ----
