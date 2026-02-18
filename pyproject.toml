@@ -68,6 +68,7 @@ dev = [
 
 [project.scripts]
 sommelier = "sommelier.cli:main"
+taster = "sommelier.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/bweller-lgtm/Sommelier"
