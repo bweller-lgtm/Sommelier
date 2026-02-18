@@ -2,7 +2,7 @@
 
 **Teach AI your taste. Apply it to everything.**
 
-Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best code. Screen 500 resumes against criteria you didn't have to write by hand.
+Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best code. Grade 200 student essays against criteria you didn't have to write by hand.
 
 ### You don't need to know your criteria.
 
@@ -90,28 +90,28 @@ Profiles define *what* you're classifying, *how* you want it categorized, and *w
 
 ```json
 {
-  "name": "linkedin-profiles",
-  "description": "Sort LinkedIn profile PDFs by hire potential",
+  "name": "student-essays",
+  "description": "Grade student essays by quality",
   "media_types": ["document"],
   "categories": [
-    {"name": "Strong", "description": "Excellent candidates to interview"},
-    {"name": "Maybe", "description": "Worth a second look"},
-    {"name": "Pass", "description": "Not a match for this role"}
+    {"name": "Strong", "description": "Excellent work, minimal feedback needed"},
+    {"name": "Developing", "description": "Shows promise, needs specific feedback"},
+    {"name": "Needs Work", "description": "Significant gaps to address"}
   ],
   "top_priorities": [
-    "Relevant experience in the target domain",
-    "Track record of increasing responsibility",
-    "Technical skills alignment"
+    "Clear thesis supported by evidence",
+    "Logical structure and coherent argument",
+    "Engagement with source material"
   ],
   "positive_criteria": {
-    "must_have": ["Relevant industry experience", "Clear career progression"],
-    "highly_valued": ["Leadership experience", "Quantified achievements"]
+    "must_have": ["Identifiable thesis statement", "At least 3 supporting sources"],
+    "highly_valued": ["Original analysis beyond summary", "Effective transitions"]
   },
   "negative_criteria": {
-    "deal_breakers": ["No relevant experience", "Frequent job hopping without growth"]
+    "deal_breakers": ["Plagiarism or uncited sources", "Off-topic response"]
   },
-  "philosophy": "Focus on demonstrated impact and growth potential over credentials.",
-  "thresholds": {"Strong": 0.70, "Maybe": 0.40}
+  "philosophy": "Reward critical thinking and clear communication over polish.",
+  "thresholds": {"Strong": 0.70, "Developing": 0.40}
 }
 ```
 
@@ -193,7 +193,7 @@ ANTHROPIC_API_KEY=your_key_here   # Claude
 
 From there, just talk to it:
 - *"Sort the photos in my Camera Roll folder"*
-- *"Create a profile for screening resumes"*
+- *"Create a profile for grading student essays"*
 - *"Generate a taste profile from my best code examples in src/"*
 
 **MCP Tools:**
@@ -345,7 +345,7 @@ See `config.yaml` for all options with inline documentation.
 
 | Type | Extensions |
 |------|-----------|
-| **Images** | `.jpg` `.jpeg` `.png` `.webp` `.heic` `.tif` `.tiff` `.bmp` |
+| **Images** | `.jpg` `.jpeg` `.png` `.gif` `.webp` `.heic` `.tif` `.tiff` `.bmp` |
 | **Videos** | `.mp4` `.mov` `.avi` `.mkv` `.m4v` `.3gp` `.wmv` `.flv` `.webm` |
 | **Documents** | `.pdf` `.docx` `.xlsx` `.pptx` `.html` `.htm` `.txt` `.md` `.csv` `.rtf` |
 | **Source Code** | `.py` `.js` `.ts` `.jsx` `.tsx` `.java` `.go` `.rs` `.rb` `.cpp` `.c` `.cs` `.swift` `.kt` `.php` `.lua` `.scala` + more |
