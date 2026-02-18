@@ -11,12 +11,16 @@ from collections import defaultdict
 from ..core.config import Config
 from ..core.profiles import TasteProfile
 
-# Per-item cost estimates (Gemini Flash)
-_COST_ESTIMATES = {
-    "image": 0.0013,
-    "video": 0.011,  # per minute, assume ~1 min avg
-    "document": 0.005,
-}
+# Gemini Flash token rates
+_TOKENS_PER_IMAGE = 258
+_VIDEO_TOKENS_PER_SEC = 290  # 258 visual (1fps) + 32 audio
+_VIDEO_BITRATE_BPS = 12_000_000  # 12 Mbps typical phone video
+_PROMPT_TOKENS = 1000  # average prompt size
+_OUTPUT_TOKENS = 300  # average output size
+
+# Gemini Flash pricing per 1M tokens
+_INPUT_PRICE_PER_M = 0.30
+_OUTPUT_PRICE_PER_M = 1.20
 
 
 @dataclass
@@ -61,24 +65,45 @@ class ClassificationResult:
         print(f"{'='*60}")
 
     def _estimate_cost(self) -> float:
-        """Estimate API cost based on file types."""
-        cost = 0.0
+        """Estimate API cost from token counts (images, video duration, prompts)."""
+        image_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".tif", ".tiff", ".bmp"}
+        video_exts = {".mp4", ".mov", ".avi", ".mkv", ".m4v", ".webm"}
+
+        total_input_tokens = 0
+        api_calls = 0
+
         for r in self.results:
-            # Check for burst photos (shared prompt = cheaper)
-            burst_size = r.get("burst_size", 1)
-            if burst_size > 1:
-                cost += _COST_ESTIMATES.get("image", 0) / 3  # shared prompt discount
+            path = Path(r["path"]) if isinstance(r["path"], (str, Path)) else r["path"]
+            ext = path.suffix.lower()
+
+            if ext in image_exts:
+                total_input_tokens += _TOKENS_PER_IMAGE
+            elif ext in video_exts:
+                # Estimate duration from file size
+                try:
+                    file_bytes = path.stat().st_size
+                    duration_sec = max(file_bytes * 8 / _VIDEO_BITRATE_BPS, 1)
+                except OSError:
+                    duration_sec = 60  # fallback: assume 1 minute
+                total_input_tokens += int(duration_sec * _VIDEO_TOKENS_PER_SEC)
             else:
-                # Detect type from path extension
-                path = Path(r["path"]) if isinstance(r["path"], (str, Path)) else r["path"]
-                ext = path.suffix.lower()
-                if ext in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".tif", ".tiff", ".bmp"}:
-                    cost += _COST_ESTIMATES["image"]
-                elif ext in {".mp4", ".mov", ".avi", ".mkv", ".m4v", ".webm"}:
-                    cost += _COST_ESTIMATES["video"]
-                else:
-                    cost += _COST_ESTIMATES["document"]
-        return cost
+                total_input_tokens += 2000  # documents: rough estimate
+
+            # Count API calls (burst photos share a single call)
+            burst_size = r.get("burst_size", 1)
+            if burst_size <= 1:
+                api_calls += 1
+            else:
+                api_calls += 1 / burst_size  # fractional: shared call
+
+        # Add prompt + output tokens per API call
+        api_calls = max(int(api_calls), 1)
+        total_input_tokens += api_calls * _PROMPT_TOKENS
+        total_output_tokens = api_calls * _OUTPUT_TOKENS
+
+        input_cost = total_input_tokens / 1_000_000 * _INPUT_PRICE_PER_M
+        output_cost = total_output_tokens / 1_000_000 * _OUTPUT_PRICE_PER_M
+        return input_cost + output_cost
 
     def _top_confident(self, n: int = 5) -> List[Dict[str, Any]]:
         """Return the top N highest-confidence results."""
