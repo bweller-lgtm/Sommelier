@@ -61,16 +61,16 @@ That profile is both a human-readable style guide *and* an executable classifier
 
 </details>
 
-### Screening at Scale
+### Grading at Scale
 
-Resumes, grant proposals, student papers, vendor submissions. Create a profile from the last 10 candidates you actually hired. Sommelier extracts what *your* hiring decisions had in common and applies your judgment to the next 500 applicants.
+Grade 200 student submissions against *your* standards. Create a profile from a handful of A-grade and C-grade examples. Sommelier extracts what your grading decisions had in common and applies them to the full batch -- including an explanation of why each submission landed where it did, in your voice.
 
 Classification uses confidence tiers:
-- **High confidence** -- clearly strong or clearly weak candidates are sorted automatically
-- **Medium confidence** -- borderline candidates go to a review pile for human attention
+- **High confidence** -- clearly strong or clearly weak submissions are graded automatically
+- **Medium confidence** -- borderline work goes to a review pile for your attention
 - **Low confidence** -- flagged for manual review rather than guessing
 
-You set the thresholds per category. A resume screener might use `Strong: 0.70, Maybe: 0.40` -- anything above 70% confidence goes to Strong, 40-70% to Maybe, below 40% to Pass. The review pile shrinks as the profile gets sharper.
+You set the thresholds per category. A grading profile might use `Strong: 0.70, Developing: 0.40` -- anything above 70% confidence goes to Strong, 40-70% to Developing, below 40% to Needs Work. The instructor focuses on the edge cases that require higher judgment, not the obvious calls.
 
 ### Code Standards
 
