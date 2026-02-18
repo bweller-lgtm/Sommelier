@@ -288,7 +288,7 @@ def load_config(config_path: Optional[Path] = None) -> Config:
     Returns:
         Config object with validated settings.
     """
-    from sommelier.dirs import find_config
+    from taster.dirs import find_config
 
     resolved = find_config(config_path)
 

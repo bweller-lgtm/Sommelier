@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 from PIL import Image
-from sommelier.core.file_utils import FileTypeRegistry, ImageUtils
+from taster.core.file_utils import FileTypeRegistry, ImageUtils
 
 
 class TestFileTypeRegistry:

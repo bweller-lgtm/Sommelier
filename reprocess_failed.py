@@ -24,12 +24,12 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 
 # Import infrastructure
-from sommelier.core import (
+from taster.core import (
     load_config,
     CacheManager,
     create_ai_client,
 )
-from sommelier.classification import (
+from taster.classification import (
     PromptBuilder,
     MediaClassifier,
     Router,

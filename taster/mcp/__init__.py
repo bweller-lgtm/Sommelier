@@ -1,4 +1,4 @@
-"""MCP server for Sommelier."""
+"""MCP server for Taster."""
 from .server import create_mcp_server
 
 __all__ = ["create_mcp_server"]

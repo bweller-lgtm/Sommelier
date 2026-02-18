@@ -2,8 +2,8 @@
 
 import pytest
 
-from sommelier.training.session import TrainingSession
-from sommelier.training.sampler import ComparisonSampler
+from taster.training.session import TrainingSession
+from taster.training.sampler import ComparisonSampler
 
 
 def _make_session(

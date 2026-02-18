@@ -3,10 +3,10 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
-from sommelier.core.config import load_config
-from sommelier.core.profiles import TasteProfile, CategoryDefinition
-from sommelier.classification.classifier import MediaClassifier
-from sommelier.classification.prompt_builder import PromptBuilder
+from taster.core.config import load_config
+from taster.core.profiles import TasteProfile, CategoryDefinition
+from taster.classification.classifier import MediaClassifier
+from taster.classification.prompt_builder import PromptBuilder
 
 
 @pytest.fixture
@@ -218,14 +218,14 @@ class TestClassifySingleton:
         result = classifier_with_cache.classify_singleton(Path("test.jpg"))
         assert result == cached_result
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_load_failure_returns_fallback(self, mock_utils, classifier):
         mock_utils.load_and_fix_orientation.return_value = None
         result = classifier.classify_singleton(Path("broken.jpg"))
         assert result["is_error_fallback"] is True
         assert result["error_type"] == "load_error"
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_successful_classification(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = {
@@ -235,14 +235,14 @@ class TestClassifySingleton:
         assert result["classification"] == "Share"
         assert mock_client.generate_json.called
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_api_exception_returns_fallback(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.side_effect = Exception("API down")
         result = classifier.classify_singleton(Path("test.jpg"))
         assert result["is_error_fallback"] is True
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_caches_result(self, mock_utils, classifier_with_cache, mock_client, mock_cache):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = {
@@ -267,7 +267,7 @@ class TestClassifyBurst:
             assert len(result) == 1
             mock_single.assert_called_once()
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_burst_classification(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = [
@@ -279,7 +279,7 @@ class TestClassifyBurst:
         assert result[0]["burst_position"] == 0
         assert result[1]["burst_position"] == 1
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_burst_invalid_response_format(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         # Return dict instead of list
@@ -288,7 +288,7 @@ class TestClassifyBurst:
         assert len(result) == 2
         assert all(r["is_error_fallback"] for r in result)
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_burst_wrong_length_response(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = [
@@ -298,7 +298,7 @@ class TestClassifyBurst:
         assert len(result) == 2
         assert all(r["is_error_fallback"] for r in result)
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_burst_chunking(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = [
@@ -310,7 +310,7 @@ class TestClassifyBurst:
         # Should have been chunked into 3 chunks (2+2+1)
         assert len(result) == 5
 
-    @patch("sommelier.classification.classifier.ImageUtils")
+    @patch("taster.classification.classifier.ImageUtils")
     def test_burst_failed_image_placeholder(self, mock_utils, classifier, mock_client):
         # First image fails to load, second succeeds
         mock_utils.load_and_fix_orientation.side_effect = [None, MagicMock()]

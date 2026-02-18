@@ -4,8 +4,8 @@ import io
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from sommelier.api.services.classification_service import ClassificationService
-from sommelier.core.config import load_config
+from taster.api.services.classification_service import ClassificationService
+from taster.core.config import load_config
 
 router = APIRouter(prefix="/api/results", tags=["results"])
 

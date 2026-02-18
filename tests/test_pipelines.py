@@ -5,12 +5,12 @@ from pathlib import Path
 from collections import defaultdict
 from unittest.mock import MagicMock, patch
 
-from sommelier.core.config import load_config
-from sommelier.core.profiles import TasteProfile, CategoryDefinition
-from sommelier.pipelines.base import ClassificationResult, ClassificationPipeline
-from sommelier.pipelines.photo_pipeline import PhotoPipeline
-from sommelier.pipelines.document_pipeline import DocumentPipeline
-from sommelier.pipelines.mixed_pipeline import MixedPipeline
+from taster.core.config import load_config
+from taster.core.profiles import TasteProfile, CategoryDefinition
+from taster.pipelines.base import ClassificationResult, ClassificationPipeline
+from taster.pipelines.photo_pipeline import PhotoPipeline
+from taster.pipelines.document_pipeline import DocumentPipeline
+from taster.pipelines.mixed_pipeline import MixedPipeline
 
 
 @pytest.fixture
@@ -223,7 +223,7 @@ class TestDocumentPipeline:
         assert routed[1]["destination"] == "Weak"  # Below threshold
 
     def test_group_files_disabled(self, config):
-        from sommelier.core.profiles import DocumentProfileSettings
+        from taster.core.profiles import DocumentProfileSettings
         profile = TasteProfile(
             name="test", description="test", media_types=["document"],
             categories=[CategoryDefinition("A", "a")],

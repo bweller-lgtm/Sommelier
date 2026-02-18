@@ -7,9 +7,9 @@ import numpy as np
 from PIL import Image
 from datetime import datetime, timedelta
 
-from sommelier.core import load_config, CacheManager, GeminiClient, FileTypeRegistry
-from sommelier.features import QualityScorer, BurstDetector, EmbeddingExtractor
-from sommelier.classification import PromptBuilder, MediaClassifier, Router
+from taster.core import load_config, CacheManager, GeminiClient, FileTypeRegistry
+from taster.features import QualityScorer, BurstDetector, EmbeddingExtractor
+from taster.classification import PromptBuilder, MediaClassifier, Router
 
 
 class TestEndToEndWorkflow:
@@ -239,7 +239,7 @@ class TestEndToEndWorkflow:
 
         # Test threshold validation
         with pytest.raises(ValueError, match="review_threshold.*must be.*share_threshold"):
-            from sommelier.core.config import ClassificationConfig
+            from taster.core.config import ClassificationConfig
             ClassificationConfig(
                 share_threshold=0.5,
                 review_threshold=0.6  # Invalid: review > share
@@ -247,7 +247,7 @@ class TestEndToEndWorkflow:
 
         # Test weight validation
         with pytest.raises(ValueError, match="sharpness_weight.*brightness_weight.*must equal 1.0"):
-            from sommelier.core.config import QualityConfig
+            from taster.core.config import QualityConfig
             QualityConfig(
                 sharpness_weight=0.5,
                 brightness_weight=0.3  # Invalid: doesn't sum to 1.0
@@ -255,7 +255,7 @@ class TestEndToEndWorkflow:
 
         # Test max_faces validation
         with pytest.raises(ValueError, match="max_faces_to_report must be >= 1"):
-            from sommelier.core.config import QualityConfig
+            from taster.core.config import QualityConfig
             QualityConfig(max_faces_to_report=0)
 
         print("[OK] Configuration validation working")
@@ -303,7 +303,7 @@ class TestEndToEndWorkflow:
         corrupt_file = tmp_path / "corrupt.jpg"
         corrupt_file.write_bytes(b"not an image")
 
-        from sommelier.core.file_utils import ImageUtils
+        from taster.core.file_utils import ImageUtils
         img = ImageUtils.load_and_fix_orientation(corrupt_file)
         assert img is None  # Should return None instead of crashing
 
@@ -317,15 +317,15 @@ def test_full_system_integration():
     print("\n=== Testing Full System Integration ===")
 
     # Test all imports
-    from sommelier.core import (
+    from taster.core import (
         Config, load_config, save_config,
         CacheManager, CacheKey,
         FileTypeRegistry, ImageUtils,
         GeminiClient, GeminiResponse,
         get_logger, setup_logging
     )
-    from sommelier.features import QualityScorer, BurstDetector, EmbeddingExtractor
-    from sommelier.classification import PromptBuilder, MediaClassifier, Router
+    from taster.features import QualityScorer, BurstDetector, EmbeddingExtractor
+    from taster.classification import PromptBuilder, MediaClassifier, Router
 
     # Test configuration
     config = load_config(Path("config.yaml"))

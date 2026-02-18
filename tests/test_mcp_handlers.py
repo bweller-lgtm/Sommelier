@@ -5,7 +5,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
-from sommelier.core.profiles import ProfileManager, TasteProfile, CategoryDefinition
+from taster.core.profiles import ProfileManager, TasteProfile, CategoryDefinition
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def pm(tmp_profiles_dir):
 
 def _import_handlers():
     """Import handler functions from the MCP server module."""
-    from sommelier.mcp.server import (
+    from taster.mcp.server import (
         _handle_status,
         _handle_list_profiles,
         _handle_get_profile,
@@ -261,7 +261,7 @@ class TestToolDispatch:
 
     def test_unknown_tool(self, pm):
         h = _import_handlers()
-        with patch("sommelier.mcp.server._get_profile_manager", return_value=pm):
+        with patch("taster.mcp.server._get_profile_manager", return_value=pm):
             result = h["handle_tool"]("unknown_tool", {})
             assert "error" in result
 
@@ -271,16 +271,16 @@ class TestToolDispatch:
             categories=[{"name": "A", "description": "a"}],
         )
         h = _import_handlers()
-        with patch("sommelier.mcp.server._get_profile_manager", return_value=pm):
-            result = h["handle_tool"]("sommelier_list_profiles", {})
+        with patch("taster.mcp.server._get_profile_manager", return_value=pm):
+            result = h["handle_tool"]("taster_list_profiles", {})
             assert isinstance(result, list)
             assert len(result) == 1
 
     def test_dispatches_status(self, pm):
         h = _import_handlers()
-        with patch("sommelier.mcp.server._get_profile_manager", return_value=pm):
+        with patch("taster.mcp.server._get_profile_manager", return_value=pm):
             with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
-                result = h["handle_tool"]("sommelier_status", {})
+                result = h["handle_tool"]("taster_status", {})
                 assert "ready" in result
 
 
@@ -291,10 +291,10 @@ class TestViewFeedback:
 
     def test_empty_feedback(self, pm, tmp_profiles_dir):
         h = _import_handlers()
-        with patch("sommelier.mcp.server._get_config") as mock_cfg:
+        with patch("taster.mcp.server._get_config") as mock_cfg:
             mock_cfg.return_value = MagicMock()
             mock_cfg.return_value.profiles.profiles_dir = str(tmp_profiles_dir)
-            with patch("sommelier.mcp.server._handle_view_feedback") as mock_vf:
+            with patch("taster.mcp.server._handle_view_feedback") as mock_vf:
                 mock_vf.return_value = {
                     "total_feedback": 0,
                     "message": "No feedback submitted yet.",
@@ -309,7 +309,7 @@ class TestViewFeedback:
 class TestQuickProfile:
 
     def test_no_api_key(self, pm):
-        from sommelier.mcp.server import _handle_quick_profile
+        from taster.mcp.server import _handle_quick_profile
         with patch.dict(os.environ, {}, clear=True):
             for k in ["GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]:
                 os.environ.pop(k, None)
@@ -319,7 +319,7 @@ class TestQuickProfile:
             assert "error" in result
 
     def test_profile_already_exists(self, pm):
-        from sommelier.mcp.server import _handle_quick_profile
+        from taster.mcp.server import _handle_quick_profile
         pm.create_profile(
             name="existing", description="d", media_types=["image"],
             categories=[{"name": "A", "description": "a"}],
@@ -332,7 +332,7 @@ class TestQuickProfile:
             assert "already exists" in result["error"]
 
     def test_quick_profile_success(self, pm):
-        from sommelier.mcp.server import _handle_quick_profile
+        from taster.mcp.server import _handle_quick_profile
         mock_client = MagicMock()
         mock_client.generate_json.return_value = {
             "description": "Test profile",
@@ -346,8 +346,8 @@ class TestQuickProfile:
             "philosophy": "only the best",
         }
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
-            with patch("sommelier.core.provider_factory.create_ai_client", return_value=mock_client):
-                with patch("sommelier.mcp.server._get_config") as mock_cfg:
+            with patch("taster.core.provider_factory.create_ai_client", return_value=mock_client):
+                with patch("taster.mcp.server._get_config") as mock_cfg:
                     mock_cfg.return_value = MagicMock()
                     result = _handle_quick_profile(pm, {
                         "profile_name": "generated", "description": "sort my photos",
@@ -362,7 +362,7 @@ class TestQuickProfile:
 class TestGenerateProfile:
 
     def test_no_api_key(self, pm):
-        from sommelier.mcp.server import _handle_generate_profile
+        from taster.mcp.server import _handle_generate_profile
         with patch.dict(os.environ, {}, clear=True):
             for k in ["GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]:
                 os.environ.pop(k, None)
@@ -372,7 +372,7 @@ class TestGenerateProfile:
             assert "error" in result
 
     def test_profile_already_exists(self, pm, tmp_path):
-        from sommelier.mcp.server import _handle_generate_profile
+        from taster.mcp.server import _handle_generate_profile
         pm.create_profile(
             name="existing", description="d", media_types=["image"],
             categories=[{"name": "A", "description": "a"}],
@@ -385,7 +385,7 @@ class TestGenerateProfile:
             assert "error" in result
 
     def test_bad_folder(self, pm):
-        from sommelier.mcp.server import _handle_generate_profile
+        from taster.mcp.server import _handle_generate_profile
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
             result = _handle_generate_profile(pm, {
                 "profile_name": "gen",
@@ -394,13 +394,13 @@ class TestGenerateProfile:
             assert "error" in result
 
     def test_no_media_found(self, pm, tmp_path):
-        from sommelier.mcp.server import _handle_generate_profile
+        from taster.mcp.server import _handle_generate_profile
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
         mock_client = MagicMock()
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
-            with patch("sommelier.core.provider_factory.create_ai_client", return_value=mock_client):
-                with patch("sommelier.mcp.server._get_config") as mock_cfg:
+            with patch("taster.core.provider_factory.create_ai_client", return_value=mock_client):
+                with patch("taster.mcp.server._get_config") as mock_cfg:
                     mock_cfg.return_value = MagicMock()
                     result = _handle_generate_profile(pm, {
                         "profile_name": "gen",
@@ -415,7 +415,7 @@ class TestGenerateProfile:
 class TestClassifyFolder:
 
     def test_no_api_key(self, pm):
-        from sommelier.mcp.server import _handle_classify_folder
+        from taster.mcp.server import _handle_classify_folder
         with patch.dict(os.environ, {}, clear=True):
             for k in ["GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]:
                 os.environ.pop(k, None)
@@ -425,14 +425,14 @@ class TestClassifyFolder:
             assert "error" in result
 
     def test_folder_not_found(self, pm):
-        from sommelier.mcp.server import _handle_classify_folder
+        from taster.mcp.server import _handle_classify_folder
         pm.create_profile(
             name="test-prof", description="d", media_types=["image"],
             categories=[{"name": "A", "description": "a"}],
         )
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
-            with patch("sommelier.mcp.server._get_config") as mock_cfg:
-                from sommelier.core.config import Config
+            with patch("taster.mcp.server._get_config") as mock_cfg:
+                from taster.core.config import Config
                 mock_cfg.return_value = Config()
                 result = _handle_classify_folder(pm, {
                     "folder_path": "/nonexistent/path",
@@ -447,7 +447,7 @@ class TestClassifyFolder:
 class TestClassifyFiles:
 
     def test_no_api_key(self, pm):
-        from sommelier.mcp.server import _handle_classify_files
+        from taster.mcp.server import _handle_classify_files
         with patch.dict(os.environ, {}, clear=True):
             for k in ["GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]:
                 os.environ.pop(k, None)
