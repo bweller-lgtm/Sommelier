@@ -32,6 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
     cls.add_argument("--no-classify-videos", action="store_true")
     cls.add_argument("--parallel-videos", type=int, default=None)
     cls.add_argument("--cache-dir", type=str, default=None)
+    cls.add_argument("--no-cache", action="store_true", help="Skip classification cache (re-query AI for every item)")
 
     # ── train ───────────────────────────────────────────────────────
     trn = sub.add_parser("train", help="Launch Gradio pairwise trainer")
@@ -254,10 +255,14 @@ def _cmd_classify(args: argparse.Namespace) -> None:
     for d in dirs.values():
         d.mkdir(parents=True, exist_ok=True)
 
+    skip_cache = {"gemini", "burst_context"} if getattr(args, 'no_cache', False) else set()
+    if skip_cache:
+        print("Classification cache disabled (--no-cache)")
     cache_manager = CacheManager(
         config.paths.cache_root,
         ttl_days=config.caching.ttl_days,
         enabled=config.caching.enabled,
+        skip_types=skip_cache,
     )
 
     try:
