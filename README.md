@@ -131,14 +131,21 @@ Sommelier runs as an MCP server inside Claude Desktop, or as a standalone CLI / 
 ### Install
 
 ```bash
-git clone https://github.com/bweller-lgtm/Sommelier.git
-cd Sommelier
-pip install -e ".[gemini]"        # Gemini (recommended -- cheapest)
-# or: pip install -e ".[openai]"  # OpenAI
-# or: pip install -e ".[all]"     # Everything
+pip install taster[gemini]        # Gemini (recommended -- cheapest)
+# or: pip install taster[openai]  # OpenAI
+# or: pip install taster[all]     # Everything
 ```
 
-> **Note:** PyPI distribution coming soon. For now, install from source.
+<details>
+<summary><strong>Install from source</strong></summary>
+
+```bash
+git clone https://github.com/bweller-lgtm/Sommelier.git
+cd Sommelier
+pip install -e ".[gemini]"
+```
+
+</details>
 
 ### First-run setup
 
