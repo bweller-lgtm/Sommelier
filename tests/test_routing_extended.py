@@ -30,44 +30,44 @@ class TestSingletonRouting:
 
     def test_no_children(self, router):
         assert router.route_singleton({
-            "classification": "Share", "confidence": 0.9,
+            "classification": "Share", "score": 5,
             "contains_children": False,
         }) == "Ignore"
 
     def test_inappropriate(self, router):
         assert router.route_singleton({
-            "classification": "Share", "confidence": 0.9,
+            "classification": "Share", "score": 5,
             "contains_children": True, "is_appropriate": False,
         }) == "Review"
 
-    def test_share_high_confidence(self, router):
+    def test_share_high_score(self, router):
         assert router.route_singleton({
-            "classification": "Share", "confidence": 0.85,
+            "classification": "Share", "score": 4,
             "contains_children": True, "is_appropriate": True,
         }) == "Share"
 
-    def test_share_mid_confidence_to_review(self, router):
+    def test_share_mid_score_to_review(self, router):
         assert router.route_singleton({
-            "classification": "Share", "confidence": 0.45,
+            "classification": "Share", "score": 3,
             "contains_children": True, "is_appropriate": True,
         }) == "Review"
 
     def test_storage(self, router):
         assert router.route_singleton({
-            "classification": "Storage", "confidence": 0.5,
+            "classification": "Storage", "score": 2,
             "contains_children": True, "is_appropriate": True,
         }) == "Storage"
 
-    def test_very_low_confidence(self, router):
+    def test_very_low_score(self, router):
         assert router.route_singleton({
-            "classification": "Share", "confidence": 0.1,
+            "classification": "Share", "score": 1,
             "contains_children": True, "is_appropriate": True,
         }) == "Storage"
 
     def test_default_review(self, router):
-        """Mid-confidence non-Share, non-Storage ends up in Review."""
+        """Mid-score non-Share, non-Storage ends up in Review."""
         assert router.route_singleton({
-            "classification": "Review", "confidence": 0.5,
+            "classification": "Review", "score": 3,
             "contains_children": True, "is_appropriate": True,
         }) == "Review"
 
@@ -79,7 +79,7 @@ class TestVideoRouting:
 
     def test_delegates_to_singleton(self, router):
         result = router.route_video({
-            "classification": "Share", "confidence": 0.9,
+            "classification": "Share", "score": 5,
             "contains_children": True, "is_appropriate": True,
         })
         assert result == "Share"
@@ -100,21 +100,21 @@ class TestBurstRouting:
     def test_ignore_in_burst(self, router):
         result = router.route_burst(
             [Path("a.jpg")],
-            [{"classification": "Ignore", "rank": 1, "confidence": 0.9}],
+            [{"classification": "Ignore", "rank": 1, "score": 5}],
         )
         assert result == ["Ignore"]
 
     def test_no_children_in_burst(self, router):
         result = router.route_burst(
             [Path("a.jpg")],
-            [{"classification": "Share", "rank": 1, "confidence": 0.9, "contains_children": False}],
+            [{"classification": "Share", "rank": 1, "score": 5, "contains_children": False}],
         )
         assert result == ["Ignore"]
 
     def test_inappropriate_in_burst(self, router):
         result = router.route_burst(
             [Path("a.jpg")],
-            [{"classification": "Share", "rank": 1, "confidence": 0.9, "is_appropriate": False}],
+            [{"classification": "Share", "rank": 1, "score": 5, "is_appropriate": False}],
         )
         assert result == ["Review"]
 
@@ -122,8 +122,8 @@ class TestBurstRouting:
         result = router.route_burst(
             [Path("a.jpg"), Path("b.jpg")],
             [
-                {"classification": "Share", "confidence": 0.9, "rank": 1},
-                {"classification": "Share", "confidence": 0.7, "rank": 2},
+                {"classification": "Share", "score": 5, "rank": 1},
+                {"classification": "Share", "score": 4, "rank": 2},
             ],
         )
         assert result[0] == "Share"
@@ -137,9 +137,9 @@ class TestBurstRouting:
         result = r.route_burst(
             [Path("a.jpg"), Path("b.jpg"), Path("c.jpg")],
             [
-                {"classification": "Share", "confidence": 0.9, "rank": 1},
-                {"classification": "Share", "confidence": 0.8, "rank": 2},
-                {"classification": "Share", "confidence": 0.7, "rank": 3},
+                {"classification": "Share", "score": 5, "rank": 1},
+                {"classification": "Share", "score": 4, "rank": 2},
+                {"classification": "Share", "score": 4, "rank": 3},
             ],
         )
         assert result[0] == "Share"
@@ -154,17 +154,17 @@ class TestBurstRouting:
         result = r.route_burst(
             [Path("a.jpg"), Path("b.jpg"), Path("c.jpg")],
             [
-                {"classification": "Share", "confidence": 0.9, "rank": 1},
-                {"classification": "Share", "confidence": 0.8, "rank": 2},
-                {"classification": "Share", "confidence": 0.7, "rank": 5},
+                {"classification": "Share", "score": 5, "rank": 1},
+                {"classification": "Share", "score": 4, "rank": 2},
+                {"classification": "Share", "score": 2, "rank": 5},
             ],
         )
         assert result[2] == "Storage"
 
-    def test_top_ranked_low_confidence(self, router):
+    def test_top_ranked_low_score(self, router):
         result = router.route_burst(
             [Path("a.jpg")],
-            [{"classification": "Share", "confidence": 0.2, "rank": 1}],
+            [{"classification": "Share", "score": 1, "rank": 1}],
         )
         assert result[0] == "Storage"
 
@@ -184,13 +184,13 @@ class TestBurstRouting:
         result = r.route_burst(
             [Path("a.jpg"), Path("b.jpg")],
             [
-                {"classification": "Share", "confidence": 0.9, "rank": 1},
-                {"classification": "Share", "confidence": 0.85, "rank": 2},
+                {"classification": "Share", "score": 5, "rank": 1},
+                {"classification": "Share", "score": 4, "rank": 2},
             ],
             embeddings=embeddings,
         )
         assert result[0] == "Share"
-        assert result[1] == "Storage"  # Too similar
+        assert result[1] == "Review"  # Too similar, but score 4 >= review threshold
 
     def test_diversity_check_accepts_different(self, config):
         config.classification.enable_diversity_check = True
@@ -206,8 +206,8 @@ class TestBurstRouting:
         result = r.route_burst(
             [Path("a.jpg"), Path("b.jpg")],
             [
-                {"classification": "Share", "confidence": 0.9, "rank": 1},
-                {"classification": "Share", "confidence": 0.85, "rank": 2},
+                {"classification": "Share", "score": 5, "rank": 1},
+                {"classification": "Share", "score": 4, "rank": 2},
             ],
             embeddings=embeddings,
         )
@@ -221,8 +221,8 @@ class TestBurstRouting:
         result = r.route_burst(
             [Path("a.jpg"), Path("b.jpg")],
             [
-                {"classification": "Share", "confidence": 0.9, "rank": 1},
-                {"classification": "Share", "confidence": 0.85, "rank": 2},
+                {"classification": "Share", "score": 5, "rank": 1},
+                {"classification": "Share", "score": 4, "rank": 2},
             ],
             embeddings=None,
         )
@@ -247,7 +247,7 @@ class TestDiversityCheck:
     def test_with_client(self, config):
         mock_client = MagicMock()
         mock_client.generate_json.return_value = {
-            "is_diverse": False, "confidence": 0.9, "reasoning": "identical"
+            "is_diverse": False, "score": 5, "reasoning": "identical"
         }
         r = Router(config, gemini_client=mock_client)
         with MagicMock() as mock_utils:
@@ -278,7 +278,7 @@ class TestDocumentRouting:
 
     def test_no_profile_delegates_to_singleton(self, router):
         result = router.route_document({
-            "classification": "Share", "confidence": 0.9,
+            "classification": "Share", "score": 5,
             "contains_children": True, "is_appropriate": True,
         })
         assert result == "Share"
@@ -291,10 +291,10 @@ class TestDocumentRouting:
                 CategoryDefinition("Weak", "bad"),
             ],
             default_category="Weak",
-            thresholds={"Strong": 0.70},
+            thresholds={"Strong": 4},
         )
         r = Router(config, profile=profile)
-        result = r.route_document({"classification": "Strong", "confidence": 0.85})
+        result = r.route_document({"classification": "Strong", "score": 4})
         assert result == "Strong"
 
     def test_profile_below_threshold(self, config):
@@ -305,10 +305,10 @@ class TestDocumentRouting:
                 CategoryDefinition("Weak", "bad"),
             ],
             default_category="Weak",
-            thresholds={"Strong": 0.70},
+            thresholds={"Strong": 4},
         )
         r = Router(config, profile=profile)
-        result = r.route_document({"classification": "Strong", "confidence": 0.50})
+        result = r.route_document({"classification": "Strong", "score": 3})
         assert result == "Weak"  # Falls to default
 
     def test_profile_invalid_category(self, config):
@@ -321,7 +321,7 @@ class TestDocumentRouting:
             default_category="Weak",
         )
         r = Router(config, profile=profile)
-        result = r.route_document({"classification": "Bogus", "confidence": 0.9})
+        result = r.route_document({"classification": "Bogus", "score": 5})
         assert result == "Weak"
 
     def test_profile_no_threshold_for_category(self, config):
@@ -335,5 +335,5 @@ class TestDocumentRouting:
             thresholds={},
         )
         r = Router(config, profile=profile)
-        result = r.route_document({"classification": "A", "confidence": 0.1})
-        assert result == "A"  # No threshold means any confidence accepted
+        result = r.route_document({"classification": "A", "score": 1})
+        assert result == "A"  # No threshold means any score accepted

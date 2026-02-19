@@ -54,9 +54,16 @@
     "In burst mode, only keep the absolute best 1-2 photos."
   ],
   "philosophy": "Photos that capture genuine moments of connection, emotion, and personality - especially between parent and child.",
+  "scoring_rubric": {
+    "5": "Exceptional -- joyful expression, great composition, share immediately with no hesitation",
+    "4": "Good -- clearly share-worthy with only minor imperfections",
+    "3": "Borderline -- nice moment but notable flaws, or you're genuinely torn",
+    "2": "Ordinary -- decent memory to keep, but not share quality",
+    "1": "Poor -- blurry, no faces visible, or not relevant"
+  },
   "thresholds": {
-    "Share": 0.60,
-    "Review": 0.35
+    "Share": 4,
+    "Review": 3
   },
   "photo_settings": {
     "enable_burst_detection": true,

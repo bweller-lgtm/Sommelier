@@ -132,7 +132,7 @@ class ClassificationResultItem(BaseModel):
     file_path: str
     file_name: str
     category: str
-    confidence: Optional[float] = None
+    score: Optional[int] = None
     reasoning: Optional[str] = None
     burst_size: int = 1
 
@@ -152,7 +152,7 @@ class FileInCategory(BaseModel):
     """A file listed within a category."""
     file_path: str
     file_name: str
-    confidence: Optional[float] = None
+    score: Optional[int] = None
     reasoning: Optional[str] = None
 
 

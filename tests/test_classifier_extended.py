@@ -93,7 +93,7 @@ class TestFallbackResponse:
     def test_basic_fallback(self, classifier):
         fb = classifier._create_fallback_response("something broke")
         assert fb["classification"] == "Review"
-        assert fb["confidence"] == 0.3
+        assert fb["score"] == 2
         assert fb["is_error_fallback"] is True
         assert fb["error_type"] == "api_error"
         assert "something broke" in fb["reasoning"]
@@ -120,31 +120,31 @@ class TestValidateSingleton:
         resp = {}
         result = classifier._validate_singleton_response(resp)
         assert result["classification"] == "Review"
-        assert result["confidence"] == 0.3
+        assert result["score"] == 2
         assert result["reasoning"] == "No reasoning provided"
         assert result["is_error_fallback"] is False
 
-    def test_clamps_confidence(self, classifier):
-        resp = {"classification": "Share", "confidence": 1.5}
+    def test_clamps_score(self, classifier):
+        resp = {"classification": "Share", "score": 7}
         result = classifier._validate_singleton_response(resp)
-        assert result["confidence"] == 1.0
+        assert result["score"] == 5
 
-        resp2 = {"classification": "Share", "confidence": -0.5}
+        resp2 = {"classification": "Share", "score": -1}
         result2 = classifier._validate_singleton_response(resp2)
-        assert result2["confidence"] == 0.0
+        assert result2["score"] == 1
 
     def test_remaps_invalid_category(self, classifier):
-        resp = {"classification": "Invalid", "confidence": 0.8}
+        resp = {"classification": "Invalid", "score": 4}
         result = classifier._validate_singleton_response(resp)
         assert result["classification"] == "Review"
 
     def test_keeps_valid_category(self, classifier):
-        resp = {"classification": "Share", "confidence": 0.8, "reasoning": "good"}
+        resp = {"classification": "Share", "score": 4, "reasoning": "good"}
         result = classifier._validate_singleton_response(resp)
         assert result["classification"] == "Share"
 
     def test_adds_boolean_fields(self, classifier):
-        resp = {"classification": "Share", "confidence": 0.8}
+        resp = {"classification": "Share", "score": 4}
         result = classifier._validate_singleton_response(resp)
         assert "contains_children" in result
         assert "is_appropriate" in result
@@ -159,7 +159,7 @@ class TestValidateDocument:
         resp = {}
         result = classifier._validate_document_response(resp)
         assert result["classification"] == "Review"
-        assert result["confidence"] == 0.3
+        assert result["score"] == 2
         assert result["content_summary"] == ""
         assert result["key_topics"] == []
 
@@ -185,12 +185,12 @@ class TestValidateDocument:
 class TestValidateBurst:
 
     def test_adds_default_rank(self, classifier):
-        resp = {"classification": "Share", "confidence": 0.8}
+        resp = {"classification": "Share", "score": 4}
         result = classifier._validate_burst_response(resp, default_rank=2)
         assert result["rank"] == 2
 
     def test_keeps_existing_rank(self, classifier):
-        resp = {"classification": "Share", "confidence": 0.8, "rank": 1}
+        resp = {"classification": "Share", "score": 4, "rank": 1}
         result = classifier._validate_burst_response(resp, default_rank=5)
         assert result["rank"] == 1
 
@@ -201,7 +201,7 @@ class TestValidateBurst:
 class TestValidateVideo:
 
     def test_adds_audio_quality(self, classifier):
-        resp = {"classification": "Share", "confidence": 0.8}
+        resp = {"classification": "Share", "score": 4}
         result = classifier._validate_video_response(resp)
         assert result["audio_quality"] == "unknown"
 
@@ -213,7 +213,7 @@ class TestValidateVideo:
 class TestClassifySingleton:
 
     def test_returns_cached(self, classifier_with_cache, mock_cache):
-        cached_result = {"classification": "Share", "confidence": 0.9}
+        cached_result = {"classification": "Share", "score": 5}
         mock_cache.get.return_value = cached_result
         result = classifier_with_cache.classify_singleton(Path("test.jpg"))
         assert result == cached_result
@@ -229,7 +229,7 @@ class TestClassifySingleton:
     def test_successful_classification(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = {
-            "classification": "Share", "confidence": 0.85, "reasoning": "great photo"
+            "classification": "Share", "score": 4, "reasoning": "great photo"
         }
         result = classifier.classify_singleton(Path("good.jpg"))
         assert result["classification"] == "Share"
@@ -246,7 +246,7 @@ class TestClassifySingleton:
     def test_caches_result(self, mock_utils, classifier_with_cache, mock_client, mock_cache):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = {
-            "classification": "Storage", "confidence": 0.6, "reasoning": "ok"
+            "classification": "Storage", "score": 3, "reasoning": "ok"
         }
         classifier_with_cache.classify_singleton(Path("test.jpg"))
         assert mock_cache.set.called
@@ -271,8 +271,8 @@ class TestClassifyBurst:
     def test_burst_classification(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = [
-            {"classification": "Share", "confidence": 0.9, "rank": 1},
-            {"classification": "Storage", "confidence": 0.4, "rank": 2},
+            {"classification": "Share", "score": 5, "rank": 1},
+            {"classification": "Storage", "score": 2, "rank": 2},
         ]
         result = classifier.classify_burst([Path("a.jpg"), Path("b.jpg")])
         assert len(result) == 2
@@ -292,7 +292,7 @@ class TestClassifyBurst:
     def test_burst_wrong_length_response(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = [
-            {"classification": "Share", "confidence": 0.9, "rank": 1},
+            {"classification": "Share", "score": 5, "rank": 1},
         ]  # Only 1 result for 2 photos
         result = classifier.classify_burst([Path("a.jpg"), Path("b.jpg")])
         assert len(result) == 2
@@ -302,8 +302,8 @@ class TestClassifyBurst:
     def test_burst_chunking(self, mock_utils, classifier, mock_client):
         mock_utils.load_and_fix_orientation.return_value = MagicMock()
         mock_client.generate_json.return_value = [
-            {"classification": "Share", "confidence": 0.9, "rank": 1},
-            {"classification": "Storage", "confidence": 0.4, "rank": 2},
+            {"classification": "Share", "score": 5, "rank": 1},
+            {"classification": "Storage", "score": 2, "rank": 2},
         ]
         photos = [Path(f"p{i}.jpg") for i in range(5)]
         result = classifier.classify_burst(photos, chunk_size=2)
@@ -315,8 +315,8 @@ class TestClassifyBurst:
         # First image fails to load, second succeeds
         mock_utils.load_and_fix_orientation.side_effect = [None, MagicMock()]
         mock_client.generate_json.return_value = [
-            {"classification": "Storage", "confidence": 0.3, "rank": 1},
-            {"classification": "Share", "confidence": 0.8, "rank": 2},
+            {"classification": "Storage", "score": 2, "rank": 1},
+            {"classification": "Share", "score": 4, "rank": 2},
         ]
         result = classifier.classify_burst([Path("bad.jpg"), Path("good.jpg")])
         assert len(result) == 2
@@ -328,14 +328,14 @@ class TestClassifyBurst:
 class TestClassifyVideo:
 
     def test_returns_cached(self, classifier_with_cache, mock_cache):
-        cached = {"classification": "Share", "confidence": 0.8, "audio_quality": "good"}
+        cached = {"classification": "Share", "score": 4, "audio_quality": "good"}
         mock_cache.get.return_value = cached
         result = classifier_with_cache.classify_video(Path("test.mp4"))
         assert result == cached
 
     def test_classification(self, classifier, mock_client):
         mock_client.generate_json.return_value = {
-            "classification": "Share", "confidence": 0.85, "reasoning": "cute video",
+            "classification": "Share", "score": 4, "reasoning": "cute video",
             "audio_quality": "good",
         }
         result = classifier.classify_video(Path("test.mp4"))
@@ -370,14 +370,14 @@ class TestClassifyBatch:
 class TestClassifyDocument:
 
     def test_returns_cached(self, classifier_with_cache, mock_cache):
-        cached = {"classification": "Exemplary", "confidence": 0.9}
+        cached = {"classification": "Exemplary", "score": 5}
         mock_cache.get.return_value = cached
         result = classifier_with_cache.classify_document(Path("test.pdf"))
         assert result == cached
 
     def test_pdf_sends_path(self, classifier, mock_client):
         mock_client.generate_json.return_value = {
-            "classification": "Share", "confidence": 0.7, "reasoning": "good doc"
+            "classification": "Share", "score": 4, "reasoning": "good doc"
         }
         result = classifier.classify_document(Path("test.pdf"), text_content="hello")
         assert result["classification"] == "Share"
@@ -388,7 +388,7 @@ class TestClassifyDocument:
 
     def test_non_pdf_sends_text(self, classifier, mock_client):
         mock_client.generate_json.return_value = {
-            "classification": "Storage", "confidence": 0.5, "reasoning": "ok"
+            "classification": "Storage", "score": 3, "reasoning": "ok"
         }
         result = classifier.classify_document(
             Path("test.docx"), text_content="Some document content"
@@ -397,7 +397,7 @@ class TestClassifyDocument:
 
     def test_text_truncation(self, classifier, mock_client):
         mock_client.generate_json.return_value = {
-            "classification": "Share", "confidence": 0.7
+            "classification": "Share", "score": 4
         }
         long_text = "x" * 50000
         classifier.classify_document(Path("test.txt"), text_content=long_text)
@@ -413,7 +413,7 @@ class TestClassifyDocument:
 
     def test_with_metadata(self, classifier, mock_client):
         mock_client.generate_json.return_value = {
-            "classification": "Share", "confidence": 0.7
+            "classification": "Share", "score": 4
         }
         classifier.classify_document(
             Path("test.pdf"), metadata={"author": "John", "pages": 5}
@@ -443,8 +443,8 @@ class TestClassifyDocumentGroup:
 
     def test_group_classification(self, classifier, mock_client):
         mock_client.generate_json.return_value = [
-            {"classification": "Share", "confidence": 0.9, "rank": 1},
-            {"classification": "Storage", "confidence": 0.4, "rank": 2},
+            {"classification": "Share", "score": 5, "rank": 1},
+            {"classification": "Storage", "score": 2, "rank": 2},
         ]
         result = classifier.classify_document_group(
             [Path("a.pdf"), Path("b.pdf")],

@@ -54,9 +54,16 @@
     "Consistency matters: if you're building a gallery, similar style across shots is more important than any single shot being perfect."
   ],
   "philosophy": "The customer should see exactly what they're getting. Hero shots sell; Usable shots inform; Rejects confuse or mislead.",
+  "scoring_rubric": {
+    "5": "Hero lead image -- clean background, perfect lighting, product fills frame, ready for listing",
+    "4": "Strong gallery shot -- good quality, shows product well, minor imperfections",
+    "3": "Borderline -- acceptable but notable issues with lighting, angle, or background",
+    "2": "Weak -- poor composition or lighting, product hard to evaluate",
+    "1": "Reject -- out of focus, color-cast, watermarked, or misleading"
+  },
   "thresholds": {
-    "Hero": 0.70,
-    "Usable": 0.40
+    "Hero": 4,
+    "Usable": 3
   },
   "photo_settings": {
     "enable_burst_detection": false,

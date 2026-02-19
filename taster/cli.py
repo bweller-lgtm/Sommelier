@@ -31,6 +31,7 @@ def _build_parser() -> argparse.ArgumentParser:
     cls.add_argument("--classify-videos", action="store_true")
     cls.add_argument("--no-classify-videos", action="store_true")
     cls.add_argument("--parallel-videos", type=int, default=None)
+    cls.add_argument("--parallel-photos", type=int, default=None)
     cls.add_argument("--cache-dir", type=str, default=None)
     cls.add_argument("--no-cache", action="store_true", help="Skip classification cache (re-query AI for every item)")
 
@@ -219,6 +220,8 @@ def _cmd_classify(args: argparse.Namespace) -> None:
         config.classification.classify_videos = True
     if args.parallel_videos:
         config.classification.parallel_video_workers = args.parallel_videos
+    if args.parallel_photos:
+        config.classification.parallel_photo_workers = args.parallel_photos
     if args.dry_run:
         config.system.dry_run = True
     if args.cache_dir:
@@ -300,7 +303,7 @@ def _cmd_classify(args: argparse.Namespace) -> None:
                 "source": str(r["path"]),
                 "destination": r.get("destination", "Unknown"),
                 "classification": c.get("classification", "Unknown"),
-                "confidence": c.get("confidence", 0),
+                "score": c.get("score", 0),
                 "reasoning": c.get("reasoning", ""),
             })
         report_path = report_dir / f"classification_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"

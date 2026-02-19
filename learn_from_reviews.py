@@ -122,26 +122,26 @@ def add_corrections_to_training(manual_moves, labels_file):
 
         action = action_map.get(move["actual_bucket"], "Storage")
 
-        # Determine confidence based on the move
+        # Determine score based on the move
         if move["actual_bucket"] == "Share" and move["original_bucket"] == "Storage":
-            # Strong correction: Storage → Share
-            confidence = 0.95
+            # Strong correction: Storage -> Share
+            confidence = 5
             reason = f"Manually moved from Storage to Share (was {move['original_classification']})"
         elif move["actual_bucket"] == "Storage" and move["original_bucket"] == "Share":
-            # Strong correction: Share → Storage
-            confidence = 0.95
+            # Strong correction: Share -> Storage
+            confidence = 5
             reason = f"Manually moved from Share to Storage (was {move['original_classification']})"
         elif move["actual_bucket"] == "Share" and move["original_bucket"] == "Review":
-            # Review → Share (confirming it's shareable)
-            confidence = 0.9
+            # Review -> Share (confirming it's shareable)
+            confidence = 4
             reason = f"Manually promoted from Review to Share"
         elif move["actual_bucket"] == "Storage" and move["original_bucket"] == "Review":
-            # Review → Storage (confirming it's not shareable)
-            confidence = 0.85
+            # Review -> Storage (confirming it's not shareable)
+            confidence = 4
             reason = f"Manually demoted from Review to Storage"
         else:
             # Other moves
-            confidence = 0.8
+            confidence = 4
             reason = f"Manually moved from {move['original_bucket']} to {move['actual_bucket']}"
 
         if photo_path in labels["single"]:

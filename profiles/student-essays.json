@@ -54,9 +54,16 @@
     "A Developing essay shows understanding but hasn't pushed into analysis. A Needs Work essay has fundamental gaps."
   ],
   "philosophy": "Reward critical thinking and clear communication over polish. A rough essay with genuine insight outranks a polished essay that says nothing new.",
+  "scoring_rubric": {
+    "5": "Exceptional -- clear thesis, strong evidence, original analysis, engaging writing",
+    "4": "Strong -- well-argued with good evidence, minor gaps in depth or polish",
+    "3": "Borderline -- shows understanding but analysis is shallow or structure is weak",
+    "2": "Developing -- missing key elements like evidence, structure, or clear argument",
+    "1": "Fundamental gaps -- off-topic, no thesis, or plagiarism concerns"
+  },
   "thresholds": {
-    "Strong": 0.70,
-    "Developing": 0.40
+    "Strong": 4,
+    "Developing": 3
   },
   "photo_settings": null,
   "document_settings": {

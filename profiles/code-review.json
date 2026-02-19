@@ -54,9 +54,16 @@
     "Over-engineering (unnecessary abstractions, premature optimization) is a negative factor, not a positive one."
   ],
   "philosophy": "Good code is code that's easy to read, easy to change, and hard to break.",
+  "scoring_rubric": {
+    "5": "Exemplary -- clean, idiomatic, well-structured, a model for the codebase",
+    "4": "Solid -- readable and correct, minor style or structure improvements possible",
+    "3": "Borderline -- functional but notable readability or design issues",
+    "2": "Needs work -- significant clarity, structure, or correctness problems",
+    "1": "Broken -- security vulnerabilities, hardcoded secrets, or logic errors"
+  },
   "thresholds": {
-    "Exemplary": 0.70,
-    "Solid": 0.40
+    "Exemplary": 4,
+    "Solid": 3
   },
   "photo_settings": null,
   "document_settings": null,

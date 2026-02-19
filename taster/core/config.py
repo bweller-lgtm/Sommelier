@@ -61,8 +61,9 @@ class ClassificationConfig:
     """Classification configuration."""
     classify_videos: bool = True
     parallel_video_workers: int = 10
-    share_threshold: float = 0.60
-    review_threshold: float = 0.35
+    parallel_photo_workers: int = 10
+    share_threshold: int = 4
+    review_threshold: int = 3
     burst_rank_consider: int = 2
     burst_rank_review: int = 4
     target_share_rate: float = 0.275
@@ -78,14 +79,16 @@ class ClassificationConfig:
 
     def __post_init__(self):
         """Validate thresholds."""
-        if not 0.0 <= self.share_threshold <= 1.0:
-            raise ValueError(f"share_threshold must be between 0 and 1, got {self.share_threshold}")
-        if not 0.0 <= self.review_threshold <= 1.0:
-            raise ValueError(f"review_threshold must be between 0 and 1, got {self.review_threshold}")
+        if not 1 <= self.share_threshold <= 5:
+            raise ValueError(f"share_threshold must be between 1 and 5, got {self.share_threshold}")
+        if not 1 <= self.review_threshold <= 5:
+            raise ValueError(f"review_threshold must be between 1 and 5, got {self.review_threshold}")
         if self.review_threshold >= self.share_threshold:
             raise ValueError(f"review_threshold ({self.review_threshold}) must be < share_threshold ({self.share_threshold})")
         if self.parallel_video_workers < 1:
             raise ValueError(f"parallel_video_workers must be >= 1, got {self.parallel_video_workers}")
+        if self.parallel_photo_workers < 1:
+            raise ValueError(f"parallel_photo_workers must be >= 1, got {self.parallel_photo_workers}")
         if self.classification_retries < 0:
             raise ValueError(f"classification_retries must be >= 0, got {self.classification_retries}")
 

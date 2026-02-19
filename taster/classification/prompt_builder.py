@@ -246,6 +246,28 @@ class PromptBuilder:
 - Adults ONLY (no children present) -> Ignore
 - Inappropriate nudity or private parts -> Ignore"""
 
+    def _build_scoring_rubric(self) -> str:
+        """Build scoring rubric section from profile or generic fallback."""
+        if self.profile and self.profile.scoring_rubric:
+            rubric = self.profile.scoring_rubric
+        else:
+            # Generic fallback rubric
+            rubric = {
+                "5": "Exceptional -- clearly outstanding, no hesitation",
+                "4": "Good -- clearly above average, minor imperfections at most",
+                "3": "Borderline -- genuinely torn, notable strengths and weaknesses",
+                "2": "Below average -- some merit but not enough to stand out",
+                "1": "Poor -- significant problems or not relevant",
+            }
+
+        lines = ["**SCORING RUBRIC (1-5 scale):**"]
+        for level in ["5", "4", "3", "2", "1"]:
+            if level in rubric:
+                lines.append(f"  {level} = {rubric[level]}")
+        lines.append("")
+        lines.append("Use the FULL 1-5 range. Score 3 means genuinely borderline. Do not default to 4.")
+        return "\n".join(lines)
+
     def _build_calibration_section(self) -> str:
         """Build calibration guidance section."""
         return f"""**CALIBRATION:**
@@ -303,9 +325,11 @@ class PromptBuilder:
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
+        scoring_rubric = self._build_scoring_rubric()
+
         json_format = f"""{{
     "classification": {cat_str},
-    "confidence": 0.0 to 1.0,
+    "score": 1 to 5,
     "reasoning": "Brief explanation (1 sentence max)",
     "contains_children": true or false,
     "is_appropriate": true or false
@@ -319,6 +343,8 @@ class PromptBuilder:
 **ONLY if young children ARE visible AND photo is family-appropriate, evaluate quality:**
 
 {self._build_category_format()}
+
+{scoring_rubric}
 
 {calibration_section}
 
@@ -359,11 +385,13 @@ Analyze this photo and respond with CONCISE JSON:
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
+        scoring_rubric = self._build_scoring_rubric()
+
         json_example = f"""[
   {{
     "rank": 1 to {burst_size},
     "classification": {cat_str},
-    "confidence": 0.0 to 1.0,
+    "score": 1 to 5,
     "reasoning": "Why this rank? (1 sentence)",
     "contains_children": true or false,
     "is_appropriate": true or false
@@ -386,10 +414,10 @@ These are very similar - slight variations of the same moment.
 1. Check appropriateness: Are photos family-friendly?
 2. Compare ALL photos in the burst
 3. Rank them by quality (1=best, {burst_size}=worst)
-4. **CRITICAL**: Also evaluate ABSOLUTE share-worthiness (0.0-1.0)
+4. **CRITICAL**: Also evaluate ABSOLUTE share-worthiness (score 1-5)
    - This is INDEPENDENT of ranking
    - Even Rank 1 might not be absolutely shareable if whole burst is mediocre
-   - Confidence should reflect: "Would I share this if it appeared alone?"
+   - Score should reflect: "Would I share this if it appeared alone?"
 5. Be VERY selective - typically keep only 0-2 photos from a burst
 6. Consider: Is this burst even worth keeping ANY photos from?
 
@@ -399,7 +427,9 @@ These are very similar - slight variations of the same moment.
 - Composition: framing, background
 - **Appropriateness**: Family-friendly, no inappropriate nudity
 - **Relative quality**: Rank within THIS burst (1=best)
-- **Absolute quality**: Share-worthiness independent of burst (confidence score)
+- **Absolute quality**: Share-worthiness independent of burst (score 1-5)
+
+{scoring_rubric}
 
 **CRITICAL - BE SELECTIVE:**
 - NOT every burst deserves a share
@@ -429,6 +459,8 @@ Respond with JSON array (one entry per photo, SAME ORDER as shown):
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
+        scoring_rubric = self._build_scoring_rubric()
+
         prompt = f"""You are helping sort family VIDEOS of young children into categories: {', '.join(cat_names)}.
 
 **VIDEO EVALUATION - Watch the entire video carefully, considering both visual AND audio content**
@@ -440,12 +472,14 @@ Respond with JSON array (one entry per photo, SAME ORDER as shown):
 
 {self._build_category_format()}
 
+{scoring_rubric}
+
 {calibration_section}
 
 Watch this video and respond with CONCISE JSON:
 {{
     "classification": {cat_str},
-    "confidence": 0.0 to 1.0,
+    "score": 1 to 5,
     "reasoning": "Brief explanation (1-2 sentences max)",
     "contains_children": true or false,
     "is_appropriate": true or false,
@@ -461,10 +495,14 @@ Watch this video and respond with CONCISE JSON:
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
+        scoring_rubric = self._build_scoring_rubric()
+
         prompt = f"""You are helping classify documents into categories: {', '.join(cat_names)}.
 {taste_section}
 
 {self._build_category_format()}
+
+{scoring_rubric}
 
 Evaluate this document based on the criteria above.
 Consider content quality, relevance, completeness, and presentation.
@@ -472,7 +510,7 @@ Consider content quality, relevance, completeness, and presentation.
 Respond with CONCISE JSON:
 {{
     "classification": {cat_str},
-    "confidence": 0.0 to 1.0,
+    "score": 1 to 5,
     "reasoning": "Brief explanation (1-2 sentences max)",
     "content_summary": "2-3 sentence summary of the document content",
     "key_topics": ["topic1", "topic2", "topic3"]
@@ -486,15 +524,19 @@ Respond with CONCISE JSON:
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
+        scoring_rubric = self._build_scoring_rubric()
+
         prompt = f"""You are comparing {group_size} similar documents to classify them.
 {taste_section}
 
 {self._build_category_format()}
 
+{scoring_rubric}
+
 **YOUR TASK:**
 1. Compare ALL documents in this group
 2. Rank them by quality (1=best, {group_size}=worst)
-3. Evaluate ABSOLUTE quality for each (confidence 0.0-1.0)
+3. Evaluate ABSOLUTE quality for each (score 1-5)
 4. If documents are near-duplicates, keep only the best version
 5. Consider: content quality, completeness, relevance, presentation
 
@@ -503,7 +545,7 @@ Respond with JSON array (one entry per document, SAME ORDER as provided):
   {{
     "rank": 1 to {group_size},
     "classification": {cat_str},
-    "confidence": 0.0 to 1.0,
+    "score": 1 to 5,
     "reasoning": "Why this rank? (1 sentence)",
     "content_summary": "2-3 sentence summary",
     "key_topics": ["topic1", "topic2"]

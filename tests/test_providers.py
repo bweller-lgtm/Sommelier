@@ -35,7 +35,7 @@ class TestAIResponse:
         assert result == {"key": "value"}
 
     def test_parse_json_embedded(self):
-        text = 'Here is the result: {"classification": "Share", "confidence": 0.8}'
+        text = 'Here is the result: {"classification": "Share", "score": 4}'
         resp = AIResponse(text=text, raw_response=None)
         result = resp.parse_json()
         assert result["classification"] == "Share"

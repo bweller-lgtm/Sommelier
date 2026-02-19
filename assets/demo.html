@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taster Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    padding: 40px;
+  }
+
+  .section { margin-bottom: 60px; }
+
+  /* ── Terminal Window ─────────────────────────────── */
+  .terminal {
+    background: #1a1b26;
+    border-radius: 12px;
+    overflow: hidden;
+    width: 860px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+  }
+
+  .terminal-titlebar {
+    background: #24283b;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .terminal-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+  }
+  .terminal-dot.red { background: #f7768e; }
+  .terminal-dot.yellow { background: #e0af68; }
+  .terminal-dot.green { background: #9ece6a; }
+
+  .terminal-title {
+    color: #565f89;
+    font-size: 13px;
+    margin-left: 8px;
+  }
+
+  .terminal-body {
+    padding: 20px 24px 24px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: #a9b1d6;
+  }
+
+  .t-prompt { color: #9ece6a; }
+  .t-cmd { color: #c0caf5; font-weight: 600; }
+  .t-flag { color: #bb9af7; }
+  .t-path { color: #e0af68; }
+  .t-dim { color: #565f89; }
+  .t-blue { color: #7aa2f7; }
+  .t-green { color: #9ece6a; }
+  .t-yellow { color: #e0af68; }
+  .t-cyan { color: #7dcfff; }
+  .t-white { color: #c0caf5; }
+  .t-bold { font-weight: 700; color: #c0caf5; }
+
+  .t-line { margin-bottom: 2px; }
+  .t-gap { margin-bottom: 14px; }
+  .t-section { margin-top: 16px; }
+
+  .t-bar-track {
+    display: inline-block;
+    width: 340px;
+    height: 10px;
+    background: #24283b;
+    border-radius: 5px;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .t-bar-fill {
+    display: inline-block;
+    height: 100%;
+    border-radius: 5px;
+  }
+  .t-bar-green { background: linear-gradient(90deg, #9ece6a, #73daca); }
+
+  .t-table {
+    margin-top: 6px;
+  }
+  .t-table-row {
+    display: flex;
+    gap: 0;
+  }
+  .t-table-cat {
+    width: 140px;
+    text-align: right;
+    padding-right: 16px;
+  }
+  .t-table-colon {
+    width: 16px;
+    color: #565f89;
+  }
+  .t-table-count {
+    width: 40px;
+    text-align: right;
+    padding-right: 12px;
+  }
+  .t-table-pct {
+    color: #565f89;
+  }
+  .t-table-bar {
+    margin-left: 12px;
+    display: inline-block;
+    height: 14px;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+
+  .t-separator {
+    color: #24283b;
+    margin: 8px 0;
+    letter-spacing: 0;
+  }
+
+  /* ── Reasoning Card ─────────────────────────────── */
+  .card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 36px 40px;
+    width: 860px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  .card h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #1d1d1f;
+  }
+
+  .card .subtitle {
+    font-size: 14px;
+    color: #86868b;
+    margin-bottom: 24px;
+  }
+
+  .reasoning-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .reasoning-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #86868b;
+    padding: 0 12px 10px;
+    border-bottom: 1px solid #e5e5ea;
+  }
+
+  .reasoning-table td {
+    padding: 14px 12px;
+    font-size: 13.5px;
+    border-bottom: 1px solid #f2f2f7;
+    vertical-align: top;
+  }
+
+  .reasoning-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 28px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .score-5 { background: #d1fae5; color: #065f46; }
+  .score-4 { background: #dbeafe; color: #1e40af; }
+  .score-3 { background: #fef3c7; color: #92400e; }
+  .score-2 { background: #f3f4f6; color: #6b7280; }
+  .score-1 { background: #fee2e2; color: #991b1b; }
+
+  .cat-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .cat-share { background: #d1fae5; color: #065f46; }
+  .cat-review { background: #fef3c7; color: #92400e; }
+  .cat-storage { background: #f3f4f6; color: #6b7280; }
+  .cat-ignore { background: #fee2e2; color: #991b1b; }
+
+  .reasoning-text {
+    color: #48484a;
+    line-height: 1.5;
+    font-size: 13px;
+  }
+
+  .file-name {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    color: #86868b;
+  }
+
+  /* ── Burst Card ─────────────────────────────────── */
+  .burst-flow {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .burst-item {
+    flex: 1;
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .burst-item.share-bg { background: #ecfdf5; border: 2px solid #a7f3d0; }
+  .burst-item.review-bg { background: #fffbeb; border: 2px solid #fde68a; }
+  .burst-item.storage-bg { background: #f9fafb; border: 2px solid #e5e7eb; }
+
+  .burst-rank {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .burst-score {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .burst-dest {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .burst-reason {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #48484a;
+  }
+
+  .burst-arrow {
+    display: flex;
+    align-items: center;
+    font-size: 20px;
+    color: #d1d5db;
+    padding: 0 4px;
+  }
+
+  /* ── Stats Card ─────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-box {
+    text-align: center;
+    padding: 20px 16px;
+    border-radius: 12px;
+    background: #f9fafb;
+  }
+
+  .stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: #1d1d1f;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #86868b;
+    font-weight: 500;
+  }
+
+  .dist-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .dist-label {
+    width: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #48484a;
+  }
+
+  .dist-bar-track {
+    flex: 1;
+    height: 28px;
+    background: #f2f2f7;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 0 12px;
+  }
+
+  .dist-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    min-width: 40px;
+  }
+
+  .dist-count {
+    width: 70px;
+    font-size: 13px;
+    color: #86868b;
+    text-align: right;
+  }
+
+  .bar-share { background: linear-gradient(90deg, #34d399, #10b981); }
+  .bar-storage { background: linear-gradient(90deg, #93c5fd, #3b82f6); }
+  .bar-review { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
+  .bar-ignore { background: linear-gradient(90deg, #fca5a5, #ef4444); }
+
+  .bar-5 { background: linear-gradient(90deg, #34d399, #10b981); }
+  .bar-4 { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
+  .bar-3 { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+  .bar-2 { background: linear-gradient(90deg, #9ca3af, #6b7280); }
+  .bar-1 { background: linear-gradient(90deg, #f87171, #ef4444); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 1: Terminal
+     ═══════════════════════════════════════════════════ -->
+<div class="section" id="terminal-section">
+  <div class="terminal">
+    <div class="terminal-titlebar">
+      <div class="terminal-dot red"></div>
+      <div class="terminal-dot yellow"></div>
+      <div class="terminal-dot green"></div>
+      <div class="terminal-title">Terminal</div>
+    </div>
+    <div class="terminal-body">
+
+      <div class="t-line t-gap">
+        <span class="t-prompt">$</span>
+        <span class="t-cmd"> taster classify</span>
+        <span class="t-path"> ~/Photos/Camera-Roll</span>
+        <span class="t-flag"> --dry-run</span>
+      </div>
+
+      <div class="t-line">
+        <span class="t-dim">Using taste profile:</span>
+        <span class="t-cyan"> default-photos</span>
+      </div>
+      <div class="t-line t-gap">
+        <span class="t-dim">AI client initialized:</span>
+        <span class="t-green"> gemini</span>
+      </div>
+
+      <div class="t-line">
+        <span class="t-blue">Scanning folder:</span>
+        <span class="t-white"> ~/Photos/Camera-Roll</span>
+      </div>
+      <div class="t-line t-gap">
+        <span class="t-dim">   Found</span>
+        <span class="t-white"> 226 images</span><span class="t-dim">,</span>
+        <span class="t-white"> 54 videos</span>
+      </div>
+
+      <div class="t-line">
+        <span class="t-blue">Detecting bursts</span>
+        <span class="t-dim"> (temporal + visual)...</span>
+      </div>
+      <div class="t-line">
+        <span class="t-dim">   Bursts:</span>
+        <span class="t-white"> 42</span>
+        <span class="t-dim"> (117 photos, avg 2.8 per burst)</span>
+      </div>
+      <div class="t-line t-gap">
+        <span class="t-dim">   Singletons:</span>
+        <span class="t-white"> 109</span>
+      </div>
+
+      <div class="t-line">
+        <span class="t-blue">Classifying with Gemini Flash...</span>
+      </div>
+      <div class="t-line t-gap">
+        <span class="t-dim">   </span>
+        <span class="t-bar-track"><span class="t-bar-fill t-bar-green" style="width:100%"></span></span>
+        <span class="t-green"> 100%</span>
+        <span class="t-dim"> | 280/280 | 7m 48s</span>
+      </div>
+
+      <div class="t-separator">────────────────────────────────────────────────────────────────</div>
+      <div class="t-line" style="margin-bottom:4px;">
+        <span class="t-bold">CLASSIFICATION SUMMARY</span>
+      </div>
+      <div class="t-separator">────────────────────────────────────────────────────────────────</div>
+
+      <div class="t-table">
+        <div class="t-table-row">
+          <span class="t-table-cat t-green">Share</span>
+          <span class="t-table-colon">:</span>
+          <span class="t-table-count t-white">99</span>
+          <span class="t-table-pct">(35.4%)</span>
+          <span class="t-table-bar" style="width: 200px; background: #9ece6a;"></span>
+        </div>
+        <div class="t-table-row">
+          <span class="t-table-cat" style="color:#7aa2f7">Storage</span>
+          <span class="t-table-colon">:</span>
+          <span class="t-table-count t-white">91</span>
+          <span class="t-table-pct">(32.5%)</span>
+          <span class="t-table-bar" style="width: 183px; background: #7aa2f7;"></span>
+        </div>
+        <div class="t-table-row">
+          <span class="t-table-cat t-yellow">Review</span>
+          <span class="t-table-colon">:</span>
+          <span class="t-table-count t-white">52</span>
+          <span class="t-table-pct">(18.6%)</span>
+          <span class="t-table-bar" style="width: 105px; background: #e0af68;"></span>
+        </div>
+        <div class="t-table-row">
+          <span class="t-table-cat" style="color:#f7768e">Ignore</span>
+          <span class="t-table-colon">:</span>
+          <span class="t-table-count t-white">38</span>
+          <span class="t-table-pct">(13.6%)</span>
+          <span class="t-table-bar" style="width: 77px; background: #f7768e;"></span>
+        </div>
+      </div>
+
+      <div class="t-section">
+        <div class="t-line">
+          <span class="t-dim">   Time: 7m 48s (10 parallel workers)</span>
+        </div>
+        <div class="t-line">
+          <span class="t-dim">   Est. cost:</span>
+          <span class="t-green"> ~$0.30</span>
+          <span class="t-dim"> (Gemini Flash)</span>
+        </div>
+      </div>
+
+      <div class="t-section">
+        <div class="t-line" style="margin-bottom: 4px;">
+          <span class="t-dim">   Top rated:</span>
+        </div>
+        <div class="t-line">
+          <span class="t-dim">   1.</span>
+          <span class="t-white"> IMG_0128.jpg</span>
+          <span class="t-green"> (5/5)</span>
+          <span class="t-dim"> - Fantastic moment of pure joy and excitement...</span>
+        </div>
+        <div class="t-line">
+          <span class="t-dim">   2.</span>
+          <span class="t-white"> IMG_0131.jpg</span>
+          <span class="t-green"> (5/5)</span>
+          <span class="t-dim"> - Peak moment with exuberant expression and thumbs-up...</span>
+        </div>
+        <div class="t-line">
+          <span class="t-dim">   3.</span>
+          <span class="t-white"> IMG_0203.jpg</span>
+          <span class="t-green"> (5/5)</span>
+          <span class="t-dim"> - Wonderful action shot with a joyful, clear expression...</span>
+        </div>
+      </div>
+
+      <div class="t-section">
+        <div class="t-line">
+          <span class="t-dim">This was a dry run. No files were moved.</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 2: AI Reasoning Showcase
+     ═══════════════════════════════════════════════════ -->
+<div class="section" id="reasoning-section">
+  <div class="card">
+    <h2>Every file gets a reason</h2>
+    <div class="subtitle">AI explains each decision in plain English -- grounded in the taste profile's criteria</div>
+
+    <table class="reasoning-table">
+      <thead>
+        <tr>
+          <th style="width:50px">Score</th>
+          <th style="width:80px">Category</th>
+          <th>AI Reasoning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="score-badge score-5">5/5</span></td>
+          <td><span class="cat-badge cat-share">Share</span></td>
+          <td>
+            <div class="reasoning-text">Exceptional capture of a joyful moment with the baby laughing and both subjects fully engaged with the camera.</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="score-badge score-4">4/5</span></td>
+          <td><span class="cat-badge cat-share">Share</span></td>
+          <td>
+            <div class="reasoning-text">Clear, well-lit photo of the child engaged in play with a pleasant, direct expression.</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="score-badge score-3">3/5</span></td>
+          <td><span class="cat-badge cat-review">Review</span></td>
+          <td>
+            <div class="reasoning-text">Great joyful expressions from the adult and one child, but several other children have obscured or covered faces.</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="score-badge score-2">2/5</span></td>
+          <td><span class="cat-badge cat-storage">Storage</span></td>
+          <td>
+            <div class="reasoning-text">While the expression is cute, the photo is blurry and significantly obscured by a finger at the top of the frame.</div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="score-badge score-1">1/5</span></td>
+          <td><span class="cat-badge cat-ignore">Ignore</span></td>
+          <td>
+            <div class="reasoning-text">This is a screenshot of a health tracking app and does not contain any children.</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 3: Burst Intelligence
+     ═══════════════════════════════════════════════════ -->
+<div class="section" id="burst-section">
+  <div class="card">
+    <h2>Burst intelligence</h2>
+    <div class="subtitle">Three photos taken one second apart. AI picks the best, explains why the others fall short.</div>
+
+    <div class="burst-flow">
+      <div class="burst-item review-bg">
+        <div class="burst-rank" style="color:#92400e">Photo 1 of 3</div>
+        <div class="burst-score" style="color:#d97706">3<span style="font-size:16px;color:#92400e">/5</span></div>
+        <div class="burst-dest" style="color:#92400e">Review</div>
+        <div class="burst-reason">A wonderful, natural expression of joy, but there is some motion blur on her left arm compared to the others.</div>
+      </div>
+
+      <div class="burst-item share-bg">
+        <div class="burst-rank" style="color:#065f46">Photo 2 of 3 &mdash; Best</div>
+        <div class="burst-score" style="color:#059669">5<span style="font-size:16px;color:#065f46">/5</span></div>
+        <div class="burst-dest" style="color:#065f46">Share</div>
+        <div class="burst-reason">The peak moment of the burst with an exuberant expression and clear thumbs-up showing her pride in the tower.</div>
+      </div>
+
+      <div class="burst-item review-bg">
+        <div class="burst-rank" style="color:#92400e">Photo 3 of 3</div>
+        <div class="burst-score" style="color:#d97706">3<span style="font-size:16px;color:#92400e">/5</span></div>
+        <div class="burst-dest" style="color:#92400e">Review</div>
+        <div class="burst-reason">Very similar to the top-ranked photo but slightly more subdued in energy; a great backup shot.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 4: Score Distribution
+     ═══════════════════════════════════════════════════ -->
+<div class="section" id="stats-section">
+  <div class="card">
+    <h2>280 files. $0.30. Full range.</h2>
+    <div class="subtitle">1-5 scoring rubric produces a genuine bell curve -- no clustering at anchor values</div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-number">280</div>
+        <div class="stat-label">Files classified</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">$0.30</div>
+        <div class="stat-label">Total cost</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">42</div>
+        <div class="stat-label">Bursts detected</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number">~8m</div>
+        <div class="stat-label">Processing time</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px;">Score Distribution</div>
+
+    <div class="dist-row">
+      <span class="dist-label">5/5</span>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill bar-5" style="width: 47%">40</div>
+      </div>
+      <span class="dist-count">14.3%</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-label">4/5</span>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill bar-4" style="width: 75%">64</div>
+      </div>
+      <span class="dist-count">22.9%</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-label">3/5</span>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill bar-3" style="width: 48%">41</div>
+      </div>
+      <span class="dist-count">14.6%</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-label">2/5</span>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill bar-2" style="width: 100%">85</div>
+      </div>
+      <span class="dist-count">30.4%</span>
+    </div>
+    <div class="dist-row">
+      <span class="dist-label">1/5</span>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill bar-1" style="width: 59%">50</div>
+      </div>
+      <span class="dist-count">17.9%</span>
+    </div>
+
+    <div style="margin-top: 24px; font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px;">Category Breakdown</div>
+    <div style="margin-top: 10px;">
+      <div class="dist-row">
+        <span class="dist-label" style="color:#059669">Share</span>
+        <div class="dist-bar-track">
+          <div class="dist-bar-fill bar-share" style="width: 100%">99</div>
+        </div>
+        <span class="dist-count">35.4%</span>
+      </div>
+      <div class="dist-row">
+        <span class="dist-label" style="color:#3b82f6">Storage</span>
+        <div class="dist-bar-track">
+          <div class="dist-bar-fill bar-storage" style="width: 92%">91</div>
+        </div>
+        <span class="dist-count">32.5%</span>
+      </div>
+      <div class="dist-row">
+        <span class="dist-label" style="color:#f59e0b">Review</span>
+        <div class="dist-bar-track">
+          <div class="dist-bar-fill bar-review" style="width: 53%">52</div>
+        </div>
+        <span class="dist-count">18.6%</span>
+      </div>
+      <div class="dist-row">
+        <span class="dist-label" style="color:#ef4444">Ignore</span>
+        <div class="dist-bar-track">
+          <div class="dist-bar-fill bar-ignore" style="width: 38%">38</div>
+        </div>
+        <span class="dist-count">13.6%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

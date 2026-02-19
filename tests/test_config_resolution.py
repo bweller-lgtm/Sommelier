@@ -63,7 +63,7 @@ class TestLoadConfigResolution:
         ):
             config = load_config()
         assert isinstance(config, Config)
-        assert 0.0 <= config.classification.share_threshold <= 1.0
+        assert 1 <= config.classification.share_threshold <= 5
         assert config.profiles.active_profile == "default-photos"
 
     def test_partial_config_fills_defaults(self, tmp_path):
@@ -72,7 +72,7 @@ class TestLoadConfigResolution:
         config = load_config(cfg)
         assert config.model.name == "partial-model"
         # Other sections use defaults
-        assert config.classification.share_threshold == 0.60
+        assert config.classification.share_threshold == 4
         assert config.caching.enabled is True
 
 

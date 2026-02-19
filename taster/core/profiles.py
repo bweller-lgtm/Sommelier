@@ -56,8 +56,11 @@ class TasteProfile:
     specific_guidance: List[str] = field(default_factory=list)
     philosophy: str = ""
 
-    # Thresholds mapping category names to confidence ranges
-    thresholds: Dict[str, float] = field(default_factory=dict)
+    # Thresholds mapping category names to score levels (1-5 Likert scale)
+    thresholds: Dict[str, int] = field(default_factory=dict)
+
+    # Optional scoring rubric mapping 1-5 to descriptions
+    scoring_rubric: Dict[str, str] = field(default_factory=dict)
 
     # Optional media-type-specific settings
     photo_settings: Optional[PhotoProfileSettings] = None
@@ -102,6 +105,7 @@ class TasteProfile:
         data["negative_criteria"] = self.negative_criteria
         data["specific_guidance"] = self.specific_guidance
         data["philosophy"] = self.philosophy
+        data["scoring_rubric"] = self.scoring_rubric
         data["thresholds"] = self.thresholds
         data["photo_settings"] = asdict(self.photo_settings) if self.photo_settings else None
         data["document_settings"] = asdict(self.document_settings) if self.document_settings else None
@@ -294,8 +298,15 @@ class ProfileManager:
             ],
             philosophy="Photos that capture genuine moments of connection, emotion, and personality - especially between parent and child.",
             thresholds={
-                "Share": 0.60,
-                "Review": 0.35,
+                "Share": 4,
+                "Review": 3,
+            },
+            scoring_rubric={
+                "5": "Exceptional -- joyful expression, great composition, share immediately with no hesitation",
+                "4": "Good -- clearly share-worthy with only minor imperfections",
+                "3": "Borderline -- nice moment but notable flaws, or you're genuinely torn",
+                "2": "Ordinary -- decent memory to keep, but not share quality",
+                "1": "Poor -- blurry, no faces visible, or not relevant",
             },
             photo_settings=PhotoProfileSettings(
                 enable_burst_detection=True,
@@ -360,8 +371,15 @@ class ProfileManager:
             ],
             philosophy="Keep documents that provide clear value through accurate, well-presented information relevant to their purpose.",
             thresholds={
-                "Exemplary": 0.70,
-                "Acceptable": 0.40,
+                "Exemplary": 4,
+                "Acceptable": 3,
+            },
+            scoring_rubric={
+                "5": "Outstanding -- exceptionally well-written, highly relevant, immediately actionable",
+                "4": "Good -- solid quality, clearly relevant, minor issues at most",
+                "3": "Borderline -- adequate content but notable gaps in quality or relevance",
+                "2": "Weak -- poor structure, limited relevance, or significantly outdated",
+                "1": "Irrelevant -- unreadable, corrupted, or completely off-topic",
             },
             document_settings=DocumentProfileSettings(
                 extract_text=True,
@@ -408,7 +426,7 @@ class ProfileManager:
             negative_criteria=prefs.get("reject_criteria", {}),
             specific_guidance=prefs.get("specific_guidance", []),
             philosophy=prefs.get("share_philosophy", ""),
-            thresholds={"Share": 0.60, "Review": 0.35},
+            thresholds={"Share": 4, "Review": 3},
             photo_settings=PhotoProfileSettings(
                 enable_burst_detection=True,
                 enable_face_detection=True,
