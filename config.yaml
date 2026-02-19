@@ -71,12 +71,13 @@ classification:
   # Enable video classification by default
   classify_videos: true
 
-  # Number of parallel workers for video processing
+  # Number of parallel workers for photo and video processing
+  parallel_photo_workers: 10
   parallel_video_workers: 10
 
-  # Routing thresholds (0.0 to 1.0)
-  share_threshold: 0.60       # Must be >= 60% confidence to Share
-  review_threshold: 0.35      # 35-59% → Review, <35% → Storage
+  # Routing thresholds (1-5 Likert score)
+  share_threshold: 4          # Score >= 4 to Share
+  review_threshold: 3         # Score 3 → Review, <= 2 → Storage
 
   # Burst-aware routing
   burst_rank_consider: 2      # Only rank 1-2 considered for potential sharing

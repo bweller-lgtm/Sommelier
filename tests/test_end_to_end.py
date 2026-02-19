@@ -168,12 +168,12 @@ class TestEndToEndWorkflow:
         # Test routing logic
         test_classification = {
             "classification": "Share",
-            "confidence": 0.75,
+            "score": 4,
             "contains_children": True,
             "is_appropriate": True
         }
         destination = router.route_singleton(test_classification)
-        print(f"  Test routing: Share @ 0.75 confidence → {destination}")
+        print(f"  Test routing: Share @ score 4 -> {destination}")
         assert destination == "Share"
 
         # 7. Cache Stats
@@ -241,8 +241,8 @@ class TestEndToEndWorkflow:
         with pytest.raises(ValueError, match="review_threshold.*must be.*share_threshold"):
             from taster.core.config import ClassificationConfig
             ClassificationConfig(
-                share_threshold=0.5,
-                review_threshold=0.6  # Invalid: review > share
+                share_threshold=3,
+                review_threshold=4  # Invalid: review > share
             )
 
         # Test weight validation

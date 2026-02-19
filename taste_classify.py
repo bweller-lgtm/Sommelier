@@ -160,7 +160,7 @@ def generate_report(results: list, report_dir: Path):
             "source": str(result["path"]),
             "destination": result.get("destination", "Unknown"),
             "classification": classification.get("classification", "Unknown"),
-            "confidence": classification.get("confidence", 0),
+            "score": classification.get("score", 0),
             "burst_size": result.get("burst_size", result.get("group_size", 1)),
             "burst_index": result.get("burst_index", result.get("group_index", -1)),
             "rank": classification.get("rank", None),

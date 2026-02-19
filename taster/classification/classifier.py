@@ -78,7 +78,7 @@ class MediaClassifier:
         Returns:
             Classification result dict with keys:
             - classification: "Share", "Storage", or "Ignore"
-            - confidence: 0.0 to 1.0
+            - score: 1 to 5 (Likert scale)
             - reasoning: explanation string
             - contains_children: bool
             - is_appropriate: bool
@@ -298,7 +298,7 @@ class MediaClassifier:
         Returns:
             Classification result dict with keys:
             - classification: "Share", "Storage", or "Ignore"
-            - confidence: 0.0 to 1.0
+            - score: 1 to 5 (Likert scale)
             - reasoning: explanation string
             - contains_children: bool
             - is_appropriate: bool
@@ -524,8 +524,8 @@ class MediaClassifier:
         """Validate and fix document classification response."""
         if "classification" not in response:
             response["classification"] = self._default_category
-        if "confidence" not in response:
-            response["confidence"] = 0.3
+        if "score" not in response:
+            response["score"] = 2
         if "reasoning" not in response:
             response["reasoning"] = "No reasoning provided"
 
@@ -534,7 +534,7 @@ class MediaClassifier:
         if response["classification"] not in valid:
             response["classification"] = self._default_category
 
-        response["confidence"] = max(0.0, min(1.0, float(response.get("confidence", 0.3))))
+        response["score"] = max(1, min(5, int(response.get("score", 2))))
 
         if "content_summary" not in response:
             response["content_summary"] = ""
@@ -579,7 +579,7 @@ class MediaClassifier:
         """
         response = {
             "classification": self._default_category,
-            "confidence": 0.3,
+            "score": 2,
             "reasoning": f"Fallback response: {reason}",
             "contains_children": None,
             "is_appropriate": None,
@@ -657,8 +657,8 @@ class MediaClassifier:
         # Ensure required fields
         if "classification" not in response:
             response["classification"] = self._default_category
-        if "confidence" not in response:
-            response["confidence"] = 0.3
+        if "score" not in response:
+            response["score"] = 2
         if "reasoning" not in response:
             response["reasoning"] = "No reasoning provided"
 
@@ -667,8 +667,8 @@ class MediaClassifier:
         if response["classification"] not in valid:
             response["classification"] = self._default_category
 
-        # Ensure confidence is in range
-        response["confidence"] = max(0.0, min(1.0, float(response.get("confidence", 0.3))))
+        # Ensure score is integer in 1-5 range
+        response["score"] = max(1, min(5, int(response.get("score", 2))))
 
         # Ensure boolean fields exist
         if "contains_children" not in response:

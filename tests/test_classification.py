@@ -66,10 +66,10 @@ class TestRouter:
         assert router.config is not None
 
     def test_route_singleton_share(self, router):
-        """Test routing high-confidence Share photo."""
+        """Test routing high-score Share photo."""
         classification = {
             "classification": "Share",
-            "confidence": 0.85,
+            "score": 4,
             "contains_children": True,
             "is_appropriate": True
         }
@@ -77,11 +77,11 @@ class TestRouter:
         destination = router.route_singleton(classification)
         assert destination == "Share"
 
-    def test_route_singleton_low_confidence(self, router):
-        """Test routing low-confidence Share photo."""
+    def test_route_singleton_low_score(self, router):
+        """Test routing mid-score Share photo goes to Review."""
         classification = {
             "classification": "Share",
-            "confidence": 0.45,
+            "score": 3,
             "contains_children": True,
             "is_appropriate": True
         }
@@ -93,7 +93,7 @@ class TestRouter:
         """Test routing photo without children."""
         classification = {
             "classification": "Share",
-            "confidence": 0.90,
+            "score": 5,
             "contains_children": False,
             "is_appropriate": True
         }
@@ -105,7 +105,7 @@ class TestRouter:
         """Test routing inappropriate photo."""
         classification = {
             "classification": "Share",
-            "confidence": 0.90,
+            "score": 5,
             "contains_children": True,
             "is_appropriate": False
         }
@@ -117,7 +117,7 @@ class TestRouter:
         """Test routing Storage photo."""
         classification = {
             "classification": "Storage",
-            "confidence": 0.50,
+            "score": 2,
             "contains_children": True,
             "is_appropriate": True
         }
@@ -167,7 +167,7 @@ class TestCustomProfileClassification:
                 "deal_breakers": ["No relevant experience"],
             },
             philosophy="Focus on demonstrated impact over credentials.",
-            thresholds={"Strong": 0.70, "Maybe": 0.40},
+            thresholds={"Strong": 4, "Maybe": 2},
         )
 
     @pytest.fixture
@@ -233,7 +233,7 @@ class TestCustomProfileClassification:
         pb = PromptBuilder(config, profile=resume_profile)
         classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
 
-        response = {"classification": "Share", "confidence": 0.8, "reasoning": "test"}
+        response = {"classification": "Share", "score": 4, "reasoning": "test"}
         validated = classifier._validate_singleton_response(response)
         assert validated["classification"] == "Maybe"  # remapped to default
 
@@ -244,7 +244,7 @@ class TestCustomProfileClassification:
         pb = PromptBuilder(config, profile=resume_profile)
         classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
 
-        response = {"classification": "Strong", "confidence": 0.9, "reasoning": "great candidate"}
+        response = {"classification": "Strong", "score": 5, "reasoning": "great candidate"}
         validated = classifier._validate_singleton_response(response)
         assert validated["classification"] == "Strong"
 
@@ -255,7 +255,7 @@ class TestCustomProfileClassification:
         pb = PromptBuilder(config, profile=resume_profile)
         classifier = MediaClassifier(config, mock_client, pb, profile=resume_profile)
 
-        response = {"classification": "Exemplary", "confidence": 0.7, "reasoning": "test"}
+        response = {"classification": "Exemplary", "score": 4, "reasoning": "test"}
         validated = classifier._validate_document_response(response)
         assert validated["classification"] == "Maybe"
 
@@ -263,7 +263,7 @@ class TestCustomProfileClassification:
         """Router should accept profile categories for documents."""
         router = Router(config, profile=resume_profile)
 
-        classification = {"classification": "Strong", "confidence": 0.85}
+        classification = {"classification": "Strong", "score": 4}
         dest = router.route_document(classification)
         assert dest == "Strong"
 
@@ -271,8 +271,8 @@ class TestCustomProfileClassification:
         """Router should apply profile thresholds to documents."""
         router = Router(config, profile=resume_profile)
 
-        # Below "Strong" threshold of 0.70
-        classification = {"classification": "Strong", "confidence": 0.50}
+        # Below "Strong" threshold of 4
+        classification = {"classification": "Strong", "score": 3}
         dest = router.route_document(classification)
         assert dest == "Maybe"  # falls to default
 
@@ -280,6 +280,6 @@ class TestCustomProfileClassification:
         """Router should remap invalid categories to profile default."""
         router = Router(config, profile=resume_profile)
 
-        classification = {"classification": "Share", "confidence": 0.9}
+        classification = {"classification": "Share", "score": 5}
         dest = router.route_document(classification)
         assert dest == "Maybe"

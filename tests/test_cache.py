@@ -110,7 +110,7 @@ class TestJSONCache:
 
         test_data = {
             "classification": "Share",
-            "confidence": 0.85,
+            "score": 4,
             "reasoning": "Great photo"
         }
 
@@ -118,7 +118,7 @@ class TestJSONCache:
         retrieved = cache.get("test_key")
 
         assert retrieved == test_data
-        assert retrieved["confidence"] == 0.85
+        assert retrieved["score"] == 4
 
 
 class TestNumpyCache:

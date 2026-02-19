@@ -12,6 +12,34 @@ Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from 
 
 ---
 
+## Demo
+
+**280 photos + videos classified in under 8 minutes for $0.30** (10 parallel workers, Gemini Flash).
+
+<p align="center">
+  <img src="assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
+</p>
+
+Every file gets a score and a plain-English reason, grounded in the taste profile's criteria:
+
+<p align="center">
+  <img src="assets/demo_reasoning.png" alt="AI reasoning for each classification decision" width="780">
+</p>
+
+Burst photos taken seconds apart are compared head-to-head -- AI picks the best and explains why:
+
+<p align="center">
+  <img src="assets/demo_burst.png" alt="Burst intelligence: AI picks the best from a series" width="780">
+</p>
+
+Full score distribution and category breakdown:
+
+<p align="center">
+  <img src="assets/demo_stats.png" alt="Score distribution and category breakdown" width="780">
+</p>
+
+---
+
 ## How It Works
 
 1. **Classify** -- AI evaluates each file against your profile's criteria and sorts it into categories
@@ -339,7 +367,8 @@ classification:
   share_threshold: 0.60       # Confidence threshold for top category
   review_threshold: 0.35      # Below this → lowest category
   classify_videos: true
-  parallel_video_workers: 10
+  parallel_photo_workers: 10  # Concurrent photo classification workers
+  parallel_video_workers: 10  # Concurrent video classification workers
 
 profiles:
   profiles_dir: "profiles"
@@ -471,4 +500,4 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.2.2 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.3.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026

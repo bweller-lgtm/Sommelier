@@ -57,11 +57,11 @@ class ClassificationResult:
             for i, item in enumerate(top, 1):
                 name = Path(item["path"]).name if isinstance(item["path"], (str, Path)) else str(item["path"])
                 cls = item.get("classification", {})
-                conf = cls.get("confidence", 0)
+                score = cls.get("score", 0)
                 reason = cls.get("reasoning", "")
                 if len(reason) > 60:
                     reason = reason[:57] + "..."
-                print(f"   {i}. {name} ({conf:.2f}) - {reason}")
+                print(f"   {i}. {name} ({score}/5) - {reason}")
         print(f"{'='*60}")
 
     def _estimate_cost(self) -> float:
@@ -106,14 +106,14 @@ class ClassificationResult:
         return input_cost + output_cost
 
     def _top_confident(self, n: int = 5) -> List[Dict[str, Any]]:
-        """Return the top N highest-confidence results."""
+        """Return the top N highest-scoring results."""
         scored = []
         for r in self.results:
             cls = r.get("classification", {})
-            conf = cls.get("confidence", 0)
-            if conf and not cls.get("is_error_fallback", False):
+            score = cls.get("score", 0)
+            if score and not cls.get("is_error_fallback", False):
                 scored.append(r)
-        scored.sort(key=lambda x: x.get("classification", {}).get("confidence", 0), reverse=True)
+        scored.sort(key=lambda x: x.get("classification", {}).get("score", 0), reverse=True)
         return scored[:n]
 
     def generate_summary_report(self, report_dir: Path, provider_name: str = "gemini"):
@@ -147,17 +147,17 @@ class ClassificationResult:
             lines.append("")
 
         if top:
-            lines.append(f"  Top {len(top)} highest-confidence:")
+            lines.append(f"  Top {len(top)} highest-scoring:")
             for i, item in enumerate(top, 1):
                 name = Path(item["path"]).name if isinstance(item["path"], (str, Path)) else str(item["path"])
                 cls = item.get("classification", {})
-                conf = cls.get("confidence", 0)
+                score = cls.get("score", 0)
                 dest = item.get("destination", "")
                 reason = cls.get("reasoning", "")
                 if len(reason) > 70:
                     reason = reason[:67] + "..."
                 lines.append(f"  {i}. {name}")
-                lines.append(f"     {dest} ({conf:.2f}) - {reason}")
+                lines.append(f"     {dest} ({score}/5) - {reason}")
             lines.append("")
 
         report_dir.mkdir(parents=True, exist_ok=True)

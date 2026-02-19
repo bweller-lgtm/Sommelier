@@ -50,7 +50,7 @@ class Router:
         """
         # Extract fields
         category = classification.get("classification", "Review")
-        confidence = classification.get("confidence", 0.0)
+        score = classification.get("score", 2)
         contains_children = classification.get("contains_children", None)
         is_appropriate = classification.get("is_appropriate", None)
 
@@ -70,15 +70,13 @@ class Router:
         if category == "Review":
             return "Review"
 
-        # Apply thresholds
-        if category == "Share" and confidence >= self.config.classification.share_threshold:
+        # Apply thresholds (score is the calibrated signal)
+        if category == "Share" and score >= self.config.classification.share_threshold:
             return "Share"
-        elif category == "Share" and confidence >= self.config.classification.review_threshold:
-            return "Review"  # Share-worthy but confidence too low
-        elif category == "Storage" or confidence < self.config.classification.review_threshold:
-            return "Storage"
+        elif score >= self.config.classification.review_threshold:
+            return "Review"  # Borderline — score 3 = genuinely torn
         else:
-            return "Review"
+            return "Storage"
 
     def route_burst(
         self,
@@ -123,7 +121,7 @@ class Router:
 
             # Extract fields
             category = classification.get("classification", "Review")
-            confidence = classification.get("confidence", 0.0)
+            score = classification.get("score", 2)
             contains_children = classification.get("contains_children", None)
             is_appropriate = classification.get("is_appropriate", None)
 
@@ -142,10 +140,10 @@ class Router:
                 destinations.append("Review")
                 continue
 
-            # Burst-aware routing
+            # Burst-aware routing (score is the calibrated signal)
             if rank <= self.config.classification.burst_rank_consider:
                 # Top-ranked photos: consider for Share based on absolute threshold
-                if confidence >= self.config.classification.share_threshold:
+                if score >= self.config.classification.share_threshold:
                     # Check diversity with existing Share candidates
                     if self.config.classification.enable_diversity_check and share_candidates:
                         is_diverse = self._check_diversity_with_candidates(
@@ -159,22 +157,26 @@ class Router:
                             destinations.append("Share")
                             share_candidates.append((i, photo_path))
                         else:
-                            destinations.append("Storage")
+                            # Too similar to existing Share — borderline goes to Review
+                            if score >= self.config.classification.review_threshold:
+                                destinations.append("Review")
+                            else:
+                                destinations.append("Storage")
                     else:
                         # No diversity check needed (first candidate or disabled)
                         destinations.append("Share")
                         share_candidates.append((i, photo_path))
-                elif confidence >= self.config.classification.review_threshold:
+                elif score >= self.config.classification.review_threshold:
                     destinations.append("Review")
                 else:
                     destinations.append("Storage")
 
-            elif rank <= self.config.classification.burst_rank_review:
-                # Mid-ranked photos: Review
+            elif score >= self.config.classification.review_threshold:
+                # Borderline score — Review regardless of rank
                 destinations.append("Review")
 
             else:
-                # Low-ranked photos: Storage
+                # Low score — Storage
                 destinations.append("Storage")
 
         return destinations
@@ -326,7 +328,7 @@ Respond with JSON:
             Destination category name.
         """
         category = classification.get("classification", "Review")
-        confidence = classification.get("confidence", 0.0)
+        score = classification.get("score", 2)
 
         if self.profile:
             # Validate category is in profile
@@ -336,8 +338,8 @@ Respond with JSON:
 
             # Check thresholds for the category
             threshold = self.profile.thresholds.get(category)
-            if threshold is not None and confidence < threshold:
-                # Confidence too low for this category, fall back
+            if threshold is not None and score < threshold:
+                # Score too low for this category, fall back
                 return self.profile.default_category
 
             return category

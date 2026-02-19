@@ -21,7 +21,7 @@ class TestFallbackResponse:
         mock_client = Mock()
         mock_client.generate_json = Mock(return_value={
             "classification": "Share",
-            "confidence": 0.8,
+            "score": 4,
             "reasoning": "Test"
         })
 
@@ -47,7 +47,7 @@ class TestFallbackResponse:
         assert result["error_message"] == "Test error"
         assert result["retry_count"] == 0
         assert result["classification"] == "Review"
-        assert result["confidence"] == 0.3
+        assert result["score"] == 2
 
     def test_fallback_with_error_type(self, classifier):
         """Test fallback with custom error type."""
@@ -97,7 +97,7 @@ class TestValidationWithErrorFields:
         """Test that successful responses have is_error_fallback = False."""
         response = {
             "classification": "Share",
-            "confidence": 0.85,
+            "score": 4,
             "reasoning": "Good photo"
         }
 
@@ -112,7 +112,7 @@ class TestValidationWithErrorFields:
         """Test that error fallback fields are preserved through validation."""
         response = {
             "classification": "Review",
-            "confidence": 0.3,
+            "score": 2,
             "reasoning": "Fallback",
             "is_error_fallback": True,
             "error_type": "api_error",
@@ -150,7 +150,7 @@ class TestRetryLogic:
         def success_fn():
             return {
                 "classification": "Share",
-                "confidence": 0.85,
+                "score": 4,
                 "is_error_fallback": False
             }
 
@@ -168,13 +168,13 @@ class TestRetryLogic:
             if call_count[0] < 2:
                 return {
                     "classification": "Review",
-                    "confidence": 0.3,
+                    "score": 2,
                     "is_error_fallback": True,
                     "error_type": "api_error"
                 }
             return {
                 "classification": "Share",
-                "confidence": 0.85,
+                "score": 4,
                 "is_error_fallback": False
             }
 
@@ -192,7 +192,7 @@ class TestRetryLogic:
             call_count[0] += 1
             return {
                 "classification": "Review",
-                "confidence": 0.3,
+                "score": 2,
                 "is_error_fallback": True,
                 "error_type": "load_error"  # Not in retry_on_errors
             }
@@ -210,7 +210,7 @@ class TestRetryLogic:
             call_count[0] += 1
             return {
                 "classification": "Review",
-                "confidence": 0.3,
+                "score": 2,
                 "is_error_fallback": True,
                 "error_type": "api_error"
             }
@@ -231,7 +231,7 @@ class TestRetryLogic:
                 raise Exception("Connection timeout")
             return {
                 "classification": "Share",
-                "confidence": 0.85,
+                "score": 4,
                 "is_error_fallback": False
             }
 
@@ -259,8 +259,8 @@ class TestBurstContextStorage:
             "burst_id": "test123",
             "photo_paths": ["/path/1.jpg", "/path/2.jpg"],
             "results": [
-                {"classification": "Share", "confidence": 0.8},
-                {"classification": "Storage", "confidence": 0.5}
+                {"classification": "Share", "score": 4},
+                {"classification": "Storage", "score": 3}
             ],
             "failed_indices": [],
             "has_failures": False

@@ -142,7 +142,7 @@ class TestPhotoPipeline:
                 "path": Path("a.jpg"),
                 "burst_size": 1,
                 "classification": {
-                    "classification": "Share", "confidence": 0.9,
+                    "classification": "Share", "score": 5,
                     "contains_children": True, "is_appropriate": True,
                 },
             },
@@ -150,7 +150,7 @@ class TestPhotoPipeline:
                 "path": Path("b.jpg"),
                 "burst_size": 1,
                 "classification": {
-                    "classification": "Storage", "confidence": 0.5,
+                    "classification": "Storage", "score": 2,
                     "contains_children": True, "is_appropriate": True,
                 },
             },
@@ -169,7 +169,7 @@ class TestPhotoPipeline:
                 "burst_size": 3,
                 "burst_index": 0,
                 "classification": {
-                    "classification": "Share", "confidence": 0.9,
+                    "classification": "Share", "score": 5,
                     "contains_children": True, "is_appropriate": True,
                 },
             },
@@ -204,18 +204,18 @@ class TestDocumentPipeline:
                 CategoryDefinition("Weak", "bad"),
             ],
             default_category="Weak",
-            thresholds={"Strong": 0.70},
+            thresholds={"Strong": 4},
         )
         pipeline = DocumentPipeline(config, profile=profile)
 
         results = [
             {
                 "path": Path("a.pdf"),
-                "classification": {"classification": "Strong", "confidence": 0.85},
+                "classification": {"classification": "Strong", "score": 4},
             },
             {
                 "path": Path("b.pdf"),
-                "classification": {"classification": "Strong", "confidence": 0.50},
+                "classification": {"classification": "Strong", "score": 3},
             },
         ]
         routed = pipeline.route(results)

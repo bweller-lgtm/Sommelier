@@ -73,7 +73,17 @@
     "Favor images where the subjects are interacting with each other or the environment rather than looking directly at the lens."
   ],
   "philosophy": "Prioritize authentic storytelling and 'wow' moments over technical perfection to curate a feed that feels both spectacular and genuine.",
-  "thresholds": {},
+  "scoring_rubric": {
+    "5": "Stop-the-scroll -- visually stunning, unique story, immediate 'wow' factor",
+    "4": "Strong post -- compelling moment or scenery, would drive engagement",
+    "3": "Borderline -- fun but not standout, could work for Stories but not a hero post",
+    "2": "Personal memory -- nice for you but wouldn't resonate publicly",
+    "1": "Delete -- blurry, unflattering, technical failure, or redundant duplicate"
+  },
+  "thresholds": {
+    "Post": 4,
+    "Stories": 3
+  },
   "photo_settings": null,
   "document_settings": null,
   "created_at": "2026-02-17T11:22:05.178505",
