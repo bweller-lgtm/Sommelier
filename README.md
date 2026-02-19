@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Sommelier/master/assets/Readme_Logo.png" alt="Taster" width="200">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/Readme_Logo.png" alt="Taster" width="200">
 </p>
 
 <h1 align="center">Taster</h1>
@@ -17,25 +17,25 @@ Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from 
 **280 photos + videos classified in under 8 minutes for $0.30** (10 parallel workers, Gemini Flash).
 
 <p align="center">
-  <img src="assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
 </p>
 
 Every file gets a score and a plain-English reason, grounded in the taste profile's criteria:
 
 <p align="center">
-  <img src="assets/demo_reasoning.png" alt="AI reasoning for each classification decision" width="780">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_reasoning.png" alt="AI reasoning for each classification decision" width="780">
 </p>
 
 Burst photos taken seconds apart are compared head-to-head -- AI picks the best and explains why:
 
 <p align="center">
-  <img src="assets/demo_burst.png" alt="Burst intelligence: AI picks the best from a series" width="780">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_burst.png" alt="Burst intelligence: AI picks the best from a series" width="780">
 </p>
 
 Full score distribution and category breakdown:
 
 <p align="center">
-  <img src="assets/demo_stats.png" alt="Score distribution and category breakdown" width="780">
+  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_stats.png" alt="Score distribution and category breakdown" width="780">
 </p>
 
 ---
@@ -500,4 +500,4 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.3.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.3.1 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
