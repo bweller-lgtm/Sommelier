@@ -1056,7 +1056,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
                 "name": file_path.name,
                 "type": media_type,
                 "classification": classification.get("classification"),
-                "confidence": classification.get("confidence"),
+                "score": classification.get("score"),
                 "reasoning": classification.get("reasoning", ""),
                 "destination": destination,
             })
@@ -1080,8 +1080,8 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
             pct = (count / processed_count * 100) if processed_count else 0
             summary_lines.append(f"{dest}: {count} ({pct:.0f}%)")
     top_confident = sorted(
-        [r for r in results if r.get("confidence") and "error" not in r],
-        key=lambda x: x.get("confidence", 0),
+        [r for r in results if r.get("score") and "error" not in r],
+        key=lambda x: x.get("score", 0),
         reverse=True,
     )[:5]
 
@@ -1098,7 +1098,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
         "stats": stats,
         "summary": " | ".join(summary_lines) if summary_lines else "",
         "top_results": [
-            {"name": r["name"], "classification": r["classification"], "confidence": r["confidence"], "reasoning": r.get("reasoning", "")}
+            {"name": r["name"], "classification": r["classification"], "score": r["score"], "reasoning": r.get("reasoning", "")}
             for r in top_confident
         ],
         "results": results,
@@ -1161,7 +1161,7 @@ def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
                 "file": fp,
                 "name": path.name,
                 "classification": classification.get("classification"),
-                "confidence": classification.get("confidence"),
+                "score": classification.get("score"),
                 "reasoning": classification.get("reasoning", ""),
                 "destination": destination,
             })

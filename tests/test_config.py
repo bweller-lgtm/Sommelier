@@ -34,29 +34,36 @@ class TestClassificationConfig:
     def test_defaults(self):
         """Test default values."""
         config = ClassificationConfig()
-        assert config.share_threshold == 0.60
-        assert config.review_threshold == 0.35
+        assert config.share_threshold == 4
+        assert config.review_threshold == 3
         assert config.classify_videos is True
         assert config.parallel_video_workers == 10
 
     def test_threshold_validation(self):
         """Test threshold validation."""
         # Valid thresholds
-        config = ClassificationConfig(share_threshold=0.7, review_threshold=0.3)
-        assert config.share_threshold == 0.7
+        config = ClassificationConfig(share_threshold=5, review_threshold=3)
+        assert config.share_threshold == 5
 
         # Invalid: share < review
         with pytest.raises(ValueError, match="review_threshold.*must be"):
-            ClassificationConfig(share_threshold=0.3, review_threshold=0.7)
+            ClassificationConfig(share_threshold=2, review_threshold=4)
 
         # Invalid: out of range
-        with pytest.raises(ValueError, match="must be between 0 and 1"):
-            ClassificationConfig(share_threshold=1.5)
+        with pytest.raises(ValueError, match="must be between 1 and 5"):
+            ClassificationConfig(share_threshold=6)
 
     def test_parallel_workers_validation(self):
         """Test parallel workers validation."""
         with pytest.raises(ValueError, match="parallel_video_workers must be >= 1"):
             ClassificationConfig(parallel_video_workers=0)
+
+    def test_parallel_photo_workers_validation(self):
+        """Test parallel photo workers validation."""
+        config = ClassificationConfig()
+        assert config.parallel_photo_workers == 10
+        with pytest.raises(ValueError, match="parallel_photo_workers must be >= 1"):
+            ClassificationConfig(parallel_photo_workers=0)
 
 
 class TestBurstDetectionConfig:
@@ -117,8 +124,8 @@ class TestConfigLoading:
                 "clip_model": "ViT-B-32",
             },
             "classification": {
-                "share_threshold": 0.65,
-                "review_threshold": 0.30,
+                "share_threshold": 5,
+                "review_threshold": 3,
             },
         }
 
@@ -130,8 +137,8 @@ class TestConfigLoading:
         config = load_config(config_file)
 
         assert config.model.name == "gemini-3-flash-preview"
-        assert config.classification.share_threshold == 0.65
-        assert config.classification.review_threshold == 0.30
+        assert config.classification.share_threshold == 5
+        assert config.classification.review_threshold == 3
 
     def test_load_nonexistent_config(self):
         """Test loading non-existent config."""
@@ -157,7 +164,7 @@ class TestConfigLoading:
         assert config.model.name == "gemini-1.5-pro"
 
         # Defaults
-        assert config.classification.share_threshold == 0.60
+        assert config.classification.share_threshold == 4
         assert config.burst_detection.time_window_seconds == 10
 
 
@@ -173,16 +180,16 @@ class TestConfig:
     def test_defaults(self, sample_config):
         """Test default config creation."""
         assert sample_config.model.name == "gemini-3-flash-preview"
-        assert sample_config.classification.share_threshold == 0.60
+        assert sample_config.classification.share_threshold == 4
         assert sample_config.burst_detection.enabled is True
 
     def test_from_dict(self):
         """Test creating config from dict."""
         data = {
             "model": {"name": "test-model"},
-            "classification": {"share_threshold": 0.75},
+            "classification": {"share_threshold": 5},
         }
 
         config = Config.from_dict(data)
         assert config.model.name == "test-model"
-        assert config.classification.share_threshold == 0.75
+        assert config.classification.share_threshold == 5

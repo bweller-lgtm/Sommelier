@@ -2,6 +2,7 @@
 
 Extracts the core logic from taste_classify.py into a reusable pipeline class.
 """
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from tqdm import tqdm
@@ -65,6 +66,19 @@ class PhotoPipeline(ClassificationPipeline):
         detector = BurstDetector(self.config.burst_detection)
         return detector.detect_bursts(files, embeddings)
 
+    def _classify_group(self, group, classifier):
+        """Classify a single group (singleton or burst). Thread-safe."""
+        if len(group) == 1:
+            photo = group[0]
+            classification = classifier.classify_singleton(photo, use_cache=True)
+            return [{"path": photo, "burst_size": 1, "burst_index": -1, "classification": classification}]
+        else:
+            classifications = classifier.classify_burst(group, use_cache=True)
+            return [
+                {"path": photo, "burst_size": len(group), "burst_index": i, "classification": cls}
+                for i, (photo, cls) in enumerate(zip(group, classifications))
+            ]
+
     def classify(self, groups: List[List[Path]], features: Dict) -> List[Dict[str, Any]]:
         """Classify all photos using Gemini."""
         if not groups:
@@ -77,31 +91,20 @@ class PhotoPipeline(ClassificationPipeline):
             self.config, self.gemini_client, prompt_builder,
             self.cache_manager, profile=self.profile
         )
-        embeddings = features.get("embeddings")
-        images = features.get("images", [])
 
         print(f"\nStep 3: Classifying photos with Gemini...")
+        workers = self.config.classification.parallel_photo_workers
         results = []
 
-        for burst in tqdm(groups, desc="Processing bursts/singletons"):
-            if len(burst) == 1:
-                photo = burst[0]
-                classification = classifier.classify_singleton(photo, use_cache=True)
-                results.append({
-                    "path": photo,
-                    "burst_size": 1,
-                    "burst_index": -1,
-                    "classification": classification,
-                })
-            else:
-                classifications = classifier.classify_burst(burst, use_cache=True)
-                for i, (photo, classification) in enumerate(zip(burst, classifications)):
-                    results.append({
-                        "path": photo,
-                        "burst_size": len(burst),
-                        "burst_index": i,
-                        "classification": classification,
-                    })
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(self._classify_group, group, classifier): idx
+                for idx, group in enumerate(groups)
+            }
+            with tqdm(total=len(groups), desc="Processing bursts/singletons") as pbar:
+                for future in as_completed(futures):
+                    results.extend(future.result())
+                    pbar.update(1)
 
         return results
 
@@ -158,6 +161,12 @@ class PhotoPipeline(ClassificationPipeline):
 
         return image_result.merge(video_result)
 
+    def _classify_single_video(self, video, classifier, router):
+        """Classify a single video. Thread-safe."""
+        classification = classifier.classify_video(video, use_cache=True)
+        destination = router.route_video(classification)
+        return {"path": video, "classification": classification, "destination": destination}
+
     def _classify_videos(
         self, videos: List[Path], output_folder: Path, dry_run: bool
     ) -> ClassificationResult:
@@ -171,15 +180,14 @@ class PhotoPipeline(ClassificationPipeline):
         )
         router = Router(self.config, self.gemini_client, profile=self.profile)
 
+        workers = self.config.classification.parallel_video_workers
         results = []
-        for video in tqdm(videos, desc="Classifying videos"):
-            classification = classifier.classify_video(video, use_cache=True)
-            destination = router.route_video(classification)
-            results.append({
-                "path": video,
-                "classification": classification,
-                "destination": destination,
-            })
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(self._classify_single_video, v, classifier, router): v for v in videos}
+            with tqdm(total=len(videos), desc="Classifying videos") as pbar:
+                for future in as_completed(futures):
+                    results.append(future.result())
+                    pbar.update(1)
 
         if not dry_run:
             self.move_files(results, output_folder)

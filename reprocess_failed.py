@@ -300,7 +300,7 @@ def save_reprocessing_report(results: list, report_dir: Path):
             "previous_destination": result.get("previous_destination", "Review"),
             "new_destination": result["destination"],
             "classification": classification.get("classification", "Unknown"),
-            "confidence": classification.get("confidence", 0),
+            "score": classification.get("score", 0),
             "reasoning": classification.get("reasoning", ""),
             "is_error_fallback": classification.get("is_error_fallback", False),
             "error_type": classification.get("error_type", ""),

@@ -47,9 +47,16 @@
     "Group similar documents and identify the best version."
   ],
   "philosophy": "Keep documents that provide clear value through accurate, well-presented information relevant to their purpose.",
+  "scoring_rubric": {
+    "5": "Outstanding -- exceptionally well-written, highly relevant, immediately actionable",
+    "4": "Good -- solid quality, clearly relevant, minor issues at most",
+    "3": "Borderline -- adequate content but notable gaps in quality or relevance",
+    "2": "Weak -- poor structure, limited relevance, or significantly outdated",
+    "1": "Irrelevant -- unreadable, corrupted, or completely off-topic"
+  },
   "thresholds": {
-    "Exemplary": 0.70,
-    "Acceptable": 0.40
+    "Exemplary": 4,
+    "Acceptable": 3
   },
   "photo_settings": null,
   "document_settings": {
