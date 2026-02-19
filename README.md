@@ -14,7 +14,7 @@ Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from 
 
 ## Demo
 
-**280 photos + videos classified in under 8 minutes for $0.30** (10 parallel workers, Gemini Flash).
+**280 photos + videos classified in 12 minutes for $0.30** (10 parallel workers, Gemini Flash).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
