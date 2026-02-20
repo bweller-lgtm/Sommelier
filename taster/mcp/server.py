@@ -30,6 +30,9 @@ _SETUP_INSTRUCTIONS = (
     "  Anthropic  (Claude)\n"
     "    Get a key: https://console.anthropic.com/settings/keys\n"
     "    Env var: ANTHROPIC_API_KEY\n\n"
+    "  Local LLM  (Ollama, LM Studio, vLLM — fully offline, no API key)\n"
+    "    Install Ollama: https://ollama.com\n"
+    "    Env var: LOCAL_LLM_URL (default: http://localhost:11434/v1)\n\n"
     "Add the key to a .env file in the Taster folder, or to Claude Desktop's "
     "MCP config (claude_desktop_config.json) under taster > env.\n"
     "Then restart Claude Desktop.\n\n"
@@ -43,6 +46,7 @@ def _has_api_key() -> bool:
         os.environ.get("GEMINI_API_KEY")
         or os.environ.get("OPENAI_API_KEY")
         or os.environ.get("ANTHROPIC_API_KEY")
+        or os.environ.get("LOCAL_LLM_URL")
     )
 
 
@@ -390,7 +394,10 @@ def create_mcp_server():
                     "the user a cost/time estimate and get confirmation before classifying. "
                     "For large folders (50+ files), use batch_size=30 to process in chunks "
                     "— the response includes next_offset so you can continue where you left off. "
-                    "Use dry_run=true to classify but not move files."
+                    "Use dry_run=true to classify but not move files. "
+                    "Use bundle_mode=true when the folder contains subfolders that should be "
+                    "evaluated as single packages (e.g., one subfolder per applicant with "
+                    "resume + cover letter + portfolio)."
                 ),
                 inputSchema={
                     "type": "object",
@@ -422,6 +429,11 @@ def create_mcp_server():
                             "type": "integer",
                             "description": "Max files to process. Use 30-50 for large folders. 0 = all files.",
                             "default": 0,
+                        },
+                        "bundle_mode": {
+                            "type": "boolean",
+                            "description": "If true, treat each subfolder as a bundle — one holistic classification per subfolder. Use for multi-file packages like application materials, vendor packets, or portfolios.",
+                            "default": False,
                         },
                     },
                     "required": ["folder_path", "profile_name"],
@@ -678,7 +690,7 @@ def _handle_status(pm: ProfileManager) -> Any:
             for name, avail in providers.items()
         },
         "active_provider": next(
-            (n for n in ["gemini", "openai", "anthropic"] if providers.get(n)),
+            (n for n in ["gemini", "openai", "anthropic", "local"] if providers.get(n)),
             None,
         ),
         "profiles_count": len(profiles),
@@ -1056,6 +1068,12 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     classifier = MediaClassifier(config, ai_client, prompt_builder, cache_manager, profile=profile)
     router = Router(config, ai_client, profile=profile)
 
+    # ── Bundle mode ───────────────────────────────────────────────
+    if arguments.get("bundle_mode", False):
+        return _classify_bundles_mcp(
+            folder, arguments, classifier, router, cache_manager, config,
+        )
+
     # Pagination: offset and batch_size let Claude call this repeatedly
     # for large folders without hitting the 4-minute MCP timeout.
     offset = int(arguments.get("offset", 0))
@@ -1162,6 +1180,93 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
         ],
         "results": results,
         "message": f"Processed {processed_count} files in {elapsed:.0f}s." + (f" Call again with offset={next_offset} to continue ({total - next_offset} remaining)." if has_more else ""),
+    }
+
+
+def _classify_bundles_mcp(folder, arguments, classifier, router, cache_manager, config):
+    """Bundle mode: classify each subfolder as a single package."""
+    import time as _time
+    from ..core.file_utils import FileTypeRegistry
+
+    bundles = FileTypeRegistry.list_bundles(folder)
+    if not bundles:
+        return {
+            "status": "completed",
+            "bundle_mode": True,
+            "total_bundles": 0,
+            "message": "No subfolder bundles found in folder.",
+        }
+
+    # Try to extract text from documents
+    text_contents: dict = {}
+    try:
+        from ..features.document_features import DocumentFeatureExtractor
+        extractor = DocumentFeatureExtractor(config)
+        for bundle in bundles:
+            for f in bundle["files"].get("documents", []):
+                try:
+                    text_contents[f] = extractor.extract_text(f)
+                except Exception:
+                    pass
+    except ImportError:
+        pass
+
+    dry_run = arguments.get("dry_run", True)
+    results = []
+    stats: dict = {}
+    errors = 0
+    start_time = _time.time()
+
+    for bundle in bundles:
+        all_files = (
+            bundle["files"].get("images", [])
+            + bundle["files"].get("videos", [])
+            + bundle["files"].get("audio", [])
+            + bundle["files"].get("documents", [])
+        )
+        print(f"[taster] Bundle: {bundle['name']} ({len(all_files)} files)", file=sys.stderr, flush=True)
+
+        try:
+            classification = classifier.classify_bundle(
+                bundle["name"], all_files, text_contents=text_contents,
+            )
+            destination = router.route_document(classification)
+
+            result_entry = {
+                "bundle": True,
+                "bundle_name": bundle["name"],
+                "files": [str(f) for f in all_files],
+                "file_count": len(all_files),
+                "classification": classification.get("classification"),
+                "score": classification.get("score"),
+                "reasoning": classification.get("reasoning", ""),
+                "destination": destination,
+            }
+            if classification.get("dimensions"):
+                result_entry["dimensions"] = classification["dimensions"]
+            if classification.get("content_summary"):
+                result_entry["content_summary"] = classification["content_summary"]
+            results.append(result_entry)
+            stats[destination] = stats.get(destination, 0) + 1
+        except Exception as e:
+            print(f"[taster] ERROR classifying bundle {bundle['name']}: {e}", file=sys.stderr, flush=True)
+            results.append({"bundle": True, "bundle_name": bundle["name"], "error": str(e)})
+            errors += 1
+
+    elapsed = _time.time() - start_time
+    print(f"[taster] Bundles complete in {elapsed:.0f}s. {len(results)} classified, {errors} errors.", file=sys.stderr, flush=True)
+
+    return {
+        "status": "completed",
+        "bundle_mode": True,
+        "dry_run": dry_run,
+        "total_bundles": len(bundles),
+        "processed": len(results),
+        "errors": errors,
+        "elapsed_seconds": round(elapsed, 1),
+        "stats": stats,
+        "results": results,
+        "message": f"Classified {len(results)} bundle(s) in {elapsed:.0f}s.",
     }
 
 

@@ -114,9 +114,15 @@ Examples:
     parser.add_argument(
         "--provider",
         type=str,
-        choices=["gemini", "openai", "anthropic"],
+        choices=["gemini", "openai", "anthropic", "local"],
         default=None,
         help="AI provider (default: auto-detect from API keys)"
+    )
+
+    parser.add_argument(
+        "--bundles",
+        action="store_true",
+        help="Treat each subfolder as a bundle (one classification per subfolder)"
     )
 
     return parser.parse_args()
@@ -291,7 +297,8 @@ def main():
     start_time = time.time()
     result = pipeline.run(
         folder, output_base, config.system.dry_run,
-        classify_videos=config.classification.classify_videos
+        classify_videos=config.classification.classify_videos,
+        classify_bundles=getattr(args, 'bundles', False)
     )
     result.elapsed_seconds = time.time() - start_time
 

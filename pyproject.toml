@@ -48,6 +48,7 @@ ml = [
 documents = [
     "pymupdf>=1.25",
     "python-docx>=1.0",
+    "python-pptx>=1.0",
     "openpyxl>=3.1",
 ]
 api = [
