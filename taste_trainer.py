@@ -451,7 +451,7 @@ def build_app() -> gr.Blocks:
         from taster.training.synthesizer import ProfileSynthesizer
 
         ai_client = create_ai_client(config)
-        synthesizer = ProfileSynthesizer(ai_client, pm)
+        synthesizer = ProfileSynthesizer(ai_client, pm, config.training)
 
         existing = None
         if pm.profile_exists(session.profile_name):
