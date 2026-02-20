@@ -119,36 +119,7 @@ Start with a code quality profile -- generate one from a quick description or wr
 
 ### Multi-File Packages
 
-Some things can't be evaluated one file at a time. A vendor sends an MSA, a security questionnaire, and a product deck -- you need to read them together before deciding. A research submission includes a paper, dataset description, and methodology appendix. A creative portfolio has case studies, a process document, and references.
-
-`--bundles` mode treats each subfolder as a single unit. The AI sees every file in the package together and returns one holistic classification -- exactly how a human reviewer works.
-
-```
-submissions/
-  acme-corp/           ← one classification
-    proposal.pdf
-    security_questionnaire.xlsx
-    product_deck.pptx
-  globex-inc/          ← one classification
-    proposal.pdf
-    references.pdf
-```
-
-```bash
-taster classify submissions/ --bundles --profile vendor-review
-```
-
-Each package gets a score, reasoning, and per-dimension diagnostics grounded in your profile's criteria. Missing files are a natural signal ("no references submitted"), not an automatic penalty. A strong proposal can compensate for a thin appendix -- just like in real review.
-
-Use cases people have explored:
-
-- **Vendor / procurement triage** -- MSA + security docs + product materials, sorted by fit
-- **Deal flow screening** -- pitch deck + financials + market analysis, prioritized for review
-- **Research and literature screening** -- papers + data + methodology, triaged by relevance
-- **Creative portfolio review** -- case studies + process docs + work samples, evaluated holistically
-- **Legal and compliance review** -- contracts + amendments + correspondence, flagged by risk level
-
-Pair `--bundles` with a local LLM (`--provider local`) for confidential packages where no data should leave your network.
+Some things can't be evaluated one file at a time -- a vendor sends an MSA, a security questionnaire, and a product deck; a research submission includes a paper, dataset description, and methodology appendix; a creative portfolio has case studies, a process document, and references. `--bundles` mode treats each subfolder as a single unit. The AI sees every file in the package together and returns one holistic classification -- exactly how a human reviewer works.
 
 ### Any Collection
 
@@ -417,7 +388,7 @@ model:
   local_base_url: http://localhost:11434/v1
 ```
 
-Local models are slower than cloud APIs and may produce lower-quality classifications for complex media. Best for text/document classification or when privacy is the top priority.
+Local models are slower than cloud APIs and may produce lower-quality classifications for complex media. Best for text/document classification or when privacy is the top priority. Combine with `--bundles` to review multi-file packages (vendor packets, portfolios, submissions) entirely on-device.
 
 ---
 
