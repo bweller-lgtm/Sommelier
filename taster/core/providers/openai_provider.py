@@ -24,12 +24,18 @@ class OpenAIProvider(AIClient):
         timeout: float = 120.0,
         video_frame_count: int = 8,
         pdf_render_dpi: int = 150,
+        base_url: Optional[str] = None,
     ):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError(
-                "OPENAI_API_KEY not set. Set environment variable or pass to constructor."
-            )
+        self.base_url = base_url
+        if base_url:
+            # Local/custom endpoint — no API key required
+            self.api_key = api_key or "not-needed"
+        else:
+            self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+            if not self.api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY not set. Set environment variable or pass to constructor."
+                )
         self.model_name = model_name
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -39,7 +45,10 @@ class OpenAIProvider(AIClient):
 
         from ...compat import require
         openai = require("openai", "openai")
-        self._client = openai.OpenAI(api_key=self.api_key, timeout=self.timeout)
+        client_kwargs = dict(api_key=self.api_key, timeout=self.timeout)
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        self._client = openai.OpenAI(**client_kwargs)
 
     def supports_video(self) -> bool:
         return False

@@ -134,10 +134,11 @@ class TestDetectProviders:
 
     def test_all_keys(self):
         env = {k: v for k, v in os.environ.items()
-               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")}
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "LOCAL_LLM_URL")}
         env["GEMINI_API_KEY"] = "g-key"
         env["OPENAI_API_KEY"] = "o-key"
         env["ANTHROPIC_API_KEY"] = "a-key"
+        env["LOCAL_LLM_URL"] = "http://localhost:11434/v1"
         with patch.dict(os.environ, env, clear=True):
             result = detect_available_providers()
             assert all(result.values())
@@ -505,3 +506,174 @@ class TestPDFPageRendererExtended:
     def test_nonexistent_pdf(self, tmp_path):
         with pytest.raises(Exception):  # pymupdf raises its own FileNotFoundError (RuntimeError subclass)
             PDFPageRenderer.render_pages(tmp_path / "nonexistent.pdf")
+
+
+# ── Local provider tests ─────────────────────────────────────────────
+
+
+class TestLocalProvider:
+    """Tests for LocalProvider."""
+
+    @pytest.fixture
+    def provider(self):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            from taster.core.providers.local_provider import LocalProvider
+            return LocalProvider()
+
+    def test_provider_name(self, provider):
+        assert provider.provider_name == "local"
+
+    def test_default_base_url(self, provider):
+        assert provider.base_url == "http://localhost:11434/v1"
+
+    def test_default_model(self, provider):
+        assert provider.model_name == "llama3.2"
+
+    def test_default_timeout(self, provider):
+        assert provider.timeout == 300.0
+
+    def test_custom_base_url(self):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            from taster.core.providers.local_provider import LocalProvider
+            p = LocalProvider(base_url="http://myhost:8080/v1")
+            assert p.base_url == "http://myhost:8080/v1"
+
+    def test_custom_model(self):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            from taster.core.providers.local_provider import LocalProvider
+            p = LocalProvider(model_name="mistral")
+            assert p.model_name == "mistral"
+
+    def test_custom_timeout(self):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            from taster.core.providers.local_provider import LocalProvider
+            p = LocalProvider(timeout=600.0)
+            assert p.timeout == 600.0
+
+    def test_env_var_override(self):
+        env = {k: v for k, v in os.environ.items() if k != "LOCAL_LLM_URL"}
+        env["LOCAL_LLM_URL"] = "http://envhost:9999/v1"
+        mock_openai = MagicMock()
+        with patch.dict(os.environ, env, clear=True):
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                from taster.core.providers.local_provider import LocalProvider
+                p = LocalProvider()
+                assert p.base_url == "http://envhost:9999/v1"
+
+    def test_explicit_url_beats_env(self):
+        env = dict(os.environ)
+        env["LOCAL_LLM_URL"] = "http://envhost:9999/v1"
+        mock_openai = MagicMock()
+        with patch.dict(os.environ, env):
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                from taster.core.providers.local_provider import LocalProvider
+                p = LocalProvider(base_url="http://explicit:1234/v1")
+                assert p.base_url == "http://explicit:1234/v1"
+
+    def test_no_api_key_required(self, provider):
+        # Should have created successfully without any API key env var
+        assert provider.api_key == "not-needed"
+
+    def test_inherits_message_building(self, provider):
+        messages = provider._build_messages("hello")
+        assert messages == [{"role": "user", "content": "hello"}]
+
+    def test_is_ai_client_subclass(self, provider):
+        assert isinstance(provider, AIClient)
+
+
+# ── Factory tests for local provider ─────────────────────────────────
+
+
+class TestFactoryLocal:
+    """Tests for create_ai_client with local provider."""
+
+    @pytest.fixture
+    def config(self):
+        return Config()
+
+    def test_explicit_local(self, config):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            client = create_ai_client(config, provider="local")
+            assert client.provider_name == "local"
+            assert isinstance(client, AIClient)
+
+    def test_auto_detect_via_env(self, config):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "LOCAL_LLM_URL")}
+        env["LOCAL_LLM_URL"] = "http://localhost:11434/v1"
+        mock_openai = MagicMock()
+        with patch.dict(os.environ, env, clear=True):
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                client = create_ai_client(config)
+                assert client.provider_name == "local"
+
+    def test_config_model_passthrough(self):
+        config = Config()
+        config.model.local_model = "phi3"
+        config.model.local_base_url = "http://custom:5000/v1"
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
+            client = create_ai_client(config, provider="local")
+            assert client.model_name == "phi3"
+            assert client.base_url == "http://custom:5000/v1"
+
+    def test_cloud_providers_preferred_over_local(self, config):
+        """When both cloud and local are available, cloud wins."""
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "LOCAL_LLM_URL")}
+        env["OPENAI_API_KEY"] = "o-key"
+        env["LOCAL_LLM_URL"] = "http://localhost:11434/v1"
+        mock_openai = MagicMock()
+        with patch.dict(os.environ, env, clear=True):
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                client = create_ai_client(config)
+                assert client.provider_name == "openai"
+
+    def test_no_keys_error_mentions_local(self, config):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "LOCAL_LLM_URL")}
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ValueError, match="LOCAL_LLM_URL"):
+                create_ai_client(config)
+
+    def test_unknown_provider_error_mentions_local(self, config):
+        with pytest.raises(ValueError, match="local"):
+            create_ai_client(config, provider="nonexistent")
+
+
+# ── ModelConfig local fields ─────────────────────────────────────────
+
+
+class TestModelConfigLocal:
+    """ModelConfig local LLM fields."""
+
+    def test_defaults(self):
+        mc = ModelConfig()
+        assert mc.local_model == "llama3.2"
+        assert mc.local_base_url == "http://localhost:11434/v1"
+
+    def test_backward_compat_without_local_fields(self):
+        """Old config.yaml without local fields should still work."""
+        config = Config.from_dict({
+            "model": {"name": "gemini-2.0-flash"},
+        })
+        assert config.model.local_model == "llama3.2"
+        assert config.model.local_base_url == "http://localhost:11434/v1"
+
+    def test_with_local_fields(self):
+        config = Config.from_dict({
+            "model": {
+                "provider": "local",
+                "local_model": "mistral",
+                "local_base_url": "http://myserver:8080/v1",
+            },
+        })
+        assert config.model.provider == "local"
+        assert config.model.local_model == "mistral"
+        assert config.model.local_base_url == "http://myserver:8080/v1"

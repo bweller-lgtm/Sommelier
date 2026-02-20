@@ -117,6 +117,39 @@ Grade 200 student submissions against *your* standards. Create a profile from a 
 
 Start with a code quality profile -- generate one from a quick description or write your own. Taster classifies every file into tiers (Exemplary / Solid / Needs Work) with explanations. Review the results, correct what you disagree with, and refine the profile. Each cycle sharpens it until the profile captures the standards you actually follow -- error handling patterns, naming conventions, architectural choices. That profile becomes both a style guide and an automated reviewer for future code.
 
+### Multi-File Packages
+
+Some things can't be evaluated one file at a time. A vendor sends an MSA, a security questionnaire, and a product deck -- you need to read them together before deciding. A research submission includes a paper, dataset description, and methodology appendix. A creative portfolio has case studies, a process document, and references.
+
+`--bundles` mode treats each subfolder as a single unit. The AI sees every file in the package together and returns one holistic classification -- exactly how a human reviewer works.
+
+```
+submissions/
+  acme-corp/           ← one classification
+    proposal.pdf
+    security_questionnaire.xlsx
+    product_deck.pptx
+  globex-inc/          ← one classification
+    proposal.pdf
+    references.pdf
+```
+
+```bash
+taster classify submissions/ --bundles --profile vendor-review
+```
+
+Each package gets a score, reasoning, and per-dimension diagnostics grounded in your profile's criteria. Missing files are a natural signal ("no references submitted"), not an automatic penalty. A strong proposal can compensate for a thin appendix -- just like in real review.
+
+Use cases people have explored:
+
+- **Vendor / procurement triage** -- MSA + security docs + product materials, sorted by fit
+- **Deal flow screening** -- pitch deck + financials + market analysis, prioritized for review
+- **Research and literature screening** -- papers + data + methodology, triaged by relevance
+- **Creative portfolio review** -- case studies + process docs + work samples, evaluated holistically
+- **Legal and compliance review** -- contracts + amendments + correspondence, flagged by risk level
+
+Pair `--bundles` with a local LLM (`--provider local`) for confidential packages where no data should leave your network.
+
 ### Any Collection
 
 Research papers, product photos, legal documents, design assets. Anything where you "know it when you see it" but can't write the rules upfront. Taster closes the gap between your tacit taste and explicit, repeatable judgment.
@@ -302,6 +335,9 @@ taster classify ~/Photos/MyFolder --provider openai
 # Dry run (test without moving files)
 taster classify ~/Photos/MyFolder --dry-run
 
+# Bundle mode (one classification per subfolder)
+taster classify ~/Submissions --bundles --profile vendor-review
+
 # Check setup status
 taster status
 ```
@@ -341,18 +377,47 @@ Interactive docs at `http://localhost:8000/docs`.
 
 ## AI Providers
 
-Taster supports three AI providers. Install only the SDK(s) you need.
+Taster supports three cloud AI providers and any local LLM with an OpenAI-compatible endpoint. Install only the SDK(s) you need.
 
-| Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) |
-|---------|--------|---------------------|-------------------|
-| Images | Native | Base64 | Base64 |
-| Videos | Native upload | Frame extraction | Frame extraction |
-| Audio | Native upload | Text fallback | Text fallback |
-| PDFs | Native upload | Page-to-image | Native |
-| Relative cost | Cheapest | Mid | Most expensive |
-| Env var | `GEMINI_API_KEY` | `OPENAI_API_KEY` | `ANTHROPIC_API_KEY` |
+| Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) | Local LLM |
+|---------|--------|---------------------|-------------------|-----------|
+| Images | Native | Base64 | Base64 | Base64 |
+| Videos | Native upload | Frame extraction | Frame extraction | Frame extraction |
+| Audio | Native upload | Text fallback | Text fallback | Text fallback |
+| PDFs | Native upload | Page-to-image | Native | Page-to-image |
+| Relative cost | Cheapest | Mid | Most expensive | Free (your hardware) |
+| Env var | `GEMINI_API_KEY` | `OPENAI_API_KEY` | `ANTHROPIC_API_KEY` | `LOCAL_LLM_URL` |
 
-Gemini is the recommended default -- cheapest and has native video/PDF support. The system auto-detects which key is available (gemini > openai > anthropic), or you can force a provider with `--provider` or in `config.yaml`.
+Gemini is the recommended default -- cheapest and has native video/PDF support. The system auto-detects which key is available (gemini > openai > anthropic > local), or you can force a provider with `--provider` or in `config.yaml`.
+
+### Local LLM Setup
+
+Run classification entirely on your machine -- no data leaves your network. Taster connects to any server that speaks the OpenAI chat-completions API.
+
+| Server | Install | Default URL |
+|--------|---------|-------------|
+| [Ollama](https://ollama.com) | `ollama serve` then `ollama pull llama3.2` | `http://localhost:11434/v1` |
+| [LM Studio](https://lmstudio.ai) | Download, load a model, start server | `http://localhost:1234/v1` |
+| [vLLM](https://docs.vllm.ai) | `pip install vllm && vllm serve llama3.2` | `http://localhost:8000/v1` |
+
+**Quick start (Ollama):**
+
+```bash
+ollama pull llama3.2               # Download model (~2 GB)
+export LOCAL_LLM_URL=http://localhost:11434/v1
+taster classify ~/Photos --provider local
+```
+
+Or add to `config.yaml`:
+
+```yaml
+model:
+  provider: local
+  local_model: llama3.2
+  local_base_url: http://localhost:11434/v1
+```
+
+Local models are slower than cloud APIs and may produce lower-quality classifications for complex media. Best for text/document classification or when privacy is the top priority.
 
 ---
 
@@ -380,10 +445,12 @@ All settings are in `config.yaml`. Key sections:
 
 ```yaml
 model:
-  provider: null          # null = auto-detect. Options: gemini, openai, anthropic
+  provider: null          # null = auto-detect. Options: gemini, openai, anthropic, local
   name: "gemini-3-flash-preview"
   openai_model: "gpt-4.1"
   anthropic_model: "claude-sonnet-4-20250514"
+  local_model: "llama3.2"
+  local_base_url: "http://localhost:11434/v1"
 
 classification:
   share_threshold: 0.60       # Confidence threshold for top category
@@ -525,4 +592,4 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.4.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.5.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
