@@ -7,6 +7,7 @@ from typing import Optional, Union
 from PIL import Image
 
 from ..core.ai_client import AIClient
+from ..core.config import TrainingConfig
 from ..core.file_utils import FileTypeRegistry
 from ..core.media_prep import VideoFrameExtractor, PDFPageRenderer
 from ..core.profiles import ProfileManager, TasteProfile
@@ -29,9 +30,15 @@ class ProfileSynthesizer:
 
     MAX_VISUAL_SAMPLES = 15
 
-    def __init__(self, ai_client: AIClient, profile_manager: ProfileManager):
+    def __init__(
+        self,
+        ai_client: AIClient,
+        profile_manager: ProfileManager,
+        training_config: Optional[TrainingConfig] = None,
+    ):
         self.ai_client = ai_client
         self.pm = profile_manager
+        self.training_config = training_config or TrainingConfig()
 
     def synthesize(
         self,
@@ -53,6 +60,13 @@ class ProfileSynthesizer:
         # Step 1: Convert labels to Share/Storage sets
         share_photos, storage_photos, share_reasons, storage_reasons = (
             self._convert_labels(session)
+        )
+
+        # Step 1b: Balance examples to avoid imbalanced analysis
+        share_photos, storage_photos, share_reasons, storage_reasons = (
+            self._balance_examples(
+                share_photos, storage_photos, share_reasons, storage_reasons,
+            )
         )
 
         # Step 2: Analyze reasoning text
@@ -184,6 +198,49 @@ class ProfileSynthesizer:
                     del storage[photo]
                 else:
                     del share[photo]
+
+        return share, storage, share_reasons, storage_reasons
+
+    def _balance_examples(
+        self,
+        share: dict[str, float],
+        storage: dict[str, float],
+        share_reasons: list[str],
+        storage_reasons: list[str],
+    ) -> tuple[dict[str, float], dict[str, float], list[str], list[str]]:
+        """Balance share/storage examples to prevent imbalanced analysis.
+
+        Uses ``training_config.max_negative_per_positive`` to cap the storage
+        side relative to the share side.  When storage exceeds the cap, the
+        highest-confidence items are kept and storage_reasons are trimmed
+        proportionally.
+        """
+        if not share:
+            return share, storage, share_reasons, storage_reasons
+
+        max_storage = len(share) * self.training_config.max_negative_per_positive
+        if len(storage) <= max_storage:
+            return share, storage, share_reasons, storage_reasons
+
+        # Keep the highest-confidence storage items
+        sorted_storage = sorted(
+            storage.items(), key=lambda kv: kv[1], reverse=True,
+        )
+        storage = dict(sorted_storage[:max_storage])
+
+        # Trim storage_reasons proportionally
+        if storage_reasons:
+            original_count = len(sorted_storage)
+            keep_reasons = max(
+                1, int(len(storage_reasons) * max_storage / original_count),
+            )
+            # Evenly spaced selection to avoid bias toward early/late reasons
+            if keep_reasons < len(storage_reasons):
+                step = len(storage_reasons) / keep_reasons
+                storage_reasons = [
+                    storage_reasons[int(i * step)]
+                    for i in range(keep_reasons)
+                ]
 
         return share, storage, share_reasons, storage_reasons
 
