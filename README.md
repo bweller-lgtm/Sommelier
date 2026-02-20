@@ -592,4 +592,4 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.5.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.6.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
