@@ -11,12 +11,26 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
 
+import re as _re
+
+# Characters unsafe for directory names on Windows/macOS/Linux
+_UNSAFE_PATH_CHARS = _re.compile(r'[/\\:*?"<>|]')
+
+
+def _sanitize_category_name(name: str) -> str:
+    """Remove characters that are unsafe for use as directory names."""
+    return _UNSAFE_PATH_CHARS.sub("", name).strip()
+
+
 @dataclass
 class CategoryDefinition:
     """Definition of an output category."""
     name: str                          # e.g., "Exemplary"
     description: str                   # e.g., "Outstanding examples worth showcasing"
     color: Optional[str] = None        # For UI display, e.g., "#4CAF50"
+
+    def __post_init__(self):
+        self.name = _sanitize_category_name(self.name)
 
 
 @dataclass

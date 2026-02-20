@@ -885,6 +885,7 @@ Generate a complete taste profile as a JSON object with these fields:
 Rules:
 - Create 3-5 categories that make sense for the use case
 - Categories should be ordered from best to worst
+- Category names must be simple labels safe for use as folder names (no slashes, backslashes, colons, or other special characters)
 - Include a middle/uncertain category for borderline cases
 - Be specific and practical in criteria — vague criteria lead to bad classifications
 - The philosophy should capture the user's intent in one clear sentence
@@ -1449,8 +1450,10 @@ Generate a JSON taste profile:
   "philosophy": "One sentence philosophy"
 }}
 
-Create 3-5 categories ordered best to worst. Be specific — use the actual qualities \
-you observed in the examples, not generic platitudes. Only output valid JSON."""
+Create 3-5 categories ordered best to worst. Category names must be simple labels \
+safe for use as folder names (no slashes, backslashes, colons, or other special characters). \
+Be specific — use the actual qualities you observed in the examples, not generic platitudes. \
+Only output valid JSON."""
 
     result = gemini_client.generate_json(
         prompt=generation_prompt,
