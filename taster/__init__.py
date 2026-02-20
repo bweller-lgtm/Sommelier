@@ -1,2 +1,2 @@
 """Taster - Teach AI your taste. Apply it to everything."""
-__version__ = "3.4.1"
+__version__ = "3.5.0"

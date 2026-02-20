@@ -98,6 +98,11 @@ class TestClassifyArgs:
         args = parser.parse_args(["classify", "/f", "--cache-dir", "/cache"])
         assert args.cache_dir == "/cache"
 
+    def test_classify_provider_local(self):
+        parser = _build_parser()
+        args = parser.parse_args(["classify", "/f", "--provider", "local"])
+        assert args.provider == "local"
+
 
 class TestTrainArgs:
     """Test train subcommand parsing."""
@@ -145,7 +150,7 @@ class TestInitCommand:
     def test_init_creates_dirs(self, tmp_path):
         config_dir = tmp_path / "taster"
         with (
-            patch("builtins.input", side_effect=["", "", "", "n"]),
+            patch("builtins.input", side_effect=["", "", "", "", "n"]),
             patch("taster.dirs.get_config_dir", return_value=config_dir),
             patch("taster.dirs.get_profiles_dir", return_value=config_dir / "profiles"),
             patch("taster.dirs.get_env_path", return_value=config_dir / ".env"),

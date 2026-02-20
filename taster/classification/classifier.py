@@ -609,6 +609,91 @@ class MediaClassifier:
 
         return result
 
+    def classify_bundle(
+        self,
+        bundle_name: str,
+        files: List[Path],
+        text_contents: Optional[Dict[Path, str]] = None,
+        use_cache: bool = True,
+    ) -> Dict[str, Any]:
+        """Classify a bundle of related files as a single package.
+
+        All files are sent in one prompt so the LLM evaluates the package
+        holistically rather than scoring files individually.
+
+        Args:
+            bundle_name: Human-readable bundle identifier (e.g., subfolder name).
+            files: Paths to all files in the bundle.
+            text_contents: Optional pre-extracted text per file.
+            use_cache: Whether to use cached classification.
+
+        Returns:
+            Single classification result dict for the entire bundle.
+        """
+        if not files:
+            return self._create_fallback_response("Empty bundle")
+
+        # Check cache
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_files(files)
+            cached = self.cache_manager.get("gemini", cache_key)
+            if cached is not None:
+                return cached
+
+        # Build prompt
+        file_labels = [f.name for f in files]
+        prompt = self.prompt_builder.build_bundle_prompt(file_labels)
+
+        # Build multimodal content list
+        content: list = [prompt]
+        texts = text_contents or {}
+        for f in files:
+            ext = f.suffix.lower()
+            if ext == ".pdf":
+                content.append(f"\n**{f.name}:**")
+                content.append(f)  # native upload for Gemini
+            elif ext in (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".heic"):
+                img = ImageUtils.load_and_fix_orientation(f, max_size=1024)
+                if img is not None:
+                    content.append(f"\n**{f.name}:**")
+                    content.append(img)
+                else:
+                    content.append(f"\n**{f.name}:** [could not load image]")
+            else:
+                text = texts.get(f, "")
+                if not text:
+                    # Try to read as plain text
+                    try:
+                        text = f.read_text(encoding="utf-8", errors="replace")
+                    except Exception:
+                        text = ""
+                truncated = text[:15000]
+                if len(text) > 15000:
+                    truncated += "\n[... truncated ...]"
+                content.append(f"\n**{f.name}:**\n{truncated}" if truncated else f"\n**{f.name}:** [empty or unreadable]")
+
+        def call_classify() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=content,
+                    fallback=self._create_fallback_response("API error"),
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True,
+                )
+                return self._validate_document_response(result)
+            except Exception as e:
+                print(f"Warning: Bundle classification error for {bundle_name}: {e}")
+                return self._create_fallback_response(f"Error: {e}")
+
+        result = self._execute_with_retry(call_classify, f"Bundle {bundle_name}")
+
+        # Cache
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_files(files)
+            self.cache_manager.set("gemini", cache_key, result)
+
+        return result
+
     def _validate_document_response(self, response: Dict[str, Any], default_rank: Optional[int] = None) -> Dict[str, Any]:
         """Validate and fix document classification response."""
         if "classification" not in response:

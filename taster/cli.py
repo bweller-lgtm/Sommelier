@@ -25,7 +25,7 @@ def _build_parser() -> argparse.ArgumentParser:
     cls.add_argument("folder", type=str, help="Folder to classify")
     cls.add_argument("--config", type=str, default=None, help="Path to config.yaml")
     cls.add_argument("--profile", type=str, default=None, help="Taste profile name")
-    cls.add_argument("--provider", choices=["gemini", "openai", "anthropic"], default=None)
+    cls.add_argument("--provider", choices=["gemini", "openai", "anthropic", "local"], default=None)
     cls.add_argument("--dry-run", action="store_true", help="Preview without moving files")
     cls.add_argument("--output", type=str, default=None, help="Output directory")
     cls.add_argument("--classify-videos", action="store_true")
@@ -34,6 +34,7 @@ def _build_parser() -> argparse.ArgumentParser:
     cls.add_argument("--parallel-photos", type=int, default=None)
     cls.add_argument("--cache-dir", type=str, default=None)
     cls.add_argument("--no-cache", action="store_true", help="Skip classification cache (re-query AI for every item)")
+    cls.add_argument("--bundles", action="store_true", help="Treat each subfolder as a bundle (one classification per subfolder)")
 
     # ── train ───────────────────────────────────────────────────────
     trn = sub.add_parser("train", help="Launch Gradio pairwise trainer")
@@ -92,6 +93,7 @@ def _cmd_init(args: argparse.Namespace) -> None:
         ("GEMINI_API_KEY", "Gemini (recommended -- cheapest, native video/PDF)"),
         ("OPENAI_API_KEY", "OpenAI (GPT-4o / GPT-4.1)"),
         ("ANTHROPIC_API_KEY", "Anthropic (Claude)"),
+        ("LOCAL_LLM_URL", "Local LLM (Ollama, LM Studio, vLLM -- e.g. http://localhost:11434/v1)"),
     ]
 
     print("\n  At least one AI provider API key is required.")
@@ -286,7 +288,11 @@ def _cmd_classify(args: argparse.Namespace) -> None:
     import time
     pipeline = MixedPipeline(config, profile, cache_manager, client)
     start = time.time()
-    result = pipeline.run(folder, output_base, config.system.dry_run, classify_videos=config.classification.classify_videos)
+    result = pipeline.run(
+        folder, output_base, config.system.dry_run,
+        classify_videos=config.classification.classify_videos,
+        classify_bundles=getattr(args, 'bundles', False),
+    )
     result.elapsed_seconds = time.time() - start
 
     if result.results:
@@ -444,6 +450,7 @@ def _cmd_status(args: argparse.Namespace) -> None:
         "GEMINI_API_KEY": "Gemini",
         "OPENAI_API_KEY": "OpenAI",
         "ANTHROPIC_API_KEY": "Anthropic",
+        "LOCAL_LLM_URL": "Local LLM",
     }
     for env_var, label in keys.items():
         val = os.environ.get(env_var, "")

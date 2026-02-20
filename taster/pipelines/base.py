@@ -231,15 +231,26 @@ class ClassificationPipeline(ABC):
     def move_files(self, results: List[Dict[str, Any]], output_folder: Path):
         """Copy files to their destination subfolders."""
         for result in results:
-            source = result["path"]
             destination = result["destination"]
-            dst_dir = output_folder / destination
-            dst_dir.mkdir(parents=True, exist_ok=True)
-            dst_path = dst_dir / source.name
-            try:
-                shutil.copy2(source, dst_path)
-            except Exception as e:
-                print(f"Warning: Error copying {source.name}: {e}")
+            if result.get("bundle"):
+                # Bundle: copy all files into destination/bundle_name/
+                bundle_name = result["bundle_name"]
+                dst_dir = output_folder / destination / bundle_name
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                for source in result["files"]:
+                    try:
+                        shutil.copy2(source, dst_dir / source.name)
+                    except Exception as e:
+                        print(f"Warning: Error copying {source.name}: {e}")
+            else:
+                source = result["path"]
+                dst_dir = output_folder / destination
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                dst_path = dst_dir / source.name
+                try:
+                    shutil.copy2(source, dst_path)
+                except Exception as e:
+                    print(f"Warning: Error copying {source.name}: {e}")
 
     def compute_stats(self, results: List[Dict[str, Any]]) -> Dict[str, int]:
         """Compute statistics from routed results."""

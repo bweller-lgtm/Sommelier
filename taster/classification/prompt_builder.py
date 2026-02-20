@@ -641,6 +641,52 @@ Respond with CONCISE JSON:
 
         return prompt
 
+    def build_bundle_prompt(self, file_labels: List[str]) -> str:
+        """Build prompt for evaluating a bundle of related files as a single package.
+
+        Args:
+            file_labels: List of filenames in the bundle (e.g., ["resume.pdf", "cover_letter.docx"]).
+        """
+        taste_section = self._build_taste_section("document")
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
+        cat_names = self._category_names
+        cat_str = " or ".join([f'"{c}"' for c in cat_names])
+
+        scoring_rubric = self._build_scoring_rubric()
+
+        manifest = "\n".join(f"  {i+1}. {label}" for i, label in enumerate(file_labels))
+
+        prompt = f"""You are evaluating a collection of related files submitted as a package.
+{taste_section}
+
+{self._build_category_format()}
+
+{scoring_rubric}
+{dimensions_section}
+
+**THIS PACKAGE CONTAINS {len(file_labels)} FILES:**
+{manifest}
+
+**YOUR TASK:**
+Evaluate the COMPLETE package holistically. Consider how the files work together —
+a strong submission in one area can compensate for gaps elsewhere.
+Missing or weak files are informative signals, not automatic disqualifiers.
+
+Assess the overall quality, completeness, and coherence of the package as a whole.
+
+Respond with CONCISE JSON:
+{{
+    "classification": {cat_str},
+    "score": 1 to 5,
+    "reasoning": "Brief holistic assessment (1-2 sentences max)",
+    "content_summary": "2-3 sentence summary of the package contents",
+    "key_topics": ["topic1", "topic2", "topic3"],
+    "files_reviewed": ["filename1", "filename2", ...]{dimensions_json}
+}}"""
+
+        return prompt
+
     def _build_document_group_prompt(self, group_size: int) -> str:
         """Build prompt for comparing a group of similar documents."""
         taste_section = self._build_taste_section("document")

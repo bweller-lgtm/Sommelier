@@ -264,6 +264,35 @@ class FileTypeRegistry:
         }
 
     @classmethod
+    def list_bundles(cls, directory: Path) -> List[Dict]:
+        """Discover subfolder bundles for multi-file classification.
+
+        Each immediate subdirectory with classifiable files is one bundle.
+
+        Args:
+            directory: Parent directory to scan.
+
+        Returns:
+            List of dicts: {"name": str, "path": Path,
+            "files": {"images": [...], "videos": [...], "audio": [...], "documents": [...]}}
+        """
+        bundles = []
+        if not directory.is_dir():
+            return bundles
+        for child in sorted(directory.iterdir()):
+            if not child.is_dir():
+                continue
+            media = cls.list_all_media(child)
+            total = sum(len(v) for v in media.values())
+            if total > 0:
+                bundles.append({
+                    "name": child.name,
+                    "path": child,
+                    "files": media,
+                })
+        return bundles
+
+    @classmethod
     def detect_media_type(cls, directory: Path, recursive: bool = False) -> str:
         """
         Detect the predominant media type in a directory.

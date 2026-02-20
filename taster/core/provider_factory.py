@@ -6,13 +6,14 @@ from .ai_client import AIClient
 from .config import Config
 
 
-# Provider preference order for auto-detection (cheapest first)
-_PROVIDER_ORDER = ["gemini", "openai", "anthropic"]
+# Provider preference order for auto-detection (cheapest first, local last)
+_PROVIDER_ORDER = ["gemini", "openai", "anthropic", "local"]
 
 _ENV_KEYS = {
     "gemini": "GEMINI_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
+    "local": "LOCAL_LLM_URL",
 }
 
 
@@ -60,6 +61,7 @@ def create_ai_client(
             "  GEMINI_API_KEY   (recommended — cheapest, native video/PDF)\n"
             "  OPENAI_API_KEY   (GPT-4o / GPT-4.1)\n"
             "  ANTHROPIC_API_KEY (Claude)\n"
+            "  LOCAL_LLM_URL    (local LLM — Ollama, LM Studio, vLLM)\n"
         )
 
     return _build_client(chosen, config, api_key)
@@ -104,6 +106,17 @@ def _build_client(
             **common,
         )
 
+    if provider == "local":
+        from .providers.local_provider import LocalProvider
+
+        return LocalProvider(
+            model_name=config.model.local_model,
+            base_url=config.model.local_base_url,
+            video_frame_count=config.model.video_frame_count,
+            pdf_render_dpi=config.model.pdf_render_dpi,
+            **common,
+        )
+
     raise ValueError(
-        f"Unknown provider '{provider}'. Choose from: gemini, openai, anthropic"
+        f"Unknown provider '{provider}'. Choose from: gemini, openai, anthropic, local"
     )
