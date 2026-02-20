@@ -1402,6 +1402,7 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
 
     from ..core.provider_factory import create_ai_client
     from ..core.file_utils import FileTypeRegistry
+    from ..training.synthesizer import ProfileSynthesizer
 
     config = _get_config()
     profile_name = arguments["profile_name"]
@@ -1425,18 +1426,35 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     print(f"[taster] Generating profile from examples in {good_folder}...", file=sys.stderr, flush=True)
 
     gemini_client = create_ai_client(config)
+    max_samples = ProfileSynthesizer.MAX_VISUAL_SAMPLES
+    max_neg_ratio = config.training.max_negative_per_positive
 
-    # Collect sample files (up to 10 good, 10 bad)
+    # Collect sample files (up to MAX_VISUAL_SAMPLES per side)
     good_files = FileTypeRegistry.list_all_media(good_folder)
-    good_images = good_files.get("images", [])[:10]
-    good_docs = good_files.get("documents", [])[:5]
+    good_images = good_files.get("images", [])[:max_samples]
+    good_docs = good_files.get("documents", [])[:max_samples]
 
     bad_images = []
     bad_docs = []
     if bad_folder:
         bad_files = FileTypeRegistry.list_all_media(bad_folder)
-        bad_images = bad_files.get("images", [])[:10]
-        bad_docs = bad_files.get("documents", [])[:5]
+        bad_images = bad_files.get("images", [])[:max_samples]
+        bad_docs = bad_files.get("documents", [])[:max_samples]
+
+    # Balance sides: cap the larger side at min_side * max_neg_ratio
+    good_count = len(good_images) + len(good_docs)
+    bad_count = len(bad_images) + len(bad_docs)
+    if good_count and bad_count:
+        min_side = min(good_count, bad_count)
+        max_side = min_side * max_neg_ratio
+        if good_count > max_side:
+            ratio = max_side / good_count
+            good_images = good_images[:max(1, int(len(good_images) * ratio))]
+            good_docs = good_docs[:max(1, int(len(good_docs) * ratio))]
+        if bad_count > max_side:
+            ratio = max_side / bad_count
+            bad_images = bad_images[:max(1, int(len(bad_images) * ratio))]
+            bad_docs = bad_docs[:max(1, int(len(bad_docs) * ratio))]
 
     # Detect media type from examples
     has_images = len(good_images) > 0 or len(bad_images) > 0
@@ -1452,13 +1470,12 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     analysis_parts = []
 
     if good_images:
-        sample_images = good_images[:5]
         prompt_parts = [
             "Analyze these GOOD example images. What do they have in common? "
             "What qualities make them good? Be specific about visual qualities, "
             "content, composition, and emotional impact."
         ]
-        for img_path in sample_images:
+        for img_path in good_images:
             prompt_parts.append(img_path)
         prompt_parts.append(
             "Summarize what makes these examples GOOD. List specific, observable qualities."
@@ -1470,7 +1487,7 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
         from ..features.document_features import DocumentFeatureExtractor
         extractor = DocumentFeatureExtractor(config)
         doc_texts = []
-        for doc_path in good_docs[:5]:
+        for doc_path in good_docs:
             text = extractor.extract_text(doc_path)
             if text:
                 # Truncate long files for the prompt
@@ -1488,12 +1505,11 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
             analysis_parts.append(f"GOOD document examples analysis:\n{good_doc_analysis.text}")
 
     if bad_images:
-        sample_bad = bad_images[:5]
         prompt_parts = [
             "Analyze these BAD example images. What do they have in common? "
             "What qualities make them bad? Be specific."
         ]
-        for img_path in sample_bad:
+        for img_path in bad_images:
             prompt_parts.append(img_path)
         prompt_parts.append(
             "Summarize what makes these examples BAD. List specific, observable qualities."
@@ -1505,7 +1521,7 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
         from ..features.document_features import DocumentFeatureExtractor
         extractor = DocumentFeatureExtractor(config)
         doc_texts = []
-        for doc_path in bad_docs[:5]:
+        for doc_path in bad_docs:
             text = extractor.extract_text(doc_path)
             if text:
                 preview = text[:3000] + ("..." if len(text) > 3000 else "")
@@ -1581,6 +1597,12 @@ Only output valid JSON."""
         philosophy=result.get("philosophy", ""),
     )
 
+    # Totals from the original discovery (before balancing)
+    total_good_images = len(good_files.get("images", []))
+    total_good_docs = len(good_files.get("documents", []))
+    total_bad_images = len(bad_files.get("images", [])) if bad_folder else 0
+    total_bad_docs = len(bad_files.get("documents", [])) if bad_folder else 0
+
     return {
         "status": "created",
         "message": (
@@ -1594,6 +1616,12 @@ Only output valid JSON."""
             "bad_images": len(bad_images),
             "good_docs": len(good_docs),
             "bad_docs": len(bad_docs),
+        },
+        "available": {
+            "good_images": total_good_images,
+            "bad_images": total_bad_images,
+            "good_docs": total_good_docs,
+            "bad_docs": total_bad_docs,
         },
         "profile": profile.to_dict(),
     }

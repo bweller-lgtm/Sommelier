@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from taster.core.config import TrainingConfig
 from taster.core.profiles import ProfileManager
 from taster.training.session import TrainingSession
 from taster.training.synthesizer import ProfileSynthesizer
@@ -316,3 +317,82 @@ class TestRefineFromCorrections:
         assert "a=3" in result
         assert "c=5" in result
         assert "b=" not in result  # None values excluded
+
+
+class TestBalanceExamples:
+    """Tests for _balance_examples()."""
+
+    def test_no_balancing_when_within_ratio(self, mock_client, pm):
+        """3 share + 9 storage (exactly 3:1) → unchanged."""
+        synth = ProfileSynthesizer(mock_client, pm)
+        share = {f"/{i}.jpg": 0.9 for i in range(3)}
+        storage = {f"/s{i}.jpg": 0.8 for i in range(9)}
+        s_reasons = ["good"] * 3
+        t_reasons = ["bad"] * 9
+
+        s, t, sr, tr = synth._balance_examples(share, storage, s_reasons, t_reasons)
+        assert len(s) == 3
+        assert len(t) == 9
+        assert len(sr) == 3
+        assert len(tr) == 9
+
+    def test_undersample_reduces_storage(self, mock_client, pm):
+        """3 share + 30 storage → 9 storage (3:1 with default max_negative_per_positive=3)."""
+        synth = ProfileSynthesizer(mock_client, pm)
+        share = {f"/{i}.jpg": 0.9 for i in range(3)}
+        storage = {f"/s{i}.jpg": 0.5 + i * 0.01 for i in range(30)}
+
+        s, t, sr, tr = synth._balance_examples(share, storage, [], [])
+        assert len(s) == 3
+        assert len(t) == 9  # 3 * 3
+
+    def test_keeps_highest_confidence(self, mock_client, pm):
+        """When undersampling, top-confidence items are kept."""
+        synth = ProfileSynthesizer(mock_client, pm)
+        share = {"/a.jpg": 0.9}
+        # 10 storage items with distinct confidences
+        storage = {f"/s{i}.jpg": 0.1 * (i + 1) for i in range(10)}
+
+        s, t, sr, tr = synth._balance_examples(share, storage, [], [])
+        assert len(t) == 3  # 1 * 3
+        # Top-3 confidences: 1.0, 0.9, 0.8
+        assert "/s9.jpg" in t  # 1.0
+        assert "/s8.jpg" in t  # 0.9
+        assert "/s7.jpg" in t  # 0.8
+
+    def test_reasons_capped_proportionally(self, mock_client, pm):
+        """Storage reasons scale with storage count reduction."""
+        synth = ProfileSynthesizer(mock_client, pm)
+        share = {"/a.jpg": 0.9}
+        storage = {f"/s{i}.jpg": 0.5 for i in range(30)}
+        t_reasons = [f"reason_{i}" for i in range(30)]
+
+        s, t, sr, tr = synth._balance_examples(share, storage, [], t_reasons)
+        assert len(t) == 3
+        # 30 reasons → ~3 (3/30 * 30), at least 1
+        assert 1 <= len(tr) <= 5
+
+    def test_empty_share_skips_balancing(self, mock_client, pm):
+        """0 share + 10 storage → unchanged (nothing to ratio against)."""
+        synth = ProfileSynthesizer(mock_client, pm)
+        share: dict = {}
+        storage = {f"/s{i}.jpg": 0.8 for i in range(10)}
+
+        s, t, sr, tr = synth._balance_examples(share, storage, [], ["r"] * 10)
+        assert len(t) == 10
+        assert len(tr) == 10
+
+    def test_default_config(self, mock_client, pm):
+        """No config passed → defaults apply (max_negative_per_positive=3)."""
+        synth = ProfileSynthesizer(mock_client, pm)
+        assert synth.training_config.max_negative_per_positive == 3
+
+    def test_custom_config_ratio(self, mock_client, pm):
+        """Custom config with ratio=5 allows more storage."""
+        tc = TrainingConfig(max_negative_per_positive=5)
+        synth = ProfileSynthesizer(mock_client, pm, training_config=tc)
+        share = {f"/{i}.jpg": 0.9 for i in range(2)}
+        storage = {f"/s{i}.jpg": 0.5 for i in range(20)}
+
+        s, t, sr, tr = synth._balance_examples(share, storage, [], [])
+        assert len(t) == 10  # 2 * 5
