@@ -340,7 +340,59 @@ class PromptBuilder:
                 lines.append(f"  {level} = {rubric[level]}")
         lines.append("")
         lines.append("Use the FULL 1-5 range. Score 3 means genuinely borderline. Do not default to 4.")
+
+        # Add score-to-classification consistency rule
+        consistency = self._build_score_consistency_rule()
+        if consistency:
+            lines.append("")
+            lines.append(consistency)
+
         return "\n".join(lines)
+
+    def _build_score_consistency_rule(self) -> str:
+        """Build a rule that ties score to classification so they never disagree.
+
+        Derives the mapping from profile thresholds (e.g. {"Share": 4, "Review": 3})
+        and default_category. Produces something like:
+          "Your classification MUST match your score: >= 4 → Share, 3 → Review, <= 2 → Storage"
+        """
+        # Collect thresholds: profile-based or hardcoded default
+        if self.profile and self.profile.thresholds:
+            thresholds = self.profile.thresholds
+            default = self.profile.default_category
+            cat_names = self.profile.category_names
+        else:
+            thresholds = {"Share": 4, "Review": 3}
+            default = "Review"
+            cat_names = ["Share", "Storage", "Ignore"]
+
+        if not thresholds:
+            return ""
+
+        # Sort thresholds descending by score value
+        sorted_thresh = sorted(thresholds.items(), key=lambda x: x[1], reverse=True)
+
+        # Build score ranges: e.g. >= 4 → Share, 3 → Review, <= 2 → Storage
+        rules = []
+        for i, (cat, min_score) in enumerate(sorted_thresh):
+            if i == 0:
+                rules.append(f"score >= {min_score} → {cat}")
+            else:
+                prev_score = sorted_thresh[i - 1][1]
+                if min_score == prev_score - 1:
+                    rules.append(f"score {min_score} → {cat}")
+                else:
+                    rules.append(f"score {min_score}-{prev_score - 1} → {cat}")
+
+        # Find the fallback category for scores below the lowest threshold
+        lowest_score = sorted_thresh[-1][1]
+        threshold_cats = {cat for cat, _ in sorted_thresh}
+        fallback_cats = [c for c in cat_names if c not in threshold_cats and c != "Ignore"]
+        fallback = fallback_cats[0] if fallback_cats else default
+        if lowest_score - 1 >= 1:
+            rules.append(f"score <= {lowest_score - 1} → {fallback}")
+
+        return "**IMPORTANT: Your classification MUST match your score:** " + ", ".join(rules) + "."
 
     def _build_calibration_section(self) -> str:
         """Build calibration guidance section."""
