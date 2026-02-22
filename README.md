@@ -154,11 +154,11 @@ Profiles are stored as JSON in `profiles/`. Taster ships with starter profiles f
 | Method | Input | Time | Best for |
 |--------|-------|------|----------|
 | Quick Profile | Plain English description | ~10s | Getting started fast |
-| Generate from Examples | Good/bad example folders | ~2 min | When you have sorted examples |
+| Generate from Examples | Example folders per category | ~2 min | When you have sorted examples |
 | **Pairwise Training** | 15-50+ side-by-side comparisons | 15-30 min | **Highest accuracy** |
 
 - **Quick profile:** Ask Claude *"Create a profile for sorting research papers into Keep, Skim, and Skip"* and it generates one from your description. Great for a first pass.
-- **From examples:** Point `taster_generate_profile` at a folder of good examples and a folder of bad examples. Taster analyzes both and synthesizes criteria.
+- **From examples:** Point `taster_generate_profile` at a folder of good examples and a folder of bad examples (binary mode), or provide `category_folders` mapping category names to folders for 3+ categories (e.g. `{"Excellent": "path", "Mediocre": "path", "Poor": "path"}`). Taster analyzes each category and synthesizes criteria.
 - **Pairwise training:** Launch the Gradio trainer (`taster train <folder>`) for the highest-fidelity option. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile that captures exactly how you think about quality.
 - **By hand:** Write a JSON file directly in `profiles/`.
 
@@ -279,7 +279,7 @@ Restart Claude Desktop. Ask it: *"Check my Taster status"* to verify everything 
 | `taster_update_profile` | Update specific fields of an existing profile |
 | `taster_delete_profile` | Delete a profile (with confirmation) |
 | `taster_quick_profile` | AI-generate a profile from a plain English description |
-| `taster_generate_profile` | AI-generate a profile from example files |
+| `taster_generate_profile` | AI-generate a profile from example files (binary good/bad or multi-category) |
 | `taster_classify_folder` | Classify all files in a folder |
 | `taster_classify_files` | Classify specific files by path |
 | `taster_submit_feedback` | Submit classification corrections |

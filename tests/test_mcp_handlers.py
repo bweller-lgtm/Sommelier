@@ -408,6 +408,121 @@ class TestGenerateProfile:
                     })
                     assert "error" in result
 
+    # ── Multi-category (category_folders) tests ──────────────────────
+
+    def test_category_folders_and_good_folder_conflict(self, pm, tmp_path):
+        from taster.mcp.server import _handle_generate_profile
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
+            result = _handle_generate_profile(pm, {
+                "profile_name": "gen",
+                "good_examples_folder": str(tmp_path),
+                "category_folders": {"A": str(tmp_path), "B": str(tmp_path)},
+            })
+            assert "error" in result
+            assert "not both" in result["error"]
+
+    def test_neither_parameter_provided(self, pm):
+        from taster.mcp.server import _handle_generate_profile
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
+            result = _handle_generate_profile(pm, {
+                "profile_name": "gen",
+            })
+            assert "error" in result
+
+    def test_category_folders_bad_path(self, pm, tmp_path):
+        from taster.mcp.server import _handle_generate_profile
+        good_dir = tmp_path / "good"
+        good_dir.mkdir()
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
+            result = _handle_generate_profile(pm, {
+                "profile_name": "gen",
+                "category_folders": {"Good": str(good_dir), "Bad": "/nonexistent/path"},
+            })
+            assert "error" in result
+            assert "Bad" in result["error"]
+
+    def test_category_folders_single_category(self, pm, tmp_path):
+        from taster.mcp.server import _handle_generate_profile
+        d = tmp_path / "only"
+        d.mkdir()
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
+            result = _handle_generate_profile(pm, {
+                "profile_name": "gen",
+                "category_folders": {"Only": str(d)},
+            })
+            assert "error" in result
+            assert "at least 2" in result["error"]
+
+    def test_category_folders_no_media(self, pm, tmp_path):
+        from taster.mcp.server import _handle_generate_profile
+        a = tmp_path / "a"; a.mkdir()
+        b = tmp_path / "b"; b.mkdir()
+        mock_client = MagicMock()
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
+            with patch("taster.core.provider_factory.create_ai_client", return_value=mock_client):
+                with patch("taster.mcp.server._get_config") as mock_cfg:
+                    mock_cfg.return_value = MagicMock()
+                    result = _handle_generate_profile(pm, {
+                        "profile_name": "gen",
+                        "category_folders": {"Good": str(a), "Bad": str(b)},
+                    })
+                    assert "error" in result
+
+    def test_category_folders_success(self, pm, tmp_path):
+        from taster.mcp.server import _handle_generate_profile
+        # Create category folders with small .py files
+        excellent = tmp_path / "excellent"; excellent.mkdir()
+        (excellent / "a.py").write_text("def good(): pass")
+        mediocre = tmp_path / "mediocre"; mediocre.mkdir()
+        (mediocre / "b.py").write_text("x=1")
+        poor = tmp_path / "poor"; poor.mkdir()
+        (poor / "c.py").write_text("bad")
+
+        mock_client = MagicMock()
+        # generate() returns analysis text for each category
+        mock_analysis = MagicMock()
+        mock_analysis.text = "Sample analysis text"
+        mock_client.generate.return_value = mock_analysis
+        # generate_json() returns profile JSON
+        mock_client.generate_json.return_value = {
+            "description": "Code quality sorter",
+            "media_types": ["document"],
+            "categories": [
+                {"name": "Excellent", "description": "Top quality"},
+                {"name": "Mediocre", "description": "Average"},
+                {"name": "Poor", "description": "Low quality"},
+            ],
+            "default_category": "Poor",
+            "top_priorities": ["clarity"],
+            "positive_criteria": {"must_have": ["readability"]},
+            "negative_criteria": {"deal_breakers": ["no docs"]},
+            "specific_guidance": ["prefer clean code"],
+            "philosophy": "Quality matters",
+        }
+
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test"}):
+            with patch("taster.core.provider_factory.create_ai_client", return_value=mock_client):
+                with patch("taster.mcp.server._get_config") as mock_cfg:
+                    cfg = MagicMock()
+                    cfg.training.max_negative_per_positive = 3
+                    mock_cfg.return_value = cfg
+                    result = _handle_generate_profile(pm, {
+                        "profile_name": "multi_gen",
+                        "category_folders": {
+                            "Excellent": str(excellent),
+                            "Mediocre": str(mediocre),
+                            "Poor": str(poor),
+                        },
+                    })
+                    assert result["status"] == "created"
+                    assert pm.profile_exists("multi_gen")
+                    profile = pm.load_profile("multi_gen")
+                    cat_names = [c.name for c in profile.categories]
+                    assert "Excellent" in cat_names
+                    assert "Mediocre" in cat_names
+                    assert "Poor" in cat_names
+                    assert result["analyzed_per_category"]["Excellent"] > 0
+
 
 # ── Classify folder (requires API key) ───────────────────────────────
 

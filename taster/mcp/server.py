@@ -505,9 +505,10 @@ def create_mcp_server():
                 name="taster_generate_profile",
                 description=(
                     "Generate a taste profile by analyzing example files. "
-                    "Point it at a folder of 'good' examples (and optionally 'bad' examples) "
-                    "and it will analyze them to create a profile that captures your taste. "
-                    "Best with 5-20 examples in each folder."
+                    "Two modes: (1) Binary — point at a 'good' folder and optionally a 'bad' folder. "
+                    "(2) Multi-category — provide category_folders mapping category names to folders "
+                    "(e.g. {\"Excellent\": \"path\", \"Mediocre\": \"path\", \"Poor\": \"path\"}). "
+                    "Best with 5-20 examples per category."
                 ),
                 inputSchema={
                     "type": "object",
@@ -518,14 +519,23 @@ def create_mcp_server():
                         },
                         "good_examples_folder": {
                             "type": "string",
-                            "description": "Folder containing good/positive examples",
+                            "description": "Folder containing good/positive examples (binary mode)",
                         },
                         "bad_examples_folder": {
                             "type": "string",
-                            "description": "Folder containing bad/negative examples (optional but recommended)",
+                            "description": "Folder containing bad/negative examples (binary mode, optional but recommended)",
+                        },
+                        "category_folders": {
+                            "type": "object",
+                            "additionalProperties": {"type": "string"},
+                            "description": (
+                                "Map of category names to folder paths, ordered best-to-worst. "
+                                "Use instead of good/bad folders for 3+ categories. "
+                                "Example: {\"Excellent\": \"/path/a\", \"Mediocre\": \"/path/b\", \"Poor\": \"/path/c\"}"
+                            ),
                         },
                     },
-                    "required": ["profile_name", "good_examples_folder"],
+                    "required": ["profile_name"],
                 },
             ),
             Tool(
@@ -1394,11 +1404,241 @@ def _handle_view_feedback() -> Any:
     }
 
 
+def _handle_generate_profile_multi(pm: ProfileManager, arguments: dict) -> Any:
+    """Generate a taste profile from multiple named category folders."""
+    from ..core.provider_factory import create_ai_client
+    from ..core.file_utils import FileTypeRegistry
+    from ..training.synthesizer import ProfileSynthesizer
+
+    config = _get_config()
+    profile_name = arguments["profile_name"]
+    category_folders: dict[str, str] = arguments["category_folders"]
+
+    # Validate: at least 2 categories
+    if len(category_folders) < 2:
+        return {"error": "category_folders must contain at least 2 categories."}
+
+    if pm.profile_exists(profile_name):
+        return {
+            "error": f"Profile '{profile_name}' already exists.",
+            "hint": "Use taster_delete_profile to remove it first, "
+                    "taster_update_profile to modify it, "
+                    "or choose a different name.",
+        }
+
+    # Validate all folder paths exist
+    cat_paths: dict[str, Path] = {}
+    for cat_name, folder_str in category_folders.items():
+        p = Path(folder_str)
+        if not p.is_dir():
+            return {"error": f"Folder not found for category '{cat_name}': {folder_str}"}
+        cat_paths[cat_name] = p
+
+    category_names = list(category_folders.keys())  # preserves insertion order
+    print(f"[taster] Generating multi-category profile from {len(category_names)} categories: {', '.join(category_names)}...", file=sys.stderr, flush=True)
+
+    gemini_client = create_ai_client(config)
+    max_samples = ProfileSynthesizer.MAX_SAMPLES
+    max_neg_ratio = config.training.max_negative_per_positive
+
+    # Discover files per category
+    cat_files: dict[str, dict] = {}
+    for cat_name, folder in cat_paths.items():
+        cat_files[cat_name] = FileTypeRegistry.list_all_media(folder)
+
+    # Cap each category at MAX_SAMPLES, then balance across categories
+    cat_images: dict[str, list] = {}
+    cat_docs: dict[str, list] = {}
+    for cat_name, files in cat_files.items():
+        cat_images[cat_name] = files.get("images", [])[:max_samples]
+        cat_docs[cat_name] = files.get("documents", [])[:max_samples]
+
+    cat_counts = {
+        cat: len(cat_images[cat]) + len(cat_docs[cat]) for cat in category_names
+    }
+    non_empty = {cat: cnt for cat, cnt in cat_counts.items() if cnt > 0}
+    if not non_empty:
+        return {"error": "No analyzable media files found in any category folder."}
+
+    # Balance: cap each at min_count * max_neg_ratio
+    if len(non_empty) >= 2:
+        min_count = min(non_empty.values())
+        max_allowed = min_count * max_neg_ratio
+        for cat in category_names:
+            total = cat_counts[cat]
+            if total > max_allowed:
+                ratio = max_allowed / total
+                cat_images[cat] = cat_images[cat][:max(1, int(len(cat_images[cat]) * ratio))]
+                cat_docs[cat] = cat_docs[cat][:max(1, int(len(cat_docs[cat]) * ratio))]
+
+    # Detect media type across all categories
+    all_has_images = any(len(cat_images[c]) > 0 for c in category_names)
+    all_has_docs = any(len(cat_docs[c]) > 0 for c in category_names)
+    if all_has_images and all_has_docs:
+        media_type = "mixed"
+    elif all_has_docs:
+        media_type = "document"
+    else:
+        media_type = "image"
+
+    # Analyze each category
+    analysis_parts = []
+    for cat_name in category_names:
+        images = cat_images[cat_name]
+        docs = cat_docs[cat_name]
+
+        if images:
+            prompt_parts = [
+                f"Analyze these example images from the '{cat_name}' category. "
+                "What characterizes them? What qualities define this category? "
+                "Be specific about visual qualities, content, composition, and emotional impact."
+            ]
+            for img_path in images:
+                prompt_parts.append(img_path)
+            prompt_parts.append(
+                f"Summarize what characterizes the '{cat_name}' category. "
+                "List specific, observable qualities."
+            )
+            img_analysis = gemini_client.generate(prompt_parts)
+            analysis_parts.append(f"'{cat_name}' image examples analysis:\n{img_analysis.text}")
+
+        if docs:
+            from ..features.document_features import DocumentFeatureExtractor
+            extractor = DocumentFeatureExtractor(config)
+            doc_texts = []
+            for doc_path in docs:
+                text = extractor.extract_text(doc_path)
+                if text:
+                    preview = text[:3000] + ("..." if len(text) > 3000 else "")
+                    doc_texts.append(f"--- {doc_path.name} ---\n{preview}")
+            if doc_texts:
+                docs_prompt = (
+                    f"Analyze these example documents/files from the '{cat_name}' category. "
+                    "What characterizes them? What qualities, patterns, conventions, or practices "
+                    "define this category? Be specific about structure, style, clarity, "
+                    "and any recurring patterns.\n\n"
+                    + "\n\n".join(doc_texts)
+                    + f"\n\nSummarize what characterizes the '{cat_name}' category. "
+                    "List specific, observable qualities and patterns."
+                )
+                doc_analysis = gemini_client.generate(docs_prompt)
+                analysis_parts.append(f"'{cat_name}' document examples analysis:\n{doc_analysis.text}")
+
+    if not analysis_parts:
+        return {"error": "No analyzable media files found in any category folder."}
+
+    # Synthesis prompt with explicit category names
+    analysis_text = "\n\n".join(analysis_parts)
+    cats_desc = ", ".join(f'"{c}"' for c in category_names)
+    default_category = category_names[-1]
+
+    generation_prompt = f"""\
+Based on this analysis of example files from {len(category_names)} categories, generate a taste profile.
+
+The categories, ordered from best to worst, are: {cats_desc}
+
+{analysis_text}
+
+Generate a JSON taste profile using EXACTLY these category names in the same order:
+
+{{
+  "description": "One sentence describing what this profile sorts",
+  "media_types": ["{media_type}"],
+  "categories": [
+    {{"name": "{category_names[0]}", "description": "When to put files here"}},
+    ...one entry per category in the same order...
+    {{"name": "{default_category}", "description": "When to put files here"}}
+  ],
+  "default_category": "{default_category}",
+  "top_priorities": ["Priority 1", ...],
+  "positive_criteria": {{
+    "must_have": [...],
+    "highly_valued": [...],
+    "bonus_points": [...]
+  }},
+  "negative_criteria": {{
+    "deal_breakers": [...],
+    "negative_factors": [...]
+  }},
+  "specific_guidance": ["Guidance 1", ...],
+  "philosophy": "One sentence philosophy"
+}}
+
+You MUST use exactly these category names: {cats_desc}. \
+The default_category MUST be "{default_category}". \
+Category names must be simple labels safe for use as folder names \
+(no slashes, backslashes, colons, or other special characters). \
+Be specific — use the actual qualities you observed in the examples, not generic platitudes. \
+Only output valid JSON."""
+
+    result = gemini_client.generate_json(
+        prompt=generation_prompt,
+        fallback=None,
+    )
+
+    if result is None:
+        return {"error": "Failed to generate profile from examples."}
+
+    profile = pm.create_profile(
+        name=profile_name,
+        description=result.get("description", f"Generated from {len(category_names)} category examples"),
+        media_types=result.get("media_types", [media_type]),
+        categories=result.get("categories", []),
+        default_category=result.get("default_category", default_category),
+        top_priorities=result.get("top_priorities", []),
+        positive_criteria=result.get("positive_criteria", {}),
+        negative_criteria=result.get("negative_criteria", {}),
+        specific_guidance=result.get("specific_guidance", []),
+        philosophy=result.get("philosophy", ""),
+    )
+
+    # Build per-category stats
+    analyzed = {}
+    available = {}
+    for cat_name in category_names:
+        analyzed[cat_name] = len(cat_images[cat_name]) + len(cat_docs[cat_name])
+        orig = cat_files[cat_name]
+        available[cat_name] = len(orig.get("images", [])) + len(orig.get("documents", []))
+
+    return {
+        "status": "created",
+        "message": (
+            f"Profile '{profile_name}' generated from {len(category_names)} categories: "
+            f"{', '.join(f'{c} ({analyzed[c]} files)' for c in category_names)}. "
+            f"Categories: {', '.join(c.name for c in profile.categories)}"
+        ),
+        "analyzed_per_category": analyzed,
+        "available_per_category": available,
+        "profile": profile.to_dict(),
+    }
+
+
 def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     """Generate a taste profile by analyzing example files in folders."""
     api_err = _require_api_key()
     if api_err:
         return api_err
+
+    category_folders = arguments.get("category_folders")
+    good_examples_folder = arguments.get("good_examples_folder")
+
+    if category_folders and good_examples_folder:
+        return {
+            "error": "Provide either category_folders or good_examples_folder, not both.",
+            "hint": "Use category_folders for 3+ categories, or good/bad folders for binary sorting.",
+        }
+
+    if not category_folders and not good_examples_folder:
+        return {
+            "error": "Provide either category_folders or good_examples_folder.",
+            "hint": (
+                "Binary mode: good_examples_folder (+ optional bad_examples_folder). "
+                "Multi-category: category_folders mapping names to folder paths."
+            ),
+        }
+
+    if category_folders:
+        return _handle_generate_profile_multi(pm, arguments)
 
     from ..core.provider_factory import create_ai_client
     from ..core.file_utils import FileTypeRegistry
