@@ -34,7 +34,8 @@ def _build_parser() -> argparse.ArgumentParser:
     cls.add_argument("--parallel-photos", type=int, default=None)
     cls.add_argument("--cache-dir", type=str, default=None)
     cls.add_argument("--no-cache", action="store_true", help="Skip classification cache (re-query AI for every item)")
-    cls.add_argument("--bundles", action="store_true", help="Treat each subfolder as a bundle (one classification per subfolder)")
+    cls.add_argument("--bundles", action="store_true", help="Force bundle mode (one classification per subfolder)")
+    cls.add_argument("--no-bundles", action="store_true", help="Disable bundle auto-detection")
 
     # ── train ───────────────────────────────────────────────────────
     trn = sub.add_parser("train", help="Launch Gradio pairwise trainer")
@@ -91,7 +92,7 @@ def _cmd_init(args: argparse.Namespace) -> None:
 
     providers = [
         ("GEMINI_API_KEY", "Gemini (recommended -- cheapest, native video/PDF)"),
-        ("OPENAI_API_KEY", "OpenAI (GPT-4o / GPT-4.1)"),
+        ("OPENAI_API_KEY", "OpenAI (GPT-5)"),
         ("ANTHROPIC_API_KEY", "Anthropic (Claude)"),
         ("LOCAL_LLM_URL", "Local LLM (Ollama, LM Studio, vLLM -- e.g. http://localhost:11434/v1)"),
     ]
@@ -291,7 +292,7 @@ def _cmd_classify(args: argparse.Namespace) -> None:
     result = pipeline.run(
         folder, output_base, config.system.dry_run,
         classify_videos=config.classification.classify_videos,
-        classify_bundles=getattr(args, 'bundles', False),
+        classify_bundles=True if getattr(args, 'bundles', False) else (False if getattr(args, 'no_bundles', False) else None),
     )
     result.elapsed_seconds = time.time() - start
 

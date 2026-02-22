@@ -18,8 +18,9 @@ model:
   provider: null
 
   # Model names for non-Gemini providers
-  openai_model: "gpt-4.1"
-  anthropic_model: "claude-sonnet-4-20250514"
+  openai_model: "gpt-5.2"
+  anthropic_model: "claude-sonnet-4-6"
+
 
   # Settings for non-Gemini providers (video frame extraction, PDF rendering)
   video_frame_count: 8

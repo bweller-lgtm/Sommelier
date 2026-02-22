@@ -56,7 +56,7 @@ class MixedPipeline(ClassificationPipeline):
         output_folder: Path,
         dry_run: bool = False,
         classify_videos: bool = True,
-        classify_bundles: bool = False,
+        classify_bundles: Optional[bool] = None,
     ) -> ClassificationResult:
         """Execute the mixed pipeline by dispatching to sub-pipelines.
 
@@ -65,10 +65,20 @@ class MixedPipeline(ClassificationPipeline):
             output_folder: Where to copy sorted files.
             dry_run: If True, classify but don't move files.
             classify_videos: Whether to classify video files.
-            classify_bundles: If True, treat each subfolder as a bundle
-                (one holistic classification per subfolder).
+            classify_bundles: True = force bundles, False = disable,
+                None = auto-detect (classify subfolders as bundles if present).
         """
         combined = ClassificationResult()
+
+        # Auto-detect bundles: if not explicitly set, check for subfolders
+        if classify_bundles is None:
+            bundles = FileTypeRegistry.list_bundles(input_folder)
+            if bundles:
+                print(f"\nAuto-detected {len(bundles)} bundle(s) (subfolders with files). "
+                      f"Use --no-bundles to classify files individually.")
+                classify_bundles = True
+            else:
+                classify_bundles = False
 
         # Bundle mode: classify each subfolder as a single package
         if classify_bundles:

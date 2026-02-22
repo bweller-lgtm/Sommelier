@@ -28,7 +28,7 @@ class ProfileSynthesizer:
     6. Optionally merge with existing profile for refinement
     """
 
-    MAX_VISUAL_SAMPLES = 15
+    MAX_SAMPLES = 50
 
     def __init__(
         self,
@@ -341,7 +341,7 @@ Extract ONLY what's clearly stated or strongly implied. Be specific and concrete
                 text_items.append(item)
             else:
                 visual_items.append(item)
-            if len(visual_items) + len(text_items) >= self.MAX_VISUAL_SAMPLES:
+            if len(visual_items) + len(text_items) >= self.MAX_SAMPLES:
                 break
 
         if not visual_items and not text_items:
@@ -413,7 +413,7 @@ Be specific and concrete. Look for patterns across ALL files.{text_context}"""
                 text_items.append(item)
             else:
                 visual_items.append(item)
-            if len(visual_items) + len(text_items) >= self.MAX_VISUAL_SAMPLES:
+            if len(visual_items) + len(text_items) >= self.MAX_SAMPLES:
                 break
 
         if not visual_items and not text_items:

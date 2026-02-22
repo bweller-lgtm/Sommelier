@@ -369,8 +369,8 @@ class TestModelConfigCompat:
 
     def test_new_fields_have_defaults(self):
         mc = ModelConfig()
-        assert mc.openai_model == "gpt-4.1"
-        assert mc.anthropic_model == "claude-sonnet-4-20250514"
+        assert mc.openai_model == "gpt-5.2"
+        assert mc.anthropic_model == "claude-sonnet-4-6"
         assert mc.video_frame_count == 8
         assert mc.pdf_render_dpi == 150
 
@@ -381,7 +381,7 @@ class TestModelConfigCompat:
         })
         assert config.model.name == "gemini-2.0-flash"
         assert config.model.provider is None
-        assert config.model.openai_model == "gpt-4.1"
+        assert config.model.openai_model == "gpt-5.2"
 
     def test_from_yaml_with_new_fields(self):
         config = Config.from_dict({

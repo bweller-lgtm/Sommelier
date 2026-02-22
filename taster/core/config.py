@@ -15,8 +15,8 @@ class ModelConfig:
     clip_pretrained: str = "laion2b_s34b_b79k"
     # Multi-provider support
     provider: Optional[str] = None  # "gemini"/"openai"/"anthropic"/"local"/None=auto
-    openai_model: str = "gpt-4.1"
-    anthropic_model: str = "claude-sonnet-4-20250514"
+    openai_model: str = "gpt-5.2"
+    anthropic_model: str = "claude-sonnet-4-6"
     local_model: str = "llama3.2"
     local_base_url: str = "http://localhost:11434/v1"
     video_frame_count: int = 8

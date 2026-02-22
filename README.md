@@ -350,7 +350,7 @@ Interactive docs at `http://localhost:8000/docs`.
 
 Taster supports three cloud AI providers and any local LLM with an OpenAI-compatible endpoint. Install only the SDK(s) you need.
 
-| Feature | Gemini | OpenAI (GPT-4o/4.1) | Anthropic (Claude) | Local LLM |
+| Feature | Gemini | OpenAI (GPT-5) | Anthropic (Claude) | Local LLM |
 |---------|--------|---------------------|-------------------|-----------|
 | Images | Native | Base64 | Base64 | Base64 |
 | Videos | Native upload | Frame extraction | Frame extraction | Frame extraction |
@@ -418,8 +418,8 @@ All settings are in `config.yaml`. Key sections:
 model:
   provider: null          # null = auto-detect. Options: gemini, openai, anthropic, local
   name: "gemini-3-flash-preview"
-  openai_model: "gpt-4.1"
-  anthropic_model: "claude-sonnet-4-20250514"
+  openai_model: "gpt-5.2"
+  anthropic_model: "claude-sonnet-4-6"
   local_model: "llama3.2"
   local_base_url: "http://localhost:11434/v1"
 
@@ -563,4 +563,4 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.6.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.6.2 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026

@@ -59,7 +59,7 @@ def create_ai_client(
         raise ValueError(
             "No AI provider configured. Set one of these environment variables:\n"
             "  GEMINI_API_KEY   (recommended — cheapest, native video/PDF)\n"
-            "  OPENAI_API_KEY   (GPT-4o / GPT-4.1)\n"
+            "  OPENAI_API_KEY   (GPT-5)\n"
             "  ANTHROPIC_API_KEY (Claude)\n"
             "  LOCAL_LLM_URL    (local LLM — Ollama, LM Studio, vLLM)\n"
         )

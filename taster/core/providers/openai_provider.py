@@ -1,4 +1,4 @@
-"""OpenAI AI provider (GPT-4o / GPT-4.1)."""
+"""OpenAI AI provider (GPT-5)."""
 import os
 import time
 from pathlib import Path
@@ -18,7 +18,7 @@ class OpenAIProvider(AIClient):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_name: str = "gpt-4.1",
+        model_name: str = "gpt-5.2",
         max_retries: int = 3,
         retry_delay: float = 2.0,
         timeout: float = 120.0,

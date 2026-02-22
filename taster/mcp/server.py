@@ -24,7 +24,7 @@ _SETUP_INSTRUCTIONS = (
     "  Gemini  (recommended — cheapest, native video/PDF)\n"
     "    Get a free key: https://aistudio.google.com/apikey\n"
     "    Env var: GEMINI_API_KEY\n\n"
-    "  OpenAI  (GPT-4o / GPT-4.1)\n"
+    "  OpenAI  (GPT-5)\n"
     "    Get a key: https://platform.openai.com/api-keys\n"
     "    Env var: OPENAI_API_KEY\n\n"
     "  Anthropic  (Claude)\n"
@@ -1426,10 +1426,10 @@ def _handle_generate_profile(pm: ProfileManager, arguments: dict) -> Any:
     print(f"[taster] Generating profile from examples in {good_folder}...", file=sys.stderr, flush=True)
 
     gemini_client = create_ai_client(config)
-    max_samples = ProfileSynthesizer.MAX_VISUAL_SAMPLES
+    max_samples = ProfileSynthesizer.MAX_SAMPLES
     max_neg_ratio = config.training.max_negative_per_positive
 
-    # Collect sample files (up to MAX_VISUAL_SAMPLES per side)
+    # Collect sample files (up to MAX_SAMPLES per side)
     good_files = FileTypeRegistry.list_all_media(good_folder)
     good_images = good_files.get("images", [])[:max_samples]
     good_docs = good_files.get("documents", [])[:max_samples]
