@@ -6,7 +6,7 @@ results through an in-memory job store keyed by UUID.
 import logging
 import threading
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -86,7 +86,7 @@ class ClassificationService:
         profile = self.profile_manager.load_profile(profile_name)
 
         job_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         job = {
             "job_id": job_id,
@@ -197,7 +197,7 @@ class ClassificationService:
         self._update_job(
             job_id,
             status=STATUS_RUNNING,
-            started_at=datetime.utcnow().isoformat(),
+            started_at=datetime.now(UTC).isoformat(),
             message="Initializing pipeline",
             progress=5.0,
         )
@@ -243,7 +243,7 @@ class ClassificationService:
                 message="Classification complete",
                 results=serialized_results,
                 stats=result.stats,
-                completed_at=datetime.utcnow().isoformat(),
+                completed_at=datetime.now(UTC).isoformat(),
             )
             logger.info(
                 "Job %s completed: %d items, stats=%s",
@@ -259,5 +259,5 @@ class ClassificationService:
                 status=STATUS_FAILED,
                 message=f"Failed: {exc}",
                 error=str(exc),
-                completed_at=datetime.utcnow().isoformat(),
+                completed_at=datetime.now(UTC).isoformat(),
             )

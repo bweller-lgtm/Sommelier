@@ -28,12 +28,12 @@ model:
 
 # ============================= PATHS ==============================================
 paths:
-  # Root directory for family photos (optional, can be overridden)
-  root: "E:\\OneDrive\\Photos"
-  family_photos: "E:\\OneDrive\\Photos\\Family Photos"
-  private_photos: "E:\\OneDrive\\Photos\\Private Photos"
-  holding_cell: "E:\\OneDrive\\Photos\\Holding Cell"
-  camera_roll: "E:\\OneDrive\\Pictures\\Camera Roll"
+  # Root directory for photos (optional, can be overridden via CLI)
+  root: ""
+  family_photos: ""
+  private_photos: ""
+  holding_cell: ""
+  camera_roll: ""
 
   # Cache directory
   cache_root: ".taste_cache"

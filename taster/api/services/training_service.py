@@ -7,7 +7,7 @@ corrections.
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -82,7 +82,7 @@ class TrainingService:
             "file_path": str(file_path),
             "correct_category": correct_category,
             "reasoning": reasoning,
-            "submitted_at": datetime.utcnow().isoformat(),
+            "submitted_at": datetime.now(UTC).isoformat(),
         }
 
         feedback = self._load_feedback()

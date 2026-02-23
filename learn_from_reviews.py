@@ -23,9 +23,8 @@ from pathlib import Path
 from collections import defaultdict
 import sys
 
-# Import from existing code
-sys.path.insert(0, '..')
-sys.path.insert(0, '..')
+# Import from project root
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from taste_sort_win import OUT_BASE, CACHE_ROOT
 
