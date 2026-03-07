@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/Readme_Logo.png" alt="Taster" width="200">
+  <img src="https://raw.githubusercontent.com/brianmweller/Taster/master/assets/Readme_Logo.png" alt="Taster" width="200">
 </p>
 
 <h1 align="center">Taster</h1>
@@ -17,19 +17,19 @@ Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from 
 **280 photos + videos classified in 12 minutes for $0.30** (10 parallel workers, Gemini Flash).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
+  <img src="https://raw.githubusercontent.com/brianmweller/Taster/master/assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
 </p>
 
 Every file gets a score, a plain-English reason, and per-dimension diagnostic scores -- all grounded in the taste profile's criteria:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_reasoning.png" alt="AI reasoning for each classification decision" width="780">
+  <img src="https://raw.githubusercontent.com/brianmweller/Taster/master/assets/demo_reasoning.png" alt="AI reasoning for each classification decision" width="780">
 </p>
 
 Burst photos taken seconds apart are compared head-to-head -- AI picks the best and explains why:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_burst.png" alt="Burst intelligence: AI picks the best from a series" width="780">
+  <img src="https://raw.githubusercontent.com/brianmweller/Taster/master/assets/demo_burst.png" alt="Burst intelligence: AI picks the best from a series" width="780">
 </p>
 
 Dimension scores show *why* each file scored the way it did -- which priorities drove the decision:
@@ -55,7 +55,7 @@ Dimensions are auto-derived from the profile's `top_priorities`. When a photo sc
 Full score distribution and category breakdown:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_stats.png" alt="Score distribution and category breakdown" width="780">
+  <img src="https://raw.githubusercontent.com/brianmweller/Taster/master/assets/demo_stats.png" alt="Score distribution and category breakdown" width="780">
 </p>
 
 ---
@@ -192,8 +192,8 @@ pip install taster[gemini]        # Gemini (recommended -- cheapest)
 <summary><strong>Install from source</strong></summary>
 
 ```bash
-git clone https://github.com/bweller-lgtm/Sommelier.git
-cd Sommelier
+git clone https://github.com/brianmweller/Taster.git
+cd Taster
 pip install -e ".[gemini]"
 ```
 
@@ -250,7 +250,7 @@ If `taster init` configured Claude Desktop for you, just restart Claude Desktop.
       "command": "python",
       "args": ["mcp_server.py"],
       "env": {
-        "PYTHONPATH": "/path/to/Sommelier",
+        "PYTHONPATH": "/path/to/Taster",
         "PYTHONIOENCODING": "utf-8",
         "PYTHONUTF8": "1"
       }
@@ -564,3 +564,5 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
 **Version:** 3.6.4 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+
+<p align="center">Built by <a href="https://github.com/brianmweller">@brianmweller</a></p>

@@ -71,8 +71,8 @@ dev = [
 taster = "taster.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/bweller-lgtm/Sommelier"
-Repository = "https://github.com/bweller-lgtm/Sommelier"
+Homepage = "https://github.com/brianmweller/Taster"
+Repository = "https://github.com/brianmweller/Taster"
 
 [tool.hatch.version]
 path = "taster/__init__.py"
